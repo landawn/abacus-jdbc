@@ -106,10 +106,10 @@ import com.landawn.abacus.util.stream.Stream;
  * </ul>
  *
  * <p>By default, the underlying {@code PreparedStatement} or {@code CallableStatement} is closed
- * immediately after any execution method is invoked (such as {@code query},
+ * after a materializing execution completes or fails (such as {@code query},
  * {@code queryForInt}, {@code queryForLong}, {@code findFirst}, {@code findOnlyOne},
- * {@code list}, {@code execute}, and similar), regardless of whether the call completes
- * normally or throws an exception. To keep the statement open, invoke
+ * {@code list}, {@code execute}, and similar). Argument validation may happen before execution;
+ * its cleanup behavior is specified by the individual method. To keep the statement open after execution, invoke
  * {@code closeAfterExecution(false)}. A try-with-resources block is still recommended when binding
  * parameters before execution: a binding failure can prevent the execution method from being reached,
  * and individual JDBC setters do not generally close the query when they fail.</p>
@@ -284,7 +284,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * The task registered via {@link #onClose(Runnable)} to run after this query is closed, or {@code null} if
-     * none is registered. Multiple registrations are chained into a single handler; read and cleared in
+     * none is registered. Multiple registrations are grouped into a single iterative handler; read and cleared in
      * {@link #close()}.
      */
     volatile Runnable closeHandler;
@@ -369,7 +369,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p>Every registered handler runs even if another handler throws. The first failure in execution order
      * propagates from {@link #close()}; failures of the handlers that run after it are kept in its
-     * suppressed-exception chain.</p>
+     * suppressed exceptions. Handlers are invoked iteratively, so registering many handlers does not
+     * consume a corresponding number of stack frames during cleanup.</p>
      *
      * <p>This is useful for cleaning up resources that were created for this query.</p>
      *
@@ -404,36 +405,57 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         synchronized (this) {
             assertNotClosed();
 
-            if (closeHandler != null) {
-                if (this.closeHandler == null) {
-                    this.closeHandler = closeHandler;
-                } else {
-                    final Runnable tmp = this.closeHandler;
-
-                    this.closeHandler = () -> {
-                        try {
-                            closeHandler.run();
-                        } catch (final RuntimeException | Error primaryFailure) {
-                            try {
-                                tmp.run();
-                            } catch (final RuntimeException | Error olderFailure) {
-                                if (olderFailure != primaryFailure) {
-                                    primaryFailure.addSuppressed(olderFailure);
-                                }
-                            }
-
-                            throw primaryFailure;
-                        }
-
-                        tmp.run();
-                    };
-                }
-
-                return (This) this;
+            if (this.closeHandler == null) {
+                this.closeHandler = closeHandler;
+            } else if (this.closeHandler instanceof CloseHandlers handlers) {
+                handlers.add(closeHandler);
+            } else {
+                this.closeHandler = new CloseHandlers(this.closeHandler, closeHandler);
             }
         }
 
         return (This) this;
+    }
+
+    /** Stores cleanup callbacks without building a recursive chain that can overflow before releasing the connection. */
+    private static final class CloseHandlers implements Runnable {
+        private final List<Runnable> handlers = new ArrayList<>(2);
+
+        CloseHandlers(final Runnable first, final Runnable second) {
+            handlers.add(first);
+            handlers.add(second);
+        }
+
+        void add(final Runnable handler) {
+            handlers.add(handler);
+        }
+
+        @Override
+        public void run() {
+            Throwable primaryFailure = null;
+
+            // close() detaches this group under the query monitor before invoking it. No registration
+            // can mutate it now; removing each callback also releases its captures as soon as it runs.
+            for (int i = handlers.size() - 1; i >= 0; i--) {
+                final Runnable handler = handlers.remove(i);
+
+                try {
+                    handler.run();
+                } catch (final RuntimeException | Error failure) {
+                    if (primaryFailure == null) {
+                        primaryFailure = failure;
+                    } else if (failure != primaryFailure) {
+                        primaryFailure.addSuppressed(failure);
+                    }
+                }
+            }
+
+            if (primaryFailure instanceof RuntimeException runtimeFailure) {
+                throw runtimeFailure;
+            } else if (primaryFailure instanceof Error error) {
+                throw error;
+            }
+        }
     }
 
     /**
@@ -9038,7 +9060,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Note:</b> This method uses the actual query (e.g., {@code SELECT * FROM ...})
      * not a rewritten query like {@code SELECT 1 FROM ...} or {@code SELECT COUNT(*) FROM ...}.
-     * The query stops processing after finding the first row.</p>
+     * It stops inspecting rows after finding the first one; driver buffering and result-set cleanup may still
+     * fetch additional rows. Limit the SQL result itself when reducing database work is important.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11824,7 +11847,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * {@link SQLException} or {@link RuntimeException} raised while resetting a property is logged
      * and swallowed, so the remaining properties are still reset and the statement is still closed.
      * The actual close is performed via {@link JdbcUtil#closeQuietly(java.sql.Statement)}, which
-     * suppresses close failures.</p>
+     * suppresses SQL and runtime exceptions from closing; an {@link Error} still propagates.</p>
      *
      * @see #close()
      */
@@ -11927,7 +11950,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @throws IllegalStateException if this instance has been closed, or it was prepared in a transaction and is used on
      *         another thread (it is not closed then: the owner thread may be using it), or after the transaction has completed
-     *         (for one participating in a Spring-managed transaction: after that Spring transaction has completed), in which
+     *         (for one participating in a Spring-managed transaction: after that Spring transaction has begun to complete), in which
      *         case this query is closed first, unless {@code closeAfterExecution(false)} is set
      */
     void assertNotClosed() throws IllegalStateException {

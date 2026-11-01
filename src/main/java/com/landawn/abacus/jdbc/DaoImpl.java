@@ -318,6 +318,121 @@ final class DaoImpl {
     private static final java.util.concurrent.atomic.AtomicLong daoIdSequence = new java.util.concurrent.atomic.AtomicLong();
 
     /**
+     * Cache namespaces for data sources returned by an overriding {@code dataSource()} method.
+     *
+     * <p>Looking up a known data source takes no lock and allocates no reference object: it runs on every cached call of
+     * such a DAO. Only a source seen for the first time is registered under this object's monitor.</p>
+     */
+    static final class RoutedCacheIds {
+        private final String daoId;
+        private final java.lang.ref.ReferenceQueue<javax.sql.DataSource> clearedSources = new java.lang.ref.ReferenceQueue<>();
+        // Keys are DataSourceReference entries; a lookup passes a DataSourceLookup, which equals the entry of the same source.
+        private final Map<Object, String> ids = new ConcurrentHashMap<>();
+
+        /**
+         * Creates the namespaces of one DAO proxy.
+         *
+         * @param daoId the identity token of the DAO proxy, the prefix of every namespace
+         */
+        RoutedCacheIds(final String daoId) {
+            this.daoId = daoId;
+        }
+
+        /**
+         * Returns the stable cache namespace of {@code dataSource}, registering one the first time the source is seen.
+         *
+         * @param dataSource the non-null data source resolved for an invocation
+         * @return the namespace, distinct for each live data source
+         */
+        String get(final javax.sql.DataSource dataSource) {
+            final String id = ids.get(new DataSourceLookup(dataSource));
+
+            return id != null ? id : register(dataSource);
+        }
+
+        private synchronized String register(final javax.sql.DataSource dataSource) {
+            // Expunged when a new source registers, which is when retired sources typically accumulate.
+            java.lang.ref.Reference<? extends javax.sql.DataSource> cleared;
+            while ((cleared = clearedSources.poll()) != null) {
+                ids.remove(cleared);
+            }
+
+            String id = ids.get(new DataSourceLookup(dataSource));
+
+            if (id == null) {
+                // Keep namespaces stable while their sources are live: rotating them would strand old entries
+                // in application-owned caches without eviction. Weak keys avoid retaining transient pools.
+                id = daoId + "/" + daoIdSequence.incrementAndGet();
+                ids.put(new DataSourceReference(dataSource, clearedSources), id);
+            }
+
+            return id;
+        }
+
+        /**
+         * Returns the number of registered namespaces, including those of collected sources that are not yet expunged.
+         *
+         * @return the number of namespace entries
+         */
+        int size() {
+            return ids.size();
+        }
+    }
+
+    /**
+     * Weak identity key: data-source equality need not distinguish different connection pools. It equals another reference
+     * to the same live source, and a {@link DataSourceLookup} of it; once cleared, it equals only itself.
+     */
+    private static final class DataSourceReference extends java.lang.ref.WeakReference<javax.sql.DataSource> {
+        private final int hash;
+
+        DataSourceReference(final javax.sql.DataSource dataSource, final java.lang.ref.ReferenceQueue<javax.sql.DataSource> queue) {
+            super(dataSource, queue);
+            hash = System.identityHashCode(dataSource);
+        }
+
+        @Override
+        public int hashCode() {
+            return hash;
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            if (this == obj) {
+                return true;
+            }
+
+            final javax.sql.DataSource source = get();
+
+            if (source == null) {
+                return false;
+            }
+
+            return obj instanceof final DataSourceReference other ? source == other.get()
+                    : obj instanceof final DataSourceLookup lookup && source == lookup.dataSource();
+        }
+    }
+
+    /**
+     * A transient, strongly referencing identity key that finds the {@link DataSourceReference} entry of the same data
+     * source without allocating a reference object.
+     *
+     * @param dataSource the data source to find
+     */
+    private record DataSourceLookup(javax.sql.DataSource dataSource) {
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(dataSource);
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            return obj instanceof final DataSourceReference reference ? reference.get() == dataSource
+                    : obj instanceof final DataSourceLookup other && other.dataSource == dataSource;
+        }
+    }
+
+    /**
      * An entry of {@link #daoPool}: a registered DAO proxy and what its creation allocated or registered for it, so
      * that its eviction can release them without calling the proxy.
      */
@@ -333,11 +448,16 @@ final class DaoImpl {
         /** The cache {@code createDao} created for the proxy (it is released with the proxy), or {@code null}. */
         final Jdbc.DaoCache createdCache;
         final Logger daoLogger;
+        /**
+         * Whether the DAO interface overrides {@code dataSource()}: determined once, as join-DAO resolution checks it for every
+         * candidate on every scan (see {@code isDataSourceOverridden}).
+         */
+        final boolean dataSourceOverridden;
         // Set by pool hits and cleared by eviction scans; a lost update only changes which entry is evicted.
         volatile boolean recentlyUsed;
 
         PooledDao(final DaoCacheKey key, final DaoBase dao, final Class<?> daoInterface, final Class<?> entityClass, final String tableName,
-                final Map<String, JoinInfo> joinBeanInfo, final Jdbc.DaoCache createdCache, final Logger daoLogger) {
+                final Map<String, JoinInfo> joinBeanInfo, final Jdbc.DaoCache createdCache, final Logger daoLogger, final boolean dataSourceOverridden) {
             this.key = key;
             this.dao = dao;
             this.daoInterface = daoInterface;
@@ -346,6 +466,7 @@ final class DaoImpl {
             this.joinBeanInfo = joinBeanInfo;
             this.createdCache = createdCache;
             this.daoLogger = daoLogger;
+            this.dataSourceOverridden = dataSourceOverridden;
         }
     }
 
@@ -415,30 +536,67 @@ final class DaoImpl {
         }
     }
 
-    /** Identity-based key for the smaller cache used while resolving DAOs for joined entities. */
+    /** Identity-based key for the smaller caches used while resolving DAOs for joined entities. */
     private static final class JoinEntityDaoCacheKey {
         /** The referenced (joined) entity class; compared by reference identity. */
         private final Class<?> entityClass;
-        /** The data source the join DAO is bound to; compared by reference identity. */
-        private final javax.sql.DataSource dataSource;
+        /**
+         * The data source the join DAO is bound to, compared by reference identity: the data source itself, or a
+         * {@link DataSourceReference} to it in a key stored in {@link #joinEntityDaoMisses} (see {@link #weakCopy()}).
+         */
+        private final Object dataSource;
         /** Whether the selected DAO must support deleting joined rows. */
         private final boolean forDelete;
+        /** Computed from the data source's identity, so that it does not change once a weak reference is cleared. */
+        private final int hash;
 
         JoinEntityDaoCacheKey(final Class<?> entityClass, final javax.sql.DataSource dataSource, final boolean forDelete) {
+            this(entityClass, dataSource, forDelete,
+                    31 * (31 * System.identityHashCode(entityClass) + System.identityHashCode(dataSource)) + Boolean.hashCode(forDelete));
+        }
+
+        private JoinEntityDaoCacheKey(final Class<?> entityClass, final Object dataSource, final boolean forDelete, final int hash) {
             this.entityClass = entityClass;
             this.dataSource = dataSource;
             this.forDelete = forDelete;
+            this.hash = hash;
+        }
+
+        /**
+         * Returns an equal key that references its data source weakly. WHY: a miss is recorded for the data source an
+         * overriding {@code dataSource()} returned, which may be a retired pool; the miss cache must not keep it reachable.
+         *
+         * @return a key equal to this one while its data source is reachable
+         */
+        JoinEntityDaoCacheKey weakCopy() {
+            return dataSource instanceof final javax.sql.DataSource ds
+                    ? new JoinEntityDaoCacheKey(entityClass, new DataSourceReference(ds, null), forDelete, hash)
+                    : this;
+        }
+
+        private Object dataSource() {
+            return dataSource instanceof final DataSourceReference reference ? reference.get() : dataSource;
         }
 
         @Override
         public int hashCode() {
-            return 31 * (31 * System.identityHashCode(entityClass) + System.identityHashCode(dataSource)) + Boolean.hashCode(forDelete);
+            return hash;
         }
 
         @Override
         public boolean equals(final Object obj) {
-            return this == obj || obj instanceof JoinEntityDaoCacheKey other && entityClass == other.entityClass && dataSource == other.dataSource
-                    && forDelete == other.forDelete;
+            if (this == obj) {
+                return true;
+            }
+
+            if (!(obj instanceof final JoinEntityDaoCacheKey other) || hash != other.hash || entityClass != other.entityClass || forDelete != other.forDelete) {
+                return false;
+            }
+
+            final Object source = dataSource();
+
+            // A cleared reference never equals a key for a null data source.
+            return source == other.dataSource() && (source != null || dataSource == null && other.dataSource == null);
         }
     }
 
@@ -4394,7 +4552,9 @@ final class DaoImpl {
 
     private static final int MAX_JOIN_DAO_MISSES = 256;
 
-    // Guarded by this map's monitor. A registration invalidates misses, never a caller-specific fallback.
+    // Guarded by this map's monitor. A registration invalidates misses, never a caller-specific fallback. TRUE records a
+    // miss; FALSE only records that the miss was warned about, while a routed candidate requires every lookup to rescan.
+    // Keys reference their data source weakly (see JoinEntityDaoCacheKey.weakCopy).
     private static final Map<JoinEntityDaoCacheKey, Boolean> joinEntityDaoMisses = new LinkedHashMap<>(64, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(final Map.Entry<JoinEntityDaoCacheKey, Boolean> eldest) {
@@ -4521,9 +4681,12 @@ final class DaoImpl {
         // The data source the DAO's statements run on, for the checks of the transaction they run in (the result caches kept
         // out of it, the generated IDs it puts back): a DAO interface may override dataSource() with a default method, which
         // the statements honour (they run on proxy.dataSource()); otherwise the DAO's own, without a call through the proxy.
+        // Join DAO selection also uses this data source: selecting by the construction-time source could route child
+        // reads and deletes to another database when the source DAO overrides dataSource().
         // WHY: those checks used the DAO's own data source while the statements ran on the overriding one.
-        final Function<DaoBase, javax.sql.DataSource> workDataSourceOf = isDataSourceOverridden(daoInterface) ? DaoBase::dataSource
-                : proxy -> primaryDataSource;
+        final boolean dataSourceOverridden = isDataSourceOverridden(daoInterface);
+        final Function<DaoBase, javax.sql.DataSource> workDataSourceOf = dataSourceOverridden ? DaoBase::dataSource : proxy -> primaryDataSource;
+        final RoutedCacheIds routedCacheIds = dataSourceOverridden ? new RoutedCacheIds(daoId) : null;
         final SqlDialect.ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
 
         if (daoLogger.isDebugEnabled()) {
@@ -8040,7 +8203,8 @@ final class DaoImpl {
                             final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo
                                     .selectSqlPlan(parameterizedDsl);
 
-                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, workDataSourceOf.apply(proxy),
+                                    proxy);
 
                             final PreparedQuery preparedQuery = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames)).setParameters(entity, tp._2);
 
@@ -8086,7 +8250,8 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, workDataSourceOf.apply(proxy),
+                                    proxy);
 
                             if (N.isEmpty(entities)) {
                                 // Do nothing.
@@ -8197,8 +8362,8 @@ final class DaoImpl {
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
                             final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.deleteSqlPlan(parameterizedDsl);
 
-                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy,
-                                    true);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, workDataSourceOf.apply(proxy),
+                                    proxy, true);
 
                             // tp._2 would delete a many-to-many join's intermediate-table rows. JoinInfo currently always leaves it
                             // null (those rows are left to the database, e.g. ON DELETE CASCADE, as documented), so only tp._1 runs;
@@ -8235,8 +8400,8 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy,
-                                    true);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, workDataSourceOf.apply(proxy),
+                                    proxy, true);
 
                             if (N.isEmpty(entities)) {
                                 return 0;
@@ -9888,9 +10053,14 @@ final class DaoImpl {
                                 && !commitPending;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
-                        final String cacheKey = cacheResultEnabled || isAnnotatedRefreshResult || isLocalThreadCacheEnabled || isRefreshLocalThreadCacheRequired
-                                ? JdbcUtil.createCacheKey(tableName, fullClassMethodName, daoId, args, daoLogger)
-                                : null;
+                        // One proxy may route successive calls to distinct databases with the same schema. Its fixed
+                        // proxy ID alone would let both DAO and thread-local caches return another database's rows.
+                        final boolean cacheKeyRequired = cacheResultEnabled || isAnnotatedRefreshResult || isLocalThreadCacheEnabled
+                                || isRefreshLocalThreadCacheRequired;
+                        final String cacheDaoId = !cacheKeyRequired || routedCacheIds == null || workDataSource == null || workDataSource == primaryDataSource
+                                ? daoId
+                                : routedCacheIds.get(workDataSource);
+                        final String cacheKey = cacheKeyRequired ? JdbcUtil.createCacheKey(tableName, fullClassMethodName, cacheDaoId, args, daoLogger) : null;
 
                         Object result = null;
 
@@ -9920,7 +10090,7 @@ final class DaoImpl {
                                 // stable method/table/DAO portion so built-in and custom caches can still identify
                                 // the affected table (and custom caches still receive args/methodSignature).
                                 final String refreshCacheKey = Strings.isNotEmpty(cacheKey) ? cacheKey
-                                        : Strings.concat(fullClassMethodName, JdbcUtil.CACHE_KEY_SEPARATOR, tableName, JdbcUtil.CACHE_KEY_SEPARATOR, daoId,
+                                        : Strings.concat(fullClassMethodName, JdbcUtil.CACHE_KEY_SEPARATOR, tableName, JdbcUtil.CACHE_KEY_SEPARATOR, cacheDaoId,
                                                 JdbcUtil.CACHE_KEY_SEPARATOR);
 
                                 Throwable refreshFailure = null;
@@ -10317,7 +10487,7 @@ final class DaoImpl {
         }
 
         final PooledDao pooledDao = new PooledDao(daoCacheKey, daoInstance, daoInterface, entityClass, tableName, joinBeanInfo,
-                isDaoCacheCreatedHere ? daoCacheRef.get() : null, daoLogger);
+                isDaoCacheCreatedHere ? daoCacheRef.get() : null, daoLogger, dataSourceOverridden);
         final PooledDao existingPooledDao;
         List<PooledDao> evictedDaos = null;
 
@@ -11404,11 +11574,17 @@ final class DaoImpl {
      *
      * <p>This method searches the internal DAO pool for a registered DAO whose target entity class matches the
      * specified {@code referencedEntityClass} and whose data source matches the provided {@code ds}. If a matching
-     * DAO is found, it is cached in the join entity DAO pool for subsequent lookups and returned. If no matching
-     * DAO is found, a warning is logged and the {@code defaultDao} is returned as a fallback.</p>
+     * DAO is found, it is returned and, unless it overrides {@code dataSource()}, cached in the join entity DAO pool
+     * for subsequent lookups. If no matching DAO is found, a warning is logged and the {@code defaultDao} is returned
+     * as a fallback.</p>
      *
      * <p>The fallback {@code defaultDao} is never cached. A bounded miss cache avoids repeated registry scans and
-     * warnings; every successful DAO registration invalidates it so a later registration can take over.</p>
+     * warnings; every successful DAO registration invalidates it so a later registration can take over. A miss is not
+     * cached while a candidate for the entity and requested operation overrides {@code dataSource()}: its route may
+     * change without another registration, so both matching and nonmatching routed candidates must be checked again.
+     * The warning is still logged once per entity, data source and operation until the next registration; repeated
+     * misses are logged at debug level. Miss entries reference their data source weakly, so a retired data source
+     * returned by an overriding {@code dataSource()} is not kept reachable.</p>
      *
      * @param referencedEntityClass the entity class of the join target (the entity being referenced)
      * @param ds the {@link javax.sql.DataSource} that the returned DAO should be associated with
@@ -11447,15 +11623,26 @@ final class DaoImpl {
         synchronized (joinEntityDaoMisses) {
             registrationVersion = daoRegistrationVersion;
 
-            if (joinEntityDaoMisses.get(key) != null) {
+            if (Boolean.TRUE.equals(joinEntityDaoMisses.get(key))) {
                 return defaultDao;
             }
         }
 
+        boolean hasRoutedCandidate = false;
         for (final PooledDao pooledDao : daoPool.values()) {
             final DaoBase dao = pooledDao.dao;
 
-            if (dao.targetEntityClass() == referencedEntityClass && dao.dataSource() == ds && (!forDelete || dao instanceof Dao)) {
+            if (dao.targetEntityClass() == referencedEntityClass && (!forDelete || dao instanceof Dao)) {
+                final boolean routed = pooledDao.dataSourceOverridden;
+                hasRoutedCandidate |= routed;
+                if (dao.dataSource() != ds) {
+                    continue;
+                }
+                // An overriding target can stop matching (or start matching after a miss) without a registration
+                // change. Cache only fixed-source targets, and do not remember misses while a routed candidate exists.
+                if (routed) {
+                    return dao;
+                }
                 final DaoBase existingDao = joinEntityDaoPool.putIfAbsent(key, dao);
 
                 if (existingDao == null && daoPool.get(pooledDao.key) != pooledDao) {
@@ -11468,14 +11655,23 @@ final class DaoImpl {
             }
         }
 
+        boolean warned = false;
+
         synchronized (joinEntityDaoMisses) {
             if (registrationVersion == daoRegistrationVersion) {
-                joinEntityDaoMisses.put(key, Boolean.TRUE);
+                // While a routed candidate exists, the entry only records the warning: every lookup still rescans, and
+                // warning on each of them flooded the log of a DAO joining through a route no registered DAO serves.
+                warned = joinEntityDaoMisses.put(key.weakCopy(), !hasRoutedCandidate) != null;
             }
         }
 
-        JdbcUtil.logger.warn("No Dao interface/instance found for join operations(entityClass={}, dataSourceId={}, dao={})", referencedEntityClass,
-                System.identityHashCode(ds), defaultDao.getClass());
+        if (!warned) {
+            JdbcUtil.logger.warn("No Dao interface/instance found for join operations(entityClass={}, dataSourceId={}, dao={})", referencedEntityClass,
+                    System.identityHashCode(ds), defaultDao.getClass());
+        } else if (JdbcUtil.logger.isDebugEnabled()) {
+            JdbcUtil.logger.debug("No Dao interface/instance found for join operations(entityClass={}, dataSourceId={}, dao={})", referencedEntityClass,
+                    System.identityHashCode(ds), defaultDao.getClass());
+        }
 
         // Don't cache defaultDao - the correct DAO may be registered later (e.g., during initialization).
         // Caching the wrong DAO here would permanently prevent the correct one from being found.

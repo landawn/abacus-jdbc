@@ -1114,8 +1114,9 @@ public final class JoinInfo {
      * exactly one matching entity per key is expected and more than one match throws
      * {@link IllegalArgumentException}. A source entity with no matching joined entity receives an
      * empty collection/map or {@code null} for a single-valued property, replacing any stale value.
-     * A joined entity whose single-column join key is {@code null} (for example an unassigned row of a
-     * nullable foreign key) matches no source entity and is ignored, as in the generated SQL.
+     * A joined entity whose join key or any component of a composite join key is {@code null} (for
+     * example an unassigned row of a nullable foreign key) matches no source entity and is ignored,
+     * as in the generated SQL.
      * Join keys are matched with {@code equals}, except that array-typed keys (e.g. {@code byte[]}) are matched by content.
      * The source entities are mutated in place as the iteration proceeds and the operation is not
      * atomic; see {@link #setJoinPropEntities(Collection, Map)} for the partial-update behavior on
@@ -1169,11 +1170,11 @@ public final class JoinInfo {
 
                 final Object joinKey = referencedEntityKeyExtractor.apply(propEntity);
 
-                // A null single-column key (e.g. an unassigned row of a nullable foreign key) matches no source entity, just
-                // as "fk = ?" never matches NULL in the generated SQL. Grouping with Stream.groupTo rejected it with a
-                // NullPointerException, so one such row failed the whole assignment. Array join keys are grouped by
-                // content; each group keeps the encounter order of joinPropEntities.
-                if (joinKey != null) {
+                // Every component is compared with '=' in SQL, so even two identical composite keys cannot match when
+                // either contains NULL. Check the extracted key without rereading properties or allocating an array.
+                // A single property may itself be a Tuple/List value, so inspect components only for composite joins.
+                if (joinKey != null && (referencedPropInfos.length == 1
+                        || (joinKey instanceof final Tuple<?> tuple ? !tuple.anyNull() : !((List<?>) joinKey).contains(null)))) {
                     groupedPropEntities.computeIfAbsent(hasArrayJoinKey ? contentJoinKey(joinKey) : joinKey, k -> new ArrayList<>()).add(propEntity);
                 }
             }

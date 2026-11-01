@@ -3864,7 +3864,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * when you only need a subset of the returned data.
      *
      * <p>The {@code RowFilter} is applied before the {@code RowMapper}, so rows that don't
-     * match the filter criteria are skipped entirely, avoiding unnecessary object creation.</p>
+     * match the filter criteria are not mapped, avoiding unnecessary object creation. Filtering runs in Java
+     * after the row is fetched; it does not reduce the rows returned by the stored procedure.</p>
      *
      * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
@@ -4264,7 +4265,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * This allows you to selectively process rows across multiple result sets.
      *
      * <p>The same filter and mapper are applied to all result sets. Rows that don't pass the filter
-     * are skipped entirely, which can significantly improve performance when processing large result sets.</p>
+     * are not mapped, reducing object creation. Every source row is still fetched and tested in Java; use
+     * filtering inside the stored procedure when the database should return fewer rows.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

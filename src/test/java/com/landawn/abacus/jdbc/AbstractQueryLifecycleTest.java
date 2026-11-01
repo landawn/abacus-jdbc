@@ -240,6 +240,51 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
     }
 
     @Test
+    void close_manyHandlers_runsEveryHandlerInReverseRegistrationOrder() throws SQLException {
+        final int handlerCount = 50_000;
+        final AtomicInteger nextHandler = new AtomicInteger(handlerCount - 1);
+
+        for (int i = 0; i < handlerCount; i++) {
+            final int registrationIndex = i;
+            query.onClose(() -> assertEquals(registrationIndex, nextHandler.getAndDecrement()));
+        }
+
+        assertDoesNotThrow(query::close);
+        assertEquals(-1, nextHandler.get());
+        assertNull(query.closeHandler);
+        verify(preparedStatement).close();
+        assertDoesNotThrow(query::close);
+        assertEquals(-1, nextHandler.get());
+    }
+
+    @Test
+    void close_multipleFailingHandlers_preservesFirstFailureAndRunsEveryHandler() throws SQLException {
+        final RuntimeException firstFailure = new RuntimeException("newest handler failed");
+        final AssertionError secondFailure = new AssertionError("middle handler failed");
+        final RuntimeException thirdFailure = new RuntimeException("oldest handler failed");
+        final AtomicInteger handlerCalls = new AtomicInteger();
+        query.onClose(() -> {
+            handlerCalls.incrementAndGet();
+            throw thirdFailure;
+        }).onClose(() -> {
+            handlerCalls.incrementAndGet();
+            throw secondFailure;
+        }).onClose(() -> {
+            handlerCalls.incrementAndGet();
+            throw firstFailure;
+        }).onClose(() -> {
+            handlerCalls.incrementAndGet();
+            throw firstFailure;
+        });
+
+        assertSame(firstFailure, assertThrows(RuntimeException.class, query::close));
+        assertEquals(4, handlerCalls.get());
+        assertArrayEquals(new Throwable[] { secondFailure, thirdFailure }, firstFailure.getSuppressed());
+        assertNull(query.closeHandler);
+        verify(preparedStatement).close();
+    }
+
+    @Test
     public void testClosePreservesFailuresFromEveryCloseHandler() {
         final RuntimeException olderFailure = new RuntimeException("older handler failed");
         final RuntimeException newerFailure = new RuntimeException("newer handler failed");

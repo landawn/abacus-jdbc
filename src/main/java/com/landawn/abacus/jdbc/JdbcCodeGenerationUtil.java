@@ -3473,6 +3473,15 @@ public final class JdbcCodeGenerationUtil {
      * an inferred subscript must also have a balanced body because a value can precede a bracketed alias.
      * Only the outermost inferred subscript is checked, so nested brackets do not repeatedly rescan its body.
      * Quoted text is read with code generation's rules: a backslash escapes the next character.
+     *
+     * @param sql the SQL text being scanned
+     * @param openingBracketIndex the index of the opening {@code [} to classify
+     * @param tokenStart the inclusive start of the preceding non-comment token, or a negative value when none exists
+     * @param tokenEnd the exclusive end of that preceding token
+     * @param commentStyle the dialect's comment syntax, used when checking an inferred subscript's body
+     * @param bracketIdentifiers whether this dialect always treats brackets as identifier delimiters
+     * @return {@code true} for an explicit {@code ARRAY} constructor or a balanced inferred subscript;
+     *         {@code false} when the bracket should be treated as an identifier delimiter
      */
     static boolean startsArrayExpression(final String sql, final int openingBracketIndex, final int tokenStart, final int tokenEnd,
             final SqlCommentStyle commentStyle, final boolean bracketIdentifiers) {

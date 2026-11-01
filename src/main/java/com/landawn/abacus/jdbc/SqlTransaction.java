@@ -807,6 +807,8 @@ public final class SqlTransaction implements AutoCloseable {
     /**
      * Returns the JDBC connection of the transaction. It is shared by all scopes of the transaction and must not be closed
      * manually: the outermost scope releases it when the transaction completes.
+     * The returned reference must only be used while the transaction is open; this accessor checks the owning thread,
+     * but does not check whether the transaction has completed and released the connection.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1133,14 +1135,26 @@ public final class SqlTransaction implements AutoCloseable {
         return _outermost;
     }
 
+    /**
+     * Returns whether this scope has been marked complete, irrespective of the transaction's outcome.
+     *
+     * @return {@code true} once the scope has completed or an enclosing scope has exited it
+     */
     boolean isCompleted() {
         return _completed;
     }
 
+    /** Marks this scope complete without recording a successful nested commit. */
     void markCompleted() {
         _completed = true;
     }
 
+    /**
+     * Returns whether this nested scope completed by its own successful commit.
+     * An inner scope's commit does not establish the physical transaction's final outcome.
+     *
+     * @return {@code true} if {@link #markCommitted()} has recorded this scope's commit
+     */
     boolean isCommitted() {
         return _committed;
     }
@@ -1153,6 +1167,11 @@ public final class SqlTransaction implements AutoCloseable {
         _committed = true;
     }
 
+    /**
+     * Returns whether an enclosing scope completed while this scope was still open and exited it.
+     *
+     * @return {@code true} if completion was imposed by an enclosing scope
+     */
     boolean isExitedByEnclosingScope() {
         return _exitedByEnclosingScope;
     }

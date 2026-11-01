@@ -59,7 +59,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -420,7 +419,8 @@ public final class JdbcUtil {
     static {
         sqlStateForTableNotExists.add("42S02"); // MySQL, SQL Server
         sqlStateForTableNotExists.add("42P01"); // PostgreSQL
-        sqlStateForTableNotExists.add("42501"); // HSQLDB
+        // HSQLDB also uses 42501 for missing objects, but PostgreSQL uses it for insufficient privilege.
+        // Its missing-object diagnostic must therefore pass the message check instead of matching SQLState alone.
         sqlStateForTableNotExists.add("42704"); // DB2
     }
 
@@ -2832,98 +2832,179 @@ public final class JdbcUtil {
         Object apply(ResultSet rs, String columnLabel, Object columnValue) throws SQLException;
     }
 
+    /** Converts Oracle {@code TIMESTAMP} values, which carry no session time zone, through {@code Datum.timestampValue()}. */
+    private static final Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> oracleTimestampConverters = Tuple
+            .of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(), (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue());
+
     /**
-     * Cache of (by-index, by-label) column converter pairs, keyed by the runtime class of the read column value.
+     * Converts Oracle {@code TIMESTAMPTZ}/{@code TIMESTAMPLTZ} values through the driver. Datum.timestampValue() (no-arg)
+     * throws SQLException on them because they require the originating Connection's session timezone to materialize;
+     * rs.getTimestamp lets the driver perform the timezone-aware conversion correctly for both.
+     */
+    private static final Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> oracleZonedTimestampConverters = Tuple
+            .of((rs, columnIndex, val) -> rs.getTimestamp(columnIndex), (rs, columnLabel, val) -> rs.getTimestamp(columnLabel));
+
+    /** Converts Oracle {@code DATE} values to a timestamp or a date, as the column's declared metadata class requires. */
+    private static final Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> oracleDateConverters = Tuple.of((rs, columnIndex, val) -> {
+        final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
+
+        if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+            return rs.getTimestamp(columnIndex);
+        } else {
+            return rs.getDate(columnIndex);
+        }
+    }, (rs, columnLabel, val) -> {
+        final ResultSetMetaData metaData = rs.getMetaData();
+        final int columnIndex = getColumnIndexForLabel(rs, metaData, columnLabel);
+
+        if (columnIndex < 1) {
+            return val;
+        }
+
+        final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+
+        if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+            return rs.getTimestamp(columnIndex);
+        } else {
+            return rs.getDate(columnIndex);
+        }
+    });
+
+    /**
+     * Converts {@link java.sql.Date} values of timestamp-bearing columns. Also treats a declared metadata class of
+     * oracle.sql.TIMESTAMP as timestamp-bearing, matching ResultSetProxy: otherwise time-of-day is silently truncated on such columns.
+     */
+    private static final Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> sqlDateConverters = Tuple.of((rs, columnIndex, val) -> {
+        final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
+
+        if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+            return rs.getTimestamp(columnIndex);
+        }
+
+        return val;
+    }, (rs, columnLabel, val) -> {
+        final ResultSetMetaData metaData = rs.getMetaData();
+        final int columnIndex = getColumnIndexForLabel(rs, metaData, columnLabel);
+
+        if (columnIndex < 1) {
+            return val;
+        }
+
+        final String metaDataClassName = metaData.getColumnClassName(columnIndex);
+
+        if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
+            return rs.getTimestamp(columnIndex);
+        }
+
+        return val;
+    });
+
+    /** Returns every other column value unchanged. */
+    private static final Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> identityColumnConverters = Tuple.of((rs, columnIndex, val) -> val,
+            (rs, columnLabel, val) -> val);
+
+    /** The class loader of this class, or {@code null} for the bootstrap loader. */
+    private static final ClassLoader jdbcUtilClassLoader = JdbcUtil.class.getClassLoader();
+
+    /**
+     * Converter pairs of value classes that live at least as long as this class: those defined by its class loader, one of
+     * that loader's ancestors, or the bootstrap loader (e.g. {@code String}, {@code java.sql.Timestamp}, a driver on the
+     * same class path).
      */
     private static final ConcurrentHashMap<Class<?>, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterPool = new ConcurrentHashMap<>();
 
     /**
-     * Returns the cached converter pair for the runtime class of the given column value, computing and caching
-     * an Oracle-/date-type-aware conversion the first time a class is encountered.
+     * Converter pairs of value classes defined by a descendant of this class's loader, which can be discarded before this
+     * class: an entry is reclaimed with its value class.
      */
-    private static final Function<Object, Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> columnConverterGetter = ret -> {
-        return columnConverterPool.computeIfAbsent(ret.getClass(), cls -> {
-            final String className = cls.getName();
-            Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> converterTP;
-
-            if ("oracle.sql.TIMESTAMP".equals(className)) {
-                converterTP = Tuple.of((rs, columnIndex, val) -> ((oracle.sql.Datum) val).timestampValue(),
-                        (rs, columnLabel, val) -> ((oracle.sql.Datum) val).timestampValue());
-            } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
-                // Datum.timestampValue() (no-arg) throws SQLException on TIMESTAMPTZ/TIMESTAMPLTZ because
-                // they require the originating Connection's session timezone to materialize.
-                // rs.getTimestamp lets the driver perform the timezone-aware conversion correctly for both.
-                converterTP = Tuple.of((rs, columnIndex, val) -> rs.getTimestamp(columnIndex), (rs, columnLabel, val) -> rs.getTimestamp(columnLabel));
-            } else if (className.startsWith("oracle.sql.DATE")) {
-                converterTP = Tuple.of((rs, columnIndex, val) -> {
-                    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
-
-                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        return rs.getTimestamp(columnIndex);
-                    } else {
-                        return rs.getDate(columnIndex);
-                    }
-                }, (rs, columnLabel, val) -> {
-                    final ResultSetMetaData metaData = rs.getMetaData();
-                    final int columnIndex = getColumnIndexForLabel(rs, metaData, columnLabel);
-
-                    if (columnIndex < 1) {
-                        return val;
-                    }
-
-                    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
-
-                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        return rs.getTimestamp(columnIndex);
-                    } else {
-                        return rs.getDate(columnIndex);
-                    }
-                });
-            } else if (ret instanceof java.sql.Date) {
-                // Also treat a declared metadata class of oracle.sql.TIMESTAMP as timestamp-bearing,
-                // matching ResultSetProxy: otherwise time-of-day is silently truncated on such columns.
-                converterTP = Tuple.of((rs, columnIndex, val) -> {
-                    final String metaDataClassName = rs.getMetaData().getColumnClassName(columnIndex);
-
-                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        return rs.getTimestamp(columnIndex);
-                    }
-
-                    return val;
-                }, (rs, columnLabel, val) -> {
-                    final ResultSetMetaData metaData = rs.getMetaData();
-                    final int columnIndex = getColumnIndexForLabel(rs, metaData, columnLabel);
-
-                    if (columnIndex < 1) {
-                        return val;
-                    }
-
-                    final String metaDataClassName = metaData.getColumnClassName(columnIndex);
-
-                    if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
-                        return rs.getTimestamp(columnIndex);
-                    }
-
-                    return val;
-                });
-            } else {
-                converterTP = Tuple.of((rs, columnIndex, val) -> val, (rs, columnLabel, val) -> val);
-            }
-
-            return converterTP;
-        });
+    private static final ClassValue<Tuple2<ColumnConverterByIndex, ColumnConverterByLabel>> descendantColumnConverterPool = new ClassValue<>() {
+        @Override
+        protected Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> computeValue(final Class<?> cls) {
+            return selectColumnConverters(cls);
+        }
     };
+
+    /**
+     * Returns the converter pair for a column value of the given runtime class.
+     *
+     * <p>WHY two caches: a strong Class-keyed map retains the value classes of disposable loaders (e.g. a driver in a plugin
+     * loader), while a {@link ClassValue} stores its value on the value class. The converters are defined by this class's
+     * loader, so a {@code ClassValue} entry on {@code String} kept this class's loader (e.g. a redeployed web application's)
+     * reachable for the life of the JVM. Each cache therefore only holds classes that cannot outlive the class holding the
+     * entry. Classes of unrelated loaders (neither an ancestor nor a descendant) are not cached; selecting their converters
+     * takes a few class-name comparisons.</p>
+     *
+     * @param cls the runtime class of the column value
+     * @return the (by-index, by-label) converter pair for {@code cls}
+     */
+    static Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> columnConvertersOf(final Class<?> cls) {
+        final Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> converters = columnConverterPool.get(cls);
+
+        if (converters != null) {
+            return converters;
+        }
+
+        final ClassLoader valueClassLoader = cls.getClassLoader();
+
+        if (isSameOrAncestorClassLoader(valueClassLoader, jdbcUtilClassLoader)) {
+            return columnConverterPool.computeIfAbsent(cls, JdbcUtil::selectColumnConverters);
+        } else if (isSameOrAncestorClassLoader(jdbcUtilClassLoader, valueClassLoader)) {
+            return descendantColumnConverterPool.get(cls);
+        } else {
+            return selectColumnConverters(cls);
+        }
+    }
+
+    /**
+     * Returns whether {@code ancestor} is {@code loader} or one of its parents; the bootstrap loader ({@code null}) is the
+     * ancestor of every loader.
+     *
+     * @param ancestor the candidate ancestor loader, or {@code null} for the bootstrap loader
+     * @param loader the loader whose parent chain is searched, or {@code null} for the bootstrap loader
+     * @return {@code true} if {@code ancestor} is in the parent chain of {@code loader}, including {@code loader} itself
+     */
+    static boolean isSameOrAncestorClassLoader(final ClassLoader ancestor, final ClassLoader loader) {
+        for (ClassLoader current = loader;; current = current.getParent()) {
+            if (current == ancestor) {
+                return true;
+            } else if (current == null) {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Selects the Oracle-/date-type-aware converter pair for a column value of the given runtime class.
+     *
+     * @param cls the runtime class of the column value
+     * @return one of the shared converter pairs; never {@code null}
+     */
+    private static Tuple2<ColumnConverterByIndex, ColumnConverterByLabel> selectColumnConverters(final Class<?> cls) {
+        final String className = cls.getName();
+
+        if ("oracle.sql.TIMESTAMP".equals(className)) {
+            return oracleTimestampConverters;
+        } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
+            return oracleZonedTimestampConverters;
+        } else if (className.startsWith("oracle.sql.DATE")) {
+            return oracleDateConverters;
+        } else if (java.sql.Date.class.isAssignableFrom(cls)) {
+            return sqlDateConverters;
+        } else {
+            return identityColumnConverters;
+        }
+    }
 
     /**
      * Converts a column value read by index, dispatching to the converter pair registered for the value's runtime class.
      */
-    private static final ColumnConverterByIndex columnConverterByIndex = (rs, columnIndex, val) -> columnConverterGetter.apply(val)._1.apply(rs, columnIndex,
+    private static final ColumnConverterByIndex columnConverterByIndex = (rs, columnIndex, val) -> columnConvertersOf(val.getClass())._1.apply(rs, columnIndex,
             val);
 
     /**
      * Converts a column value read by label, dispatching to the converter pair registered for the value's runtime class.
      */
-    private static final ColumnConverterByLabel columnConverterByLabel = (rs, columnLabel, val) -> columnConverterGetter.apply(val)._2.apply(rs, columnLabel,
+    private static final ColumnConverterByLabel columnConverterByLabel = (rs, columnLabel, val) -> columnConvertersOf(val.getClass())._2.apply(rs, columnLabel,
             val);
 
     /**
@@ -3073,6 +3154,9 @@ public final class JdbcUtil {
     /**
      * Reads the whole {@link Blob} into a byte array and always frees it, attaching any {@code free()}
      * failure as a suppressed exception so it can never mask the read failure.
+     *
+     * @param blob the non-null JDBC value to read and free, including when reading fails
+     * @return the complete binary contents, or an empty array if the value has zero length
      * @throws SQLException if reading or freeing the value fails, or its length exceeds {@link Integer#MAX_VALUE}.
      */
     static byte[] materializeBlob(final Blob blob) throws SQLException {
@@ -3098,6 +3182,9 @@ public final class JdbcUtil {
     /**
      * Reads the whole {@link Clob} into a string and always frees it, attaching any {@code free()}
      * failure as a suppressed exception so it can never mask the read failure.
+     *
+     * @param clob the non-null JDBC value to read and free, including when reading fails
+     * @return the complete character contents, or an empty string if the value has zero length
      * @throws SQLException if reading or freeing the value fails, or its length exceeds {@link Integer#MAX_VALUE}.
      */
     static String materializeClob(final Clob clob) throws SQLException {
@@ -11561,8 +11648,15 @@ public final class JdbcUtil {
      * Splits a one-, two-, or three-part SQL identifier, preserving dots inside delimited parts and
      * unescaping doubled delimiters. Once a part's opening delimiter ({@code "}, {@code `}, or
      * {@code [}) is closed, only whitespace or the separating dot may follow it.
+     * This parser does not validate the lexical form or reserved-word status of undelimited parts;
+     * callers rendering the result as SQL must perform those checks separately.
+     *
+     * @param qualifiedName the caller-supplied identifier, optionally qualified by schema and catalog
+     * @param argName the argument name used in validation error messages
+     * @return one to three decoded components in their original order; syntactic outer whitespace is removed,
+     *         while whitespace inside delimiters is preserved
      * @throws IllegalArgumentException if {@code qualifiedName} is {@code null}, blank, has empty components,
-     *         unclosed or misplaced delimiters, or more than three components.
+     *         an unclosed delimiter, non-whitespace text after a closed delimited component, or more than three components.
      */
     static String[] splitQualifiedSqlIdentifier(final String qualifiedName, final String argName) throws IllegalArgumentException {
         N.checkArgNotBlank(qualifiedName, argName);
@@ -12007,6 +12101,8 @@ public final class JdbcUtil {
 
     /**
      * Checks if the given exception indicates a "table not exists" error.
+     * Ambiguous SQLState {@code 42501} is not sufficient on its own: a missing-object diagnostic must be present,
+     * so PostgreSQL insufficient-privilege errors are propagated by the calling table operations.
      *
      * @param e The throwable to check.
      * @return {@code true} if the exception indicates a table does not exist, {@code false} otherwise.
@@ -16455,8 +16551,9 @@ public final class JdbcUtil {
      * <p>When invoked, an ID getter for an entity with ID properties rejects a {@code null} entity with
      * {@link IllegalArgumentException}. An ID setter does the same when the supplied ID would assign
      * an entity property. Callbacks for entities without ID properties remain no-ops, and composite-ID
-     * setters still ignore {@code null} or unsupported IDs. A composite {@link EntityId} with no entries matching
-     * entity properties also leaves the entity untouched, except that a single entry (a generated key returned under a
+     * setters still ignore {@code null} or unsupported IDs. Only declared ID properties are assigned; known non-ID
+     * properties in generated-key results are ignored. A composite {@link EntityId} with no entries matching
+     * ID properties also leaves the entity untouched, except that a single entry with an unknown name (a generated key returned under a
      * driver-specific label such as {@code GENERATED_KEY}) is assigned to the ID property declared as database-generated
      * ({@code @ReadOnlyId}, {@code @Id} with {@code @ReadOnly}, or JPA {@code @GeneratedValue}), if exactly one is declared;
      * otherwise it is left unassigned and a warning is logged.</p>
@@ -16537,7 +16634,7 @@ public final class JdbcUtil {
                                     boolean anyPropSet = false;
 
                                     for (final String propName : entityId.keySet()) {
-                                        if ((propInfo = entityInfo.getPropInfo(propName)) != null) {
+                                        if ((propInfo = entityInfo.getPropInfo(propName)) != null && idPropNameList.contains(propInfo.name)) {
                                             N.checkArgNotNull(entity, cs.entity);
                                             propInfo.setPropValue(entity, entityId.get(propName));
                                             anyPropSet = true;
@@ -16611,9 +16708,12 @@ public final class JdbcUtil {
                                                 final PropInfo propInfo = propName == null ? null : entityInfo.getPropInfo(propName);
                                                 final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
 
-                                                return propInfo != null && idPropNameList.contains(propInfo.name)
-                                                        ? id.set(propInfo.name, propInfo.dbType.get(rs, 1))
-                                                        : id.set(columnLabel, JdbcUtil.getColumnValue(rs, 1));
+                                                if (propInfo != null) {
+                                                    // Drivers may return generated non-ID columns too; these must never become an ID fallback.
+                                                    return idPropNameList.contains(propInfo.name) ? id.set(propInfo.name, propInfo.dbType.get(rs, 1)) : id;
+                                                }
+
+                                                return id.set(columnLabel, JdbcUtil.getColumnValue(rs, 1));
                                             } else if (isEntityId) {
                                                 final int columnCount = columnLabels.size();
                                                 final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
@@ -16721,9 +16821,14 @@ public final class JdbcUtil {
      */
     private static void setSingleUnlabeledGeneratedKey(final Class<?> entityClass, final PropInfo generatedIdPropInfo, final EntityId generatedKey,
             final Object entity) throws IllegalArgumentException {
-        N.checkArgNotNull(entity, cs.entity);
-
         final String keyName = generatedKey.keySet().iterator().next();
+
+        // A recognized non-ID property is not an unlabeled generated key, including IDs supplied by a custom extractor.
+        if (ParserUtil.getBeanInfo(entityClass).getPropInfo(keyName) != null) {
+            return;
+        }
+
+        N.checkArgNotNull(entity, cs.entity);
 
         // Only declared metadata identifies the generated column reliably. Guessing from the entity's current values
         // (e.g. "the ID property still holding a default value") can overwrite a valid component: for
@@ -17470,15 +17575,16 @@ public final class JdbcUtil {
      * {@code fullClassMethodName#tableName#daoId#serializedArgs}. Returns {@code null} when a key cannot be generated
      * (in which case the result is not cached).
      *
-     * <p>{@code daoId} identifies the calling DAO proxy, and with it the DAO interface and the {@code DataSource} the
-     * proxy was created with: a cache shared by several DAOs (a thread-local DAO cache scope, or one cache passed to
-     * several {@code createDao} calls) must never return a result produced through another DAO or {@code DataSource}.
+     * <p>{@code daoId} identifies the calling DAO proxy and the {@code DataSource} resolved for this invocation,
+     * including a source selected by an overriding {@code dataSource()} method. A cache shared by several DAOs
+     * (a thread-local DAO cache scope, or one cache passed to several {@code createDao} calls) must never return a
+     * result produced through another DAO or {@code DataSource}.
      * The table name stays between the first and the second separator, where the built-in caches read it to invalidate
      * the entries of an updated table.</p>
      *
      * @param tableName The name of the table the DAO operates on.
      * @param fullClassMethodName The fully qualified name of the DAO method being invoked.
-     * @param daoId The identity token of the DAO proxy making the call.
+     * @param daoId The effective identity token of the calling DAO proxy and its resolved data source.
      * @param args The method arguments. Can be {@code null}.
      * @param daoLogger The logger of the DAO, used to report key-generation failures.
      * @return The cache key, or {@code null} if it cannot be generated.

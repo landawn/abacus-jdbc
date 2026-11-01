@@ -985,6 +985,11 @@ public @interface Query {
      * <p>The default value is {@link JdbcUtil#DEFAULT_BATCH_SIZE}, which is typically optimized for
      * common use cases and provides a good balance between performance and resource usage.</p>
      *
+     * <p>This setting limits the number of statements submitted in each driver batch, not the total memory
+     * retained by the invocation. The caller's input collection remains live until the operation completes;
+     * returned generated keys and entity-ID snapshots needed for rollback also grow with the full input size.
+     * Reducing the batch size does not bound those allocations.</p>
+     *
      * <p>A {@link com.landawn.abacus.query.SqlMapper#BATCH_SIZE} attribute on an externally mapped SQL entry overrides this value, and
      * an optional second {@code int} statement parameter overrides both at invocation time.
      * A resolved value of zero uses {@link JdbcUtil#DEFAULT_BATCH_SIZE}; a negative value fails
@@ -1018,7 +1023,7 @@ public @interface Query {
      *        batch = true, batchSize = 2000)
      * void insertMetrics(List<Metric> metrics) throws SQLException;
      *
-     * // Optimize for low memory (small row size but many rows)
+     * // Batch many small rows when the available buffering budget permits it
      * @Query(value = "INSERT INTO simple_logs (timestamp, message) VALUES (:timestamp, :message)",
      *        batch = true, batchSize = 10000)
      * void insertLogs(List<LogEntry> logs) throws SQLException;

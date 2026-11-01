@@ -52,6 +52,10 @@ final class RollbackActionLog {
     /** The number of savepoint marks among {@link #entries}. */
     private int marks;
 
+    /** Creates an empty rollback log with no savepoint marks. */
+    RollbackActionLog() {
+    }
+
     /**
      * Appends an action without a tag.
      *
@@ -357,6 +361,14 @@ final class RollbackActionLog {
          */
         private static final Object[] UNKNOWN = {};
 
+        /**
+         * Captures the current ID values while retaining only weak references to their entities.
+         *
+         * @param entities the entities whose IDs are captured
+         * @param idPropNameList the ID properties to capture, in restoration order
+         * @param entityInfo the bean metadata used to read and restore those properties
+         * @throws IllegalArgumentException if an entity is {@code null}
+         */
         IdSnapshot(final Collection<?> entities, final List<String> idPropNameList, final BeanInfo entityInfo) {
             idPropInfos = new PropInfo[idPropNameList.size()];
 
@@ -450,27 +462,63 @@ final class RollbackActionLog {
         /**
          * Puts back every captured ID value that has changed since the capture. An unchanged value is not written, so an
          * immutable entity whose ID was not changed does not fail. Once the written values are recorded, an entity whose ID
-         * values no longer equal them is left alone: the application has set another ID since, which putting back the captured
-         * one overwrote; so is one whose written values could not be read (see {@link #recordWrittenValues()}).
+         * values no longer equal them is left alone, so restoring the captured ID does not overwrite a later application edit.
+         * An entity whose written values could not be read is also left alone (see {@link #recordWrittenValues()}).
+         * A failing accessor does not prevent restoring other eligible properties or entities. The first failure is
+         * rethrown after the remaining restorations have been attempted, with later failures suppressed.
          */
         @Override
         public void run() {
+            Throwable firstFailure = null;
+
             for (int i = 0; i < entityRefs.length; i++) {
                 final Object entity = entityRefs[i].get();
 
-                if (entity == null
-                        || (writtenValues != null && writtenValues[i] != null && (writtenValues[i] == UNKNOWN || !holdsValues(entity, writtenValues[i])))) {
+                if (entity == null) {
+                    continue;
+                }
+
+                try {
+                    if (writtenValues != null && writtenValues[i] != null && (writtenValues[i] == UNKNOWN || !holdsValues(entity, writtenValues[i]))) {
+                        continue;
+                    }
+                } catch (final RuntimeException | Error e) {
+                    // Without a readable current ID, this entity cannot safely be distinguished from an application edit.
+                    firstFailure = accumulateFailure(firstFailure, e);
                     continue;
                 }
 
                 final Object[] values = idValues[i];
 
                 for (int j = 0; j < values.length; j++) {
-                    if (!N.equals(idPropInfos[j].getPropValue(entity), values[j])) {
-                        idPropInfos[j].setPropValue(entity, values[j]);
+                    try {
+                        if (!N.equals(idPropInfos[j].getPropValue(entity), values[j])) {
+                            idPropInfos[j].setPropValue(entity, values[j]);
+                        }
+                    } catch (final RuntimeException | Error e) {
+                        // One batch snapshot covers many IDs; a broken accessor must not leave all later IDs assigned.
+                        firstFailure = accumulateFailure(firstFailure, e);
                     }
                 }
             }
+
+            if (firstFailure instanceof final Error error) {
+                throw error;
+            } else if (firstFailure != null) {
+                throw (RuntimeException) firstFailure;
+            }
+        }
+
+        private static Throwable accumulateFailure(final Throwable first, final Throwable next) {
+            if (first == null) {
+                return next;
+            }
+
+            if (first != next) {
+                first.addSuppressed(next);
+            }
+
+            return first;
         }
 
         private boolean holdsValues(final Object entity, final Object[] values) {

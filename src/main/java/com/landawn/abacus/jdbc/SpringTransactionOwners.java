@@ -199,6 +199,12 @@ final class SpringTransactionOwners {
         /** A failed completion needs either a later clean completion report or explicit confirmation of settlement. */
         private volatile boolean uncertain; //NOSONAR
 
+        /**
+         * Creates an owner whose execution lifetime can be checked independently of completion callbacks.
+         *
+         * @param executionEnded reports whether Spring has ended the transaction's execution
+         * @param transactionName the diagnostic transaction name; {@code null} becomes an empty name
+         */
         Owner(final BooleanSupplier executionEnded, final String transactionName) {
             this.executionEnded = executionEnded;
             this.transactionName = transactionName == null ? "" : transactionName;
@@ -247,7 +253,11 @@ final class SpringTransactionOwners {
             return completed;
         }
 
-        /** Returns whether a warning may be due, without taking a lock or invoking the logger. */
+        /**
+         * Returns whether a warning may be due, without taking a lock or invoking the logger.
+         *
+         * @return {@code true} if the outcome is unresolved and no warning has yet been recorded
+         */
         boolean needsWarning() {
             return !warned && isUnresolved();
         }
@@ -550,7 +560,13 @@ final class SpringTransactionOwners {
         return ownersByTransaction.get(transaction);
     }
 
-    /** Requires an owner for a participating scope; a late synchronization cannot identify its lifetime reliably. */
+    /**
+     * Requires an owner for a participating scope; a late synchronization cannot identify its lifetime reliably.
+     *
+     * @param holder the connection holder of the transaction being joined
+     * @return the recorded transaction owner
+     * @throws IllegalStateException if no owner is known for the holder
+     */
     static Owner require(final Object holder) {
         final Owner owner = of(holder);
         if (owner == null) {

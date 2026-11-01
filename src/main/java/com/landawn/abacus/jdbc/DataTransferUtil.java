@@ -167,6 +167,10 @@ import com.landawn.abacus.util.Throwables;
  * try-with-resources: if closing it fails, that failure is thrown when the operation otherwise succeeded, and is
  * attached as a suppressed exception to the operation's own failure otherwise.</p>
  *
+ * <p>Data-source connections are acquired through {@link JdbcUtil#getConnection(javax.sql.DataSource)}, which does not
+ * look up this library's current {@link SqlTransaction}. Pass {@link SqlTransaction#connection()} explicitly to enlist a
+ * transfer in that transaction. Spring's connection acquisition rules still apply to data-source overloads.</p>
+ *
  * <p><b>Same source and target connection:</b> On MySQL/MariaDB, copies normally stream the source rows
  * ({@code setFetchSize(Integer.MIN_VALUE)}), and those drivers cannot run the target batch inserts on a connection
  * whose streaming result set is still open. The source and target count as the same connection when they are the
@@ -2276,11 +2280,11 @@ public final class DataTransferUtil {
     }
 
     /**
-     * Parses one CSV data line into {@code output}, converting a field-count overflow into an
+     * Parses one CSV data record into {@code output}, converting a field-count overflow into an
      * {@link IllegalArgumentException}.
      *
      * @param lineParser the CSV line parser that tokenizes {@code line} into {@code output}
-     * @param line the raw CSV line to parse
+     * @param line the raw CSV record to parse; it may contain line breaks inside quoted fields
      * @param output the array receiving the parsed column values; sized to the header's column count
      * @throws IllegalArgumentException if the line contains more fields than the header has columns
      * @throws ParsingException if {@code lineParser} cannot parse {@code line}, for example because it contains an unterminated quoted field

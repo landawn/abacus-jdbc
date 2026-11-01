@@ -427,8 +427,8 @@ public final class DBLock implements AutoCloseable {
      *         could not be acquired within the default timeout, or if the calling thread was interrupted
      *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has already been closed, or is closed
-     *         concurrently with a successful acquisition: the row just inserted is then deleted again and
-     *         no lock code is returned.
+     *         concurrently with a successful acquisition: deletion of the inserted row is attempted and no lock
+     *         code is returned. If deletion fails, the row remains until it expires or is reclaimed as stale.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty.
      * @see #tryLock(String, long, long)
      * @see #DEFAULT_LOCK_LIVE_TIME
@@ -474,8 +474,8 @@ public final class DBLock implements AutoCloseable {
      *         could not be acquired within the specified timeout, or if the calling thread was interrupted
      *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has already been closed, or is closed
-     *         concurrently with a successful acquisition: the row just inserted is then deleted again and
-     *         no lock code is returned.
+     *         concurrently with a successful acquisition: deletion of the inserted row is attempted and no lock
+     *         code is returned. If deletion fails, the row remains until it expires or is reclaimed as stale.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty, or {@code timeout} is negative.
      * @see #tryLock(String, long, long)
      * @see #DEFAULT_LOCK_LIVE_TIME
@@ -526,8 +526,8 @@ public final class DBLock implements AutoCloseable {
      *         could not be acquired within the specified timeout, or if the calling thread was interrupted
      *         while waiting (in which case the thread's interrupt status is preserved).
      * @throws IllegalStateException if this {@code DBLock} instance has already been closed, or is closed
-     *         concurrently with a successful acquisition: the row just inserted is then deleted again and
-     *         no lock code is returned.
+     *         concurrently with a successful acquisition: deletion of the inserted row is attempted and no lock
+     *         code is returned. If deletion fails, the row remains until it expires or is reclaimed as stale.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
      *         {@code liveTime} is not positive, or {@code timeout} is negative.
      * @see #tryLock(String, long, long, long)
@@ -591,8 +591,8 @@ public final class DBLock implements AutoCloseable {
      *         preserved). An exception from an individual acquisition attempt is logged, not thrown; an {@link Error}
      *         (for example a driver {@link LinkageError}) propagates.
      * @throws IllegalStateException if this {@code DBLock} instance has already been closed, or is closed
-     *         concurrently with a successful acquisition: the row just inserted is then deleted again and
-     *         no lock code is returned.
+     *         concurrently with a successful acquisition: deletion of the inserted row is attempted and no lock
+     *         code is returned. If deletion fails, the row remains until it expires or is reclaimed as stale.
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
      *         {@code liveTime} is not positive, or {@code timeout} or {@code retryInterval} is negative.
      */

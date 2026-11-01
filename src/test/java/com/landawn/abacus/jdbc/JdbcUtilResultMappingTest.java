@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
@@ -1204,6 +1205,58 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         assertEquals(42, entity.getEntityId());
     }
 
+    @Test
+    void generatedIdSetter_extraNonIdColumn_preservesEntityData() throws SQLException {
+        final var accessors = JdbcUtil.<EntityId> getIdGeneratorGetterSetter(CrudDao.class, CompositeIdEntity.class, NamingPolicy.SNAKE_CASE, EntityId.class);
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getLong(1)).thenReturn(5L);
+        when(rs.getLong(2)).thenReturn(42L);
+        when(rs.getString(3)).thenReturn("database value");
+        final CompositeIdEntity entity = new CompositeIdEntity();
+        entity.setName("caller value");
+
+        accessors._3.accept(accessors._1.apply(rs, List.of("TENANT_ID", "ENTITY_ID", "NAME")), entity);
+
+        assertEquals(5L, entity.getTenantId());
+        assertEquals(42L, entity.getEntityId());
+        assertEquals("caller value", entity.getName());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void generatedIdSetter_knownNonIdProperty_isNotUsedAsUnlabeledKey(final boolean recordId) {
+        final var accessors = JdbcUtil.<Object> getIdGeneratorGetterSetter(CrudDao.class, GeneratedIdAndPayloadEntity.class, NamingPolicy.SNAKE_CASE,
+                recordId ? RecordId.class : EntityId.class);
+        final GeneratedIdAndPayloadEntity entity = new GeneratedIdAndPayloadEntity();
+        entity.setTenantId(5);
+        entity.setPayload(9);
+
+        accessors._3.accept(EntityId.of("payload", 77L), entity);
+
+        assertEquals(5L, entity.getTenantId());
+        assertEquals(0L, entity.getEntityId());
+        assertEquals(9L, entity.getPayload());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void generatedIdExtractor_singleMappedNonIdColumn_doesNotPopulateGeneratedId(final boolean recordId) throws SQLException {
+        final var accessors = JdbcUtil.<Object> getIdGeneratorGetterSetter(CrudDao.class, GeneratedIdAndPayloadEntity.class, NamingPolicy.SNAKE_CASE,
+                recordId ? RecordId.class : EntityId.class);
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getObject(1)).thenReturn(77L);
+        final GeneratedIdAndPayloadEntity entity = new GeneratedIdAndPayloadEntity();
+        entity.setTenantId(5);
+        entity.setPayload(9);
+
+        accessors._3.accept(accessors._1.apply(rs, List.of("PAYLOAD_NO")), entity);
+
+        assertEquals(5L, entity.getTenantId());
+        assertEquals(0L, entity.getEntityId());
+        assertEquals(9L, entity.getPayload());
+        verify(rs, never()).getObject(1);
+    }
+
     // BUG FIX: MySQL returns the AUTO_INCREMENT part of a composite key as a single GENERATED_KEY column. It used to be
     // attributed to the FIRST id property (overwriting the caller's tenantId), and then to "the only id property still
     // holding a default value", which also corrupts a valid zero component: for (tenantId = 0, entityId = 9 supplied
@@ -1525,6 +1578,19 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
 
         public void setEntityId(final long entityId) {
             this.entityId = entityId;
+        }
+    }
+
+    public static class GeneratedIdAndPayloadEntity extends ReadOnlyIdCompositeEntity {
+        @com.landawn.abacus.annotation.Column("PAYLOAD_NO")
+        private long payload;
+
+        public long getPayload() {
+            return payload;
+        }
+
+        public void setPayload(final long payload) {
+            this.payload = payload;
         }
     }
 

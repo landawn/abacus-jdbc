@@ -294,10 +294,20 @@ final class TransactionContext {
         }
     }
 
+    /**
+     * Returns the identifier used in transaction diagnostics, including its creation time.
+     *
+     * @return the transaction's diagnostic identifier
+     */
     String id() {
         return _timedId;
     }
 
+    /**
+     * Verifies that the current thread owns this transaction context.
+     *
+     * @throws IllegalStateException if called from another thread
+     */
     void assertOwnerThread() throws IllegalStateException {
         if (_key.thread != Thread.currentThread()) {
             throw new IllegalStateException("Transaction(id=" + _timedId + ") is bound to thread '" + _key.thread.getName()
@@ -305,6 +315,12 @@ final class TransactionContext {
         }
     }
 
+    /**
+     * Returns the shared connection after checking thread ownership, without checking completion.
+     *
+     * @return the transaction's connection reference, which must only be used while its transaction is open
+     * @throws IllegalStateException if called from another thread
+     */
     Connection connection() throws IllegalStateException {
         assertOwnerThread();
 
@@ -320,10 +336,20 @@ final class TransactionContext {
         return _isolationLevel;
     }
 
+    /**
+     * Returns the physical transaction or Spring-participation state tracked by this context.
+     *
+     * @return the current transaction status
+     */
     Status status() {
         return _status;
     }
 
+    /**
+     * Returns whether this context participates in a transaction whose completion belongs to Spring.
+     *
+     * @return {@code true} for a Spring-participating context
+     */
     boolean isSpringParticipating() {
         return _springParticipating;
     }
@@ -1502,6 +1528,12 @@ final class TransactionContext {
 
     /**
      * Runs {@code cmd} with this transaction unregistered from the thread: see {@link SqlTransaction#runOutsideTransaction}.
+     *
+     * @param <E> the exception type the command may throw
+     * @param cmd the command to execute outside this transaction
+     * @throws IllegalStateException if called from another thread or the command leaves another transaction open
+     * @throws IllegalArgumentException if {@code cmd} is {@code null}
+     * @throws E if the command fails
      */
     <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws IllegalStateException, IllegalArgumentException, E {
         assertOwnerThread();
@@ -1515,6 +1547,14 @@ final class TransactionContext {
 
     /**
      * Calls {@code cmd} with this transaction unregistered from the thread: see {@link SqlTransaction#callOutsideTransaction}.
+     *
+     * @param <R> the command's result type
+     * @param <E> the exception type the command may throw
+     * @param cmd the command to execute outside this transaction
+     * @return the command's result
+     * @throws IllegalStateException if called from another thread or the command leaves another transaction open
+     * @throws IllegalArgumentException if {@code cmd} is {@code null}
+     * @throws E if the command fails
      */
     <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<? extends R, E> cmd) throws IllegalStateException, IllegalArgumentException, E {
         assertOwnerThread();

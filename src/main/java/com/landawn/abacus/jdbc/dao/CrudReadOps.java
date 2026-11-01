@@ -926,8 +926,16 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         return N.distinctBy(ids, id -> declaredIdValuesKey(id, idPropNameList));
     }
 
-    // De-duplication key of a composite id (EntityId, Map, bean or record): its values for the declared id properties, the
-    // ones DaoUtil.idsToCondition matches on. Null and other elements are returned as they are.
+    /**
+     * Builds a de-duplication key from only the declared ID properties of an {@link EntityId}, map, bean, or record.
+     * The values follow {@code idPropNameList} order and are compared by content, including array-valued components,
+     * consistently with the properties matched by {@link DaoUtil#idsToCondition}. Missing properties contribute
+     * {@code null}; callers validate composite IDs before de-duplicating them.
+     *
+     * @param id the composite identifier; may be {@code null}
+     * @param idPropNameList the declared ID property names, in comparison order; must not be {@code null}
+     * @return the content-comparison key, or {@code id} itself when it is {@code null} or is not an entity ID, map, bean, or record
+     */
     static Object declaredIdValuesKey(final Object id, final List<String> idPropNameList) {
         final Object[] idPropValues = new Object[idPropNameList.size()];
 

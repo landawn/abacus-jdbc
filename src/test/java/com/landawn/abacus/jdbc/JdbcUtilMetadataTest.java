@@ -458,6 +458,45 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
     }
 
     @Test
+    void tableExists_permissionDeniedDuringProbe_preservesFailureAndRestoresSavepoint() throws SQLException {
+        final SQLException failure = new SQLException("permission denied for table users", "42501");
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockPreparedStatement.execute()).thenThrow(failure);
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, () -> JdbcUtil.tableExists(mockConnection, "users")).getCause());
+
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+        verify(mockPreparedStatement).close();
+    }
+
+    @Test
+    void dropTableIfExists_permissionDenied_preservesFailure() throws SQLException {
+        final ResultSet tables = mock(ResultSet.class);
+        final SQLException failure = new SQLException("must be owner of table users", "42501");
+        when(mockDatabaseMetaData.getTables(null, null, "users", null)).thenReturn(tables);
+        when(tables.next()).thenReturn(true);
+        when(mockPreparedStatement.execute()).thenThrow(failure);
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, () -> JdbcUtil.dropTableIfExists(mockConnection, "users")).getCause());
+
+        verify(mockConnection).prepareStatement("DROP TABLE users");
+        verify(mockPreparedStatement).close();
+    }
+
+    @Test
+    void tableExists_hsqlMissingObjectDiagnostic_stillReturnsFalse() throws SQLException {
+        when(mockPreparedStatement.execute()).thenThrow(new SQLException("user lacks privilege or object not found: USERS", "42501", -5501));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "users"));
+
+        verify(mockPreparedStatement).close();
+    }
+
+    @Test
     void tableExistsDataSourceRejectsMalformedNameBeforeAcquiringConnection() throws SQLException {
         assertThrows(IllegalArgumentException.class, () -> JdbcUtil.tableExists(mockDataSource, "a..b"));
         assertThrows(IllegalArgumentException.class, () -> JdbcUtil.tableExists(mockDataSource, "a.b.c.d"));

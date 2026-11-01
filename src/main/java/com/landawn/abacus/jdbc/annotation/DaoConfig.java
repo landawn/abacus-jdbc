@@ -189,7 +189,9 @@ public @interface DaoConfig {
      * can be performed when the join key value is {@code null} or the type's default value.
      * When {@code false} (default), an {@code IllegalArgumentException} is thrown at runtime if a
      * {@code null} or default join key is encountered. When {@code true}, the join query is executed with the
-     * null/default key (typically loading no join entities) instead of raising an error.
+     * null/default key instead of raising an error. The generated predicates still use SQL equality: a null key, or
+     * any null component of a composite key, matches no joined row. A non-null default such as numeric zero can
+     * match a row storing that value.
      *
      * <p>This applies to the built-in join methods provided by {@code JoinEntityHelper}
      * (for example, {@code loadJoinEntities}, {@code loadAllJoinEntities}, and the

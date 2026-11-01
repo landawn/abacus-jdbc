@@ -35,8 +35,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * as it can lead to stale data issues if not managed properly.</p>
  *
  * <p>The cache key is automatically derived from the fully-qualified method name, the DAO's table name,
- * the identity of the DAO proxy (so DAOs of different interfaces or {@code DataSource}s that share a cache never
- * share entries) and the serialized method arguments; when the arguments cannot be serialized, a warning is logged
+ * the identity of the DAO proxy and its invocation's {@code DataSource} (including a source selected by an overriding
+ * {@code dataSource()} method), and the serialized method arguments; when the arguments cannot be serialized, a warning is logged
  * and the result is not cached. Results are cached after the first execution and returned from cache for subsequent
  * calls with the same parameters until the cache expires or is invalidated. A {@code null}
  * method result is not cached; use an empty {@code Optional}, collection, or other non-null
