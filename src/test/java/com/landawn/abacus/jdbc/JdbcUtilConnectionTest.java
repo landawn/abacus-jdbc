@@ -72,6 +72,26 @@ class JdbcUtilConnectionTest extends JdbcUtilTestSupport {
 
         // Sanity: legitimate PostgreSQL URL still resolves to the PostgreSQL driver.
         assertResolvesToVendorDriver(m, "jdbc:postgresql://host:5432/anything", "postgresql", "org.postgresql.Driver");
+
+        assertResolvesToVendorDriver(m, "jdbc:oracle:thin:@localhost:1521:db", "oracle", "oracle.jdbc.driver.OracleDriver");
+    }
+
+    @Test
+    void hikariCreationFailuresPreserveTheirCauses() {
+        final RuntimeException basic = assertThrows(RuntimeException.class, () -> JdbcUtil.createHikariDataSource("jdbc:abacus-no-driver:test", "u", "p"));
+        assertNotNull(basic.getCause());
+
+        final RuntimeException configured = assertThrows(RuntimeException.class,
+                () -> JdbcUtil.createHikariDataSource("jdbc:abacus-no-driver:test", "u", "p", 0, 1));
+        assertNotNull(configured.getCause());
+    }
+
+    @Test
+    void createConnection_driverFailure_wrapsSqlException() {
+        final com.landawn.abacus.exception.UncheckedSQLException thrown = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> JdbcUtil.createConnection(org.h2.Driver.class, "jdbc:abacus-no-driver:test", "u", "p"));
+
+        assertTrue(thrown.getCause() instanceof SQLException);
     }
 
     @Test

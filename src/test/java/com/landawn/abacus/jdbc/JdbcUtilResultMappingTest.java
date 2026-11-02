@@ -541,6 +541,33 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
     }
 
     @Test
+    void extractDataWithFilterAndExtractorTransformsRows() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn(7);
+
+        final Dataset data = JdbcUtil.extractData(mockResultSet, rs -> true, (rs, row) -> Arrays.fill(row, 0L));
+
+        assertEquals(List.of("id"), data.columnNames());
+        assertEquals(List.of(0L), data.getColumn(0));
+    }
+
+    @Test
+    void extractDataWithOffsetCountFilterAndOwnershipDelegates() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn(7);
+
+        final Dataset data = JdbcUtil.extractData(mockResultSet, 0, 1, rs -> true, false);
+
+        assertEquals(List.of("id"), data.columnNames());
+        assertEquals(List.of(7), data.getColumn(0));
+        verify(mockResultSet, never()).close();
+    }
+
+    @Test
     public void testExtractionHonorsOwnershipWhenDateTypeDetectionThrowsError() throws SQLException {
         final AssertionError failure = new AssertionError("driver linkage failed");
         final ResultSet owned = mock(ResultSet.class);

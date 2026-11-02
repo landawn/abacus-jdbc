@@ -36,6 +36,47 @@ import com.landawn.abacus.query.ParsedSql;
 class JdbcUtilParameterBindingTest extends JdbcUtilTestSupport {
 
     @Test
+    void setParametersWithMissingTypeMetadataBindsByValue() throws SQLException {
+        JdbcUtil.setParameters(mockPreparedStatement, 1, new Object[] { "x" }, new com.landawn.abacus.type.Type[] { null });
+        JdbcUtil.setParameters(mockPreparedStatement, 1, new Object[] { null }, new com.landawn.abacus.type.Type[0]);
+
+        verify(mockPreparedStatement).setObject(1, "x");
+        verify(mockPreparedStatement).setObject(1, null);
+    }
+
+    @Test
+    void parameterValidationRejectsMissingNamesAndShortValues() {
+        final ParsedSql missingName = ParsedSql.parse("SELECT :missing");
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.setParameters(missingName, mockPreparedStatement, new Object[] { new TestEntity() }));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.setParameters(missingName, mockPreparedStatement, new Object[] { java.util.Map.of() }));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.setParameters(missingName, mockPreparedStatement, new Object[] { com.landawn.abacus.util.EntityId.of("other", 1) }));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.setParameters(ParsedSql.parse("SELECT ?, ?"), mockPreparedStatement, new Object[] { 1 }));
+    }
+
+    @Test
+    void batchParameterValidationReturnsForZeroParameters() {
+        assertDoesNotThrow(() -> JdbcUtil.checkBatchParameters(ParsedSql.parse("SELECT 1"), List.of()));
+    }
+
+    @Test
+    void namedQueryRejectsPositionalPlaceholder() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.prepareNamedQuery(mockConnection, ParsedSql.parse("SELECT :value, ?")));
+    }
+
+    @Test
+    void freeArrayQuietlyIgnoresDriverFailure() throws Exception {
+        final java.lang.reflect.Method method = JdbcUtil.class.getDeclaredMethod("freeQuietly", java.sql.Array.class);
+        method.setAccessible(true);
+        final java.sql.Array array = mock(java.sql.Array.class);
+        doThrow(new SQLException("free failed")).when(array).free();
+
+        assertDoesNotThrow(() -> method.invoke(null, array));
+        verify(array).free();
+    }
+
+    @Test
     public void testPrepareQuery() throws SQLException {
         String sql = "SELECT * FROM users WHERE id = ?";
 

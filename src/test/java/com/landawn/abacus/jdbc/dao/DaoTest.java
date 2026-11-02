@@ -743,6 +743,21 @@ public class DaoTest extends TestBase {
     }
 
     @Test
+    void updateEntityWithConditionUsesAllUpdatableProperties() throws SQLException {
+        final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
+        final TestEntity entity = new TestEntity();
+        entity.setId(1L);
+        entity.setName("updated");
+        final Condition condition = Mockito.mock(Condition.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        when(dao.update(ArgumentMatchers.same(entity), ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.same(condition))).thenReturn(1);
+
+        assertEquals(1, dao.update(entity, condition));
+
+        verify(dao).update(ArgumentMatchers.same(entity), argThat(props -> props.containsAll(List.of("id", "name"))), ArgumentMatchers.same(condition));
+    }
+
+    @Test
     public void testNotExists() throws SQLException {
         final TestDao dao = Mockito.mock(TestDao.class, Mockito.CALLS_REAL_METHODS);
         final Condition cond = Mockito.mock(Condition.class);

@@ -707,6 +707,43 @@ public class DBLockTest extends TestBase {
     }
 
     @Test
+    void initializationSqlFailureWrapsAndClosesConnection() throws Exception {
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+        final java.sql.DatabaseMetaData metadata = mock(java.sql.DatabaseMetaData.class);
+        final java.sql.SQLException failure = new java.sql.SQLException("create lock table failed");
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.getAutoCommit()).thenReturn(true);
+        when(connection.getMetaData()).thenReturn(metadata);
+        when(metadata.getDatabaseProductName()).thenReturn("H2");
+        when(metadata.getDatabaseProductVersion()).thenReturn("2");
+        when(metadata.getIdentifierQuoteString()).thenReturn("\"");
+        when(connection.prepareStatement(anyString())).thenThrow(failure);
+
+        final com.landawn.abacus.exception.UncheckedSQLException thrown = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> new DBLock(dataSource, "test_lock"));
+
+        assertEquals(failure, thrown.getCause());
+        verify(connection).close();
+    }
+
+    @Test
+    void lockConnectionConfigurationAndCloseFailuresAreSuppressed() throws Exception {
+        final LockFixture fixture = newLockFixture();
+        final java.sql.SQLException setupFailure = new java.sql.SQLException("auto-commit setup failed");
+        final java.sql.SQLException closeFailure = new java.sql.SQLException("close failed");
+        org.mockito.Mockito.doThrow(setupFailure).when(fixture.connection).setAutoCommit(true);
+        org.mockito.Mockito.doThrow(closeFailure).when(fixture.connection).close();
+
+        final com.landawn.abacus.exception.UncheckedSQLException thrown = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> fixture.lock.unlock("resource", "code"));
+
+        assertEquals(setupFailure, thrown.getCause());
+        assertEquals(1, setupFailure.getSuppressed().length);
+        assertEquals(closeFailure, setupFailure.getSuppressed()[0]);
+    }
+
+    @Test
     public void testLockConnectionConfigurationFailureClosesConnection() throws Exception {
         final LockFixture fixture = newLockFixture();
         final java.sql.SQLException failure = new java.sql.SQLException("auto-commit setup failed");

@@ -26,6 +26,9 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.type.Type;
@@ -194,6 +197,107 @@ public class DataTransferArgumentValidationTest extends TestBase {
 
         assertEquals(0, DataTransferUtil.importFrom(dataset).columns(null).columnTypes(null).to(stmt));
         verifyNoInteractions(stmt);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidBatchConfigurations")
+    void invalidBatchConfigurationIsRejected(final String name, final Executable action) {
+        assertArgument("batchSize", action);
+    }
+
+    private static java.util.stream.Stream<Arguments> invalidBatchConfigurations() {
+        final Dataset dataset = Dataset.rows(List.of("id"), new Object[0][]);
+        final Connection conn = mock(Connection.class);
+        final DataSource sourceDs = mock(DataSource.class);
+        final DataSource targetDs = mock(DataSource.class);
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        final Iterator<Object> iter = Collections.emptyIterator();
+        final File file = new File("unused.csv");
+        final Reader reader = new java.io.StringReader("id\n");
+        final Predicate<Object[]> filter = row -> true;
+        final Predicate<String[]> csvFilter = row -> true;
+        final String sql = "INSERT INTO users VALUES (?)";
+        final String select = "SELECT id FROM users";
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> rowSetter = (query, row) -> {
+        };
+        final Throwables.BiConsumer<PreparedQuery, Object, SQLException> iterSetter = (query, row) -> {
+        };
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> csvSetter = (query, row) -> {
+        };
+        final Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> copySetter = (query, rs) -> {
+        };
+
+        return java.util.stream.Stream.of(
+                batchCase("filtered dataset with types through connection", () -> DataTransferUtil.importData(dataset, filter, conn, sql, 0, 0, Map.of())),
+                batchCase("filtered dataset with custom setter through connection",
+                        () -> DataTransferUtil.importData(dataset, filter, conn, sql, 0, 0, rowSetter)),
+                batchCase("selected filtered dataset through statement", () -> DataTransferUtil.importData(dataset, List.of("id"), filter, stmt, 0, 0)),
+                batchCase("filtered dataset with types through statement", () -> DataTransferUtil.importData(dataset, filter, stmt, 0, 0, Map.of())),
+                batchCase("filtered dataset with custom setter through statement", () -> DataTransferUtil.importData(dataset, filter, stmt, 0, 0, rowSetter)),
+                batchCase("iterator through connection", () -> DataTransferUtil.importData(iter, conn, sql, 0, 0, iterSetter)),
+                batchCase("iterator through statement", () -> DataTransferUtil.importData(iter, stmt, 0, 0, iterSetter)),
+                batchCase("CSV file through connection", () -> DataTransferUtil.importCsv(file, conn, sql, 0, 0, csvSetter)),
+                batchCase("filtered CSV file through statement", () -> DataTransferUtil.importCsv(file, csvFilter, stmt, 0, 0, csvSetter)),
+                batchCase("filtered CSV reader through statement", () -> DataTransferUtil.importCsv(reader, csvFilter, stmt, 0, 0, csvSetter)),
+                batchCase("copy through data sources", () -> DataTransferUtil.copy(sourceDs, select, 10, targetDs, sql, 0, 0, copySetter)),
+                batchCase("copy through connections", () -> DataTransferUtil.copy(conn, select, 10, conn, sql, 0, 0, copySetter)),
+                batchCase("dataset builder", () -> DataTransferUtil.importFrom(dataset).batchSize(0).to(stmt)),
+                batchCase("row builder", () -> DataTransferUtil.importFrom(iter).batchSize(0).parameterSetter(iterSetter).to(stmt)));
+    }
+
+    @Test
+    void buildersRejectMissingSources() {
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+
+        final IllegalStateException importFailure = assertThrows(IllegalStateException.class,
+                () -> new DataTransferUtil.RowImportBuilder<Object>(null, null, null).to(stmt));
+        assertTrue(importFailure.getMessage().contains("Exactly one of 'iter', 'reader' or 'file'"));
+
+        final IllegalStateException exportFailure = assertThrows(IllegalStateException.class,
+                () -> new DataTransferUtil.CsvExportBuilder(null, null, null, null, null).to(new StringWriter()));
+        assertTrue(exportFailure.getMessage().contains("Exactly one of 'dataSource', 'conn', 'stmt' or 'rs'"));
+    }
+
+    @Test
+    void importRejectsMissingColumnInMultiColumnSelection() {
+        final Dataset dataset = Dataset.rows(List.of("id"), new Object[0][]);
+        final Connection conn = mock(Connection.class);
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importData(dataset, List.of("id", "missing"), conn, "INSERT INTO users VALUES (?, ?)"));
+
+        assertTrue(failure.getMessage().contains("Column 'missing' is not found"));
+        verifyNoInteractions(conn);
+    }
+
+    @Test
+    void exportCsvWrapsOutputOpenFailure() throws SQLException {
+        final ResultSet rs = mock(ResultSet.class);
+        final ResultSetMetaData metadata = mock(ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(0);
+        final File output = new File("target/missing-parent-" + System.nanoTime() + "/output.csv");
+
+        final java.io.UncheckedIOException failure = assertThrows(java.io.UncheckedIOException.class, () -> DataTransferUtil.exportCsv(rs, output));
+
+        assertTrue(failure.getCause() instanceof java.io.IOException);
+    }
+
+    @Test
+    void copyWithEmptyColumnsDelegatesToAllColumnOverload() throws SQLException {
+        final DataSource sourceDs = mock(DataSource.class);
+        final DataSource targetDs = mock(DataSource.class);
+        final SQLException failure = new SQLException("stop after delegation");
+        when(sourceDs.getConnection()).thenThrow(failure);
+
+        final org.springframework.jdbc.CannotGetJdbcConnectionException thrown = assertThrows(org.springframework.jdbc.CannotGetJdbcConnectionException.class,
+                () -> DataTransferUtil.copy(sourceDs, targetDs, "users", "users_copy", List.of(), 1));
+
+        assertEquals(failure, thrown.getCause());
+    }
+
+    private static Arguments batchCase(final String name, final Executable action) {
+        return Arguments.of(name, action);
     }
 
     private static void assertArgument(final String parameterName, final Executable action) {

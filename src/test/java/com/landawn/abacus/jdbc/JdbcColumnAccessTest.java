@@ -349,12 +349,13 @@ class JdbcColumnAccessTest extends JdbcTestSupport {
     }
 
     @Test
-    public void testColumnOneSet_ByType() {
-        // Just creating the setter covers the factory method lambda creation line
+    public void testColumnOneSet_ByType() throws SQLException {
         @SuppressWarnings("rawtypes")
         com.landawn.abacus.type.Type<String> stringType = com.landawn.abacus.type.TypeFactory.getType(String.class);
         Jdbc.BiParametersSetter<AbstractQuery, String> setter = Jdbc.Columns.ColumnOne.set(stringType);
 
-        assertNotNull(setter);
+        setter.accept(new PreparedQuery(mockPreparedStatement), "value");
+
+        verify(mockPreparedStatement).setString(1, "value");
     }
 }

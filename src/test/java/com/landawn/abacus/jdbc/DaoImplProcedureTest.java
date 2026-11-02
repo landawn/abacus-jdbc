@@ -127,6 +127,111 @@ class DaoImplProcedureTest extends JdbcUtilTestSupport {
         verify(mockConnection).close();
     }
 
+    @Test
+    void collectionAsSingleParameterBindsScalarProcedureInput() throws SQLException {
+        final Jdbc.OutParamResult result = dao.singleInput(7);
+
+        assertTrue(result.getOutParamValues().isEmpty());
+        verify(mockCallableStatement).setInt(1, 7);
+        verify(mockCallableStatement).execute();
+        verify(mockCallableStatement).close();
+        verify(mockConnection).close();
+    }
+
+    @Test
+    void procedureFragmentParametersBindByPosition() throws SQLException {
+        final Jdbc.OutParamResult result = dao.positionalWithFragment("?", 7, "seven");
+
+        assertTrue(result.getOutParamValues().isEmpty());
+        verify(mockCallableStatement).setInt(1, 7);
+        verify(mockCallableStatement).setString(2, "seven");
+        verify(mockCallableStatement).execute();
+        verify(mockCallableStatement).close();
+        verify(mockConnection).close();
+    }
+
+    @Test
+    void listAllMapsScalarResultSets() throws SQLException {
+        stubSingleStringResultSet();
+
+        final List<List<String>> results = dao.allScalarLists();
+
+        assertEquals(List.of(List.of("one")), results);
+        verify(mockResultSet).close();
+        verify(mockCallableStatement).close();
+        verify(mockConnection).close();
+    }
+
+    @Test
+    void listAllMapsScalarResultSetsAndReturnsOutputs() throws SQLException {
+        stubSingleStringResultSet();
+
+        final Tuple2<List<List<String>>, Jdbc.OutParamResult> result = dao.allScalarListsWithOutputs();
+
+        assertEquals(List.of(List.of("one")), result._1);
+        assertEquals(11, (Integer) result._2.getOutParamValue(1));
+        verify(mockResultSet).close();
+        verify(mockCallableStatement).close();
+        verify(mockConnection).close();
+    }
+
+    @Test
+    void streamAllMapsDatasets() throws SQLException {
+        stubSingleStringResultSet();
+
+        final List<Dataset> results;
+        try (com.landawn.abacus.util.stream.Stream<Dataset> stream = dao.streamDatasets()) {
+            results = stream.toList();
+        }
+
+        assertEquals(1, results.size());
+        assertEquals(List.of("value"), results.get(0).columnNames());
+        assertEquals(List.of("one"), results.get(0).getColumn(0));
+        verify(mockResultSet).close();
+        verify(mockCallableStatement).close();
+        verify(mockConnection).close();
+    }
+
+    @Test
+    void queryMapsDatasetAndReturnsOutputs() throws SQLException {
+        stubSingleStringResultSet();
+
+        final Tuple2<Dataset, Jdbc.OutParamResult> result = dao.datasetWithOutputs();
+
+        assertEquals(List.of("value"), result._1.columnNames());
+        assertEquals(List.of("one"), result._1.getColumn(0));
+        assertEquals(11, (Integer) result._2.getOutParamValue(1));
+        verify(mockResultSet).close();
+        verify(mockCallableStatement).close();
+        verify(mockConnection).close();
+    }
+
+    @Test
+    void listMapsScalarsAndReturnsOutputs() throws SQLException {
+        stubSingleStringResultSet();
+
+        final Tuple2<List<String>, Jdbc.OutParamResult> result = dao.scalarsWithOutputs();
+
+        assertEquals(List.of("one"), result._1);
+        assertEquals(11, (Integer) result._2.getOutParamValue(1));
+        verify(mockResultSet).close();
+        verify(mockCallableStatement).close();
+        verify(mockConnection).close();
+    }
+
+    private void stubSingleStringResultSet() throws SQLException {
+        when(mockCallableStatement.execute()).thenReturn(true);
+        when(mockCallableStatement.getResultSet()).thenReturn(mockResultSet);
+        when(mockCallableStatement.getMoreResults(java.sql.Statement.KEEP_CURRENT_RESULT)).thenReturn(false);
+        when(mockCallableStatement.getMoreResults()).thenReturn(false);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("value");
+        when(mockResultSetMetaData.getColumnType(1)).thenReturn(Types.VARCHAR);
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getString(1)).thenReturn("one");
+        when(mockResultSet.getObject(1)).thenReturn("one");
+    }
+
     private enum Binding {
         NAMED, POSITIONAL, COLLECTION, ARRAY
     }
@@ -144,6 +249,31 @@ class DaoImplProcedureTest extends JdbcUtilTestSupport {
         @OutParameter(position = 1, sqlType = Types.INTEGER)
         @OutParameter(name = "message", sqlType = Types.VARCHAR)
         Tuple2<List<Dataset>, Jdbc.OutParamResult> datasetsWithOutputs() throws SQLException;
+
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.listAll)
+        List<List<String>> allScalarLists() throws SQLException;
+
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.listAll)
+        @OutParameter(position = 1, sqlType = Types.INTEGER)
+        Tuple2<List<List<String>>, Jdbc.OutParamResult> allScalarListsWithOutputs() throws SQLException;
+
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.streamAll)
+        com.landawn.abacus.util.stream.Stream<Dataset> streamDatasets();
+
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.query)
+        @OutParameter(position = 1, sqlType = Types.INTEGER)
+        Tuple2<Dataset, Jdbc.OutParamResult> datasetWithOutputs() throws SQLException;
+
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.list)
+        @OutParameter(position = 1, sqlType = Types.INTEGER)
+        Tuple2<List<String>, Jdbc.OutParamResult> scalarsWithOutputs() throws SQLException;
+
+        @Query(value = "{call bind_values(?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters, collectionAsSingleParameter = true)
+        Jdbc.OutParamResult singleInput(int value) throws SQLException;
+
+        @Query(value = "{call bind_values({column}, ?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
+        Jdbc.OutParamResult positionalWithFragment(@com.landawn.abacus.jdbc.annotation.SqlFragment("column") String column, int first, String second)
+                throws SQLException;
 
         @Query(value = "{call bind_values(?, ?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
         Jdbc.OutParamResult namedInputs(@Bind("left") int first, @Bind("right") String second) throws SQLException;

@@ -37,6 +37,7 @@ import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.annotation.SqlFragmentList;
+import com.landawn.abacus.jdbc.annotation.SqlScript;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.DaoBase;
 import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
@@ -127,7 +128,25 @@ class DaoImplQueryValidationTest extends TestBase {
                 Arguments.of(StreamWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
                 Arguments.of(DatasetWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
                 Arguments.of(OptionalWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
-                Arguments.of(NullableWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"));
+                Arguments.of(NullableWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
+                Arguments.of(ScalarQueryOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
+                Arguments.of(ProcedureListAllRawNestedDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
+                Arguments.of(ProcedureListAllRawListDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
+                Arguments.of(ProcedureQueryAllInvalidTupleListDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
+                Arguments.of(ProcedureQueryAllInvalidListDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
+                Arguments.of(ProcedureStreamAllWrongReturnDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
+                Arguments.of(ProcedureStreamAllWrongElementDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
+                Arguments.of(GenericEntityDao.class, IllegalArgumentException.class, "Failed to resolve entity generic type parameter"),
+                Arguments.of(GenericIdDao.class, IllegalArgumentException.class, "Failed to resolve entity/id generic type parameters"),
+                Arguments.of(DuplicateSqlScriptDao.class, IllegalArgumentException.class, "Two fields annotated with @SqlScript have the same id"),
+                Arguments.of(InvalidSqlScriptIdDao.class, IllegalArgumentException.class, "Query IDs don't match Java identifier specification"),
+                Arguments.of(JoinWithoutSubEntityDao.class, IllegalArgumentException.class, "has no sub-entity properties"),
+                Arguments.of(InvalidCacheCapacityDao.class, UnsupportedOperationException.class, "both must be >= 0"),
+                Arguments.of(DaoImplReviewFixTest.Probe.MissingCacheConstructorDao.class, IllegalArgumentException.class,
+                        "must declare a constructor (int capacity, long evictDelay)"),
+                Arguments.of(MultipleSqlAbstractDao.class, UnsupportedOperationException.class,
+                        "only supported by interface methods with default implementation"),
+                Arguments.of(MultipleSqlWithoutVarargsDao.class, UnsupportedOperationException.class, "the type of last parameter must be: String... sqls"));
     }
 
     private static Stream<Arguments> invalidCacheDeclarations() {
@@ -528,6 +547,81 @@ class DaoImplQueryValidationTest extends TestBase {
     interface NullableWrongOperationDao extends CrudDao<Record, Long, NullableWrongOperationDao> {
         @Query(value = "SELECT id FROM validation_record", op = QueryOperation.update)
         Nullable<Long> read() throws SQLException;
+    }
+
+    interface ScalarQueryOperationDao extends CrudDao<Record, Long, ScalarQueryOperationDao> {
+        @Query(value = "SELECT id FROM validation_record", op = QueryOperation.query)
+        Long read() throws SQLException;
+    }
+
+    interface ProcedureListAllRawNestedDao extends CrudDao<Record, Long, ProcedureListAllRawNestedDao> {
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.listAll)
+        @OutParameter(position = 1, sqlType = Types.INTEGER)
+        com.landawn.abacus.util.Tuple.Tuple2<List<List>, Jdbc.OutParamResult> read() throws SQLException;
+    }
+
+    interface ProcedureListAllRawListDao extends CrudDao<Record, Long, ProcedureListAllRawListDao> {
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.listAll)
+        List<List> read() throws SQLException;
+    }
+
+    interface ProcedureQueryAllInvalidTupleListDao extends CrudDao<Record, Long, ProcedureQueryAllInvalidTupleListDao> {
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.queryAll)
+        @OutParameter(position = 1, sqlType = Types.INTEGER)
+        com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> read() throws SQLException;
+    }
+
+    interface ProcedureQueryAllInvalidListDao extends CrudDao<Record, Long, ProcedureQueryAllInvalidListDao> {
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.queryAll)
+        List<String> read() throws SQLException;
+    }
+
+    interface ProcedureStreamAllWrongReturnDao extends CrudDao<Record, Long, ProcedureStreamAllWrongReturnDao> {
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.streamAll)
+        List<Dataset> read() throws SQLException;
+    }
+
+    interface ProcedureStreamAllWrongElementDao extends CrudDao<Record, Long, ProcedureStreamAllWrongElementDao> {
+        @Query(value = "{call sample()}", procedure = true, op = QueryOperation.streamAll)
+        com.landawn.abacus.util.stream.Stream<String> read();
+    }
+
+    interface GenericEntityDao<T> extends com.landawn.abacus.jdbc.dao.Dao<T, GenericEntityDao<T>> {
+    }
+
+    interface GenericIdDao<T> extends CrudDao<Record, T, GenericIdDao<T>> {
+    }
+
+    interface DuplicateSqlScriptDao extends CrudDao<Record, Long, DuplicateSqlScriptDao> {
+        @SqlScript(id = "duplicate")
+        String first = "SELECT 1";
+        @SqlScript(id = "duplicate")
+        String second = "SELECT 2";
+    }
+
+    interface InvalidSqlScriptIdDao extends CrudDao<Record, Long, InvalidSqlScriptIdDao> {
+        @SqlScript(id = "invalid-id")
+        String invalid = "SELECT 1";
+    }
+
+    interface JoinWithoutSubEntityDao extends com.landawn.abacus.jdbc.dao.Dao<Record, JoinWithoutSubEntityDao>,
+            com.landawn.abacus.jdbc.dao.JoinEntityHelper<Record, JoinWithoutSubEntityDao> {
+    }
+
+    @com.landawn.abacus.jdbc.annotation.Cache(capacity = -1)
+    interface InvalidCacheCapacityDao extends NonUpdateCrudDao<Record, Long, InvalidCacheCapacityDao> {
+    }
+
+    interface MultipleSqlAbstractDao extends CrudDao<Record, Long, MultipleSqlAbstractDao> {
+        @Query({ "SELECT 1", "SELECT 2" })
+        int read() throws SQLException;
+    }
+
+    interface MultipleSqlWithoutVarargsDao extends CrudDao<Record, Long, MultipleSqlWithoutVarargsDao> {
+        @Query({ "SELECT 1", "SELECT 2" })
+        default int read() {
+            return 0;
+        }
     }
 
     @Table("validation_record")

@@ -24,6 +24,34 @@ import com.landawn.abacus.util.function.QuadFunction;
 class JdbcCodeGenerationSqlConversionTest extends JdbcCodeGenerationUtilTestSupport {
 
     @ParameterizedTest
+    @ValueSource(ints = { java.sql.Types.REAL, java.sql.Types.FLOAT, java.sql.Types.DATE, java.sql.Types.TIME, java.sql.Types.TIME_WITH_TIMEZONE,
+            java.sql.Types.TIMESTAMP_WITH_TIMEZONE })
+    void sqlTypeMappingsIncludeNumericAndTemporalTypes(final int sqlType) throws Exception {
+        final java.lang.reflect.Method method = JdbcCodeGenerationUtil.class.getDeclaredMethod("getClassNameBySqlType", int.class);
+        method.setAccessible(true);
+        final String expected = switch (sqlType) {
+            case java.sql.Types.REAL -> "java.lang.Float";
+            case java.sql.Types.FLOAT -> "java.lang.Double";
+            case java.sql.Types.DATE -> "java.sql.Date";
+            case java.sql.Types.TIME -> "java.sql.Time";
+            case java.sql.Types.TIME_WITH_TIMEZONE -> "java.time.OffsetTime";
+            case java.sql.Types.TIMESTAMP_WITH_TIMEZONE -> "java.time.OffsetDateTime";
+            default -> throw new IllegalArgumentException("Unexpected test type: " + sqlType);
+        };
+
+        assertEquals(expected, method.invoke(null, sqlType));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "\"a\\b\"(id)", "\"a\"\"b\"(id)", "[a]]b](id)" })
+    void columnListScannerSkipsEscapedDelimiters(final String sql) throws Exception {
+        final java.lang.reflect.Method method = JdbcCodeGenerationUtil.class.getDeclaredMethod("findColumnListOpeningParenthesis", String.class, int.class);
+        method.setAccessible(true);
+
+        assertEquals(sql.indexOf("(id)"), (int) method.invoke(null, sql, 0));
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = { "items[length($q$),]$q$)]", "items[length('a''b')]", "items[$1]", "items[$1 + $2]", "items[index$tag$]" })
     void conversionPreservesQuotedAndParameterizedArraySubscripts(final String expression) throws SQLException {
         final DataSource dataSource = dataSourceReporting("PostgreSQL");

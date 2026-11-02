@@ -229,4 +229,69 @@ public class UncheckedCrudReadOpsTest extends TestBase {
         assertEquals(0, dao.count(List.of()));
         verify(dao, never()).count(ArgumentMatchers.any(Condition.class));
     }
+
+    @Test
+    void batchGet_sqlException_wrapsUncheckedException() {
+        final IdAnnotatedUncheckedCrudDao dao = newDao();
+        final java.sql.SQLException failure = new java.sql.SQLException("batch get failed");
+        Mockito.doAnswer(throwSql(failure)).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        assertWrapsSqlException(failure, () -> dao.batchGet(List.of(1L), List.of("id"), 10));
+    }
+
+    @Test
+    void count_sqlException_wrapsUncheckedException() {
+        final IdAnnotatedUncheckedCrudDao dao = newDao();
+        final java.sql.SQLException failure = new java.sql.SQLException("count failed");
+        Mockito.doAnswer(throwSql(failure)).when(dao).count(ArgumentMatchers.any(Condition.class));
+
+        assertWrapsSqlException(failure, () -> dao.count(List.of(1L)));
+    }
+
+    @Test
+    void refresh_sqlException_wrapsUncheckedException() {
+        final IdAnnotatedUncheckedCrudDao dao = newDao();
+        final java.sql.SQLException failure = new java.sql.SQLException("refresh failed");
+        Mockito.doAnswer(throwSql(failure)).when(dao).getOrNull(ArgumentMatchers.any(), ArgumentMatchers.<Collection<String>> any());
+
+        assertWrapsSqlException(failure, () -> dao.refresh(new IdAnnotatedEntity(1L)));
+    }
+
+    @Test
+    void refreshWithProperties_sqlException_wrapsUncheckedException() {
+        final IdAnnotatedUncheckedCrudDao dao = newDao();
+        final java.sql.SQLException failure = new java.sql.SQLException("selected refresh failed");
+        Mockito.doAnswer(throwSql(failure)).when(dao).getOrNull(ArgumentMatchers.any(), ArgumentMatchers.<Collection<String>> any());
+
+        assertWrapsSqlException(failure, () -> dao.refresh(new IdAnnotatedEntity(1L), List.of("name")));
+    }
+
+    @Test
+    void batchRefresh_sqlException_wrapsUncheckedException() {
+        final IdAnnotatedUncheckedCrudDao dao = newDao();
+        final java.sql.SQLException failure = new java.sql.SQLException("batch refresh failed");
+        Mockito.doAnswer(throwSql(failure)).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        assertWrapsSqlException(failure, () -> dao.batchRefresh(List.of(new IdAnnotatedEntity(1L)), 10));
+    }
+
+    @Test
+    void batchRefreshWithProperties_sqlException_wrapsUncheckedException() {
+        final IdAnnotatedUncheckedCrudDao dao = newDao();
+        final java.sql.SQLException failure = new java.sql.SQLException("selected batch refresh failed");
+        Mockito.doAnswer(throwSql(failure)).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        assertWrapsSqlException(failure, () -> dao.batchRefresh(List.of(new IdAnnotatedEntity(1L)), List.of("name"), 10));
+    }
+
+    private static <T> org.mockito.stubbing.Answer<T> throwSql(final java.sql.SQLException failure) {
+        return invocation -> {
+            throw failure;
+        };
+    }
+
+    private static void assertWrapsSqlException(final java.sql.SQLException failure, final org.junit.jupiter.api.function.Executable action) {
+        final com.landawn.abacus.exception.UncheckedSQLException thrown = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, action);
+        assertSame(failure, thrown.getCause());
+    }
 }

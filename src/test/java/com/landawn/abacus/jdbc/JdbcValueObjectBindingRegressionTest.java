@@ -19,9 +19,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
 
-class JdbcValueObjectBindingRegressionTest {
+class JdbcValueObjectBindingRegressionTest extends TestBase {
     enum JdbcValue {
         XML(SQLXML.class, "setSQLXML"),
         ARRAY(Array.class, "setArray"),

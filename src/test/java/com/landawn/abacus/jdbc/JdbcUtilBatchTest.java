@@ -29,6 +29,32 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 
 class JdbcUtilBatchTest extends JdbcUtilTestSupport {
 
+    @Test
+    void largeBatchWithEmptyParametersReturnsWithoutConnection() throws SQLException {
+        assertEquals(0, JdbcUtil.executeLargeBatchUpdate(mockDataSource, "UPDATE account SET status = ?", List.of(), 10));
+
+        verify(mockDataSource, never()).getConnection();
+    }
+
+    @Test
+    void batchWithEmptyParametersReturnsWithoutConnection() throws SQLException {
+        assertEquals(0, JdbcUtil.executeBatchUpdate(mockDataSource, "UPDATE account SET status = ?", List.of(), 10));
+
+        verify(mockDataSource, never()).getConnection();
+    }
+
+    @Test
+    void largeBatchWithSingleParameterSetUsesOneConnection() throws SQLException {
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 3 });
+
+        assertEquals(3, JdbcUtil.executeLargeBatchUpdate(mockDataSource, "UPDATE account SET status = ?", List.of(1), 10));
+
+        verify(mockPreparedStatement).setInt(1, 1);
+        verify(mockPreparedStatement).executeLargeBatch();
+        verify(mockPreparedStatement).close();
+        verify(mockConnection).close();
+    }
+
     @ParameterizedTest(name = "wide named batch: route={0}, repeatedNames={1}")
     @CsvSource({ "prepare,false", "call,false", "execute,false", "large,false", "prepare,true", "call,true", "execute,true", "large,true" })
     void wideNamedBatchLayoutsBindEveryValueForEachRow(final String route, final boolean repeatedNames) throws SQLException {

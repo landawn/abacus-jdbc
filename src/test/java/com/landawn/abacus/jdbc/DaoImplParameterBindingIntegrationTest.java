@@ -92,6 +92,13 @@ class DaoImplParameterBindingIntegrationTest extends TestBase {
         assertNull(dao.byRecord(new IdParameter(4L)));
     }
 
+    @Test
+    void query_collectionAsSingleParameter_bindsScalarCollectionAndArrayValues() throws SQLException {
+        assertEquals(3L, dao.bySingleNamedValue(3L));
+        assertEquals(2, dao.countBySingleCollection(List.of(1, 3)));
+        assertEquals(2, dao.countBySingleArray(new Object[] { 1, 3 }));
+    }
+
     public enum Level {
         LOW, MID, HIGH
     }
@@ -642,6 +649,15 @@ class DaoImplParameterBindingIntegrationTest extends TestBase {
 
         @Query("SELECT COUNT(*) FROM binding_record WHERE {column} IN ({values}) AND id > ?")
         int collectionWithFragment(@SqlFragment("column") String column, @BindList("values") List<Integer> values, long minimum) throws SQLException;
+
+        @Query(value = "SELECT id FROM binding_record WHERE id = :id", collectionAsSingleParameter = true)
+        Long bySingleNamedValue(long id) throws SQLException;
+
+        @Query("SELECT COUNT(*) FROM binding_record WHERE id IN (?, ?)")
+        int countBySingleCollection(List<Integer> values) throws SQLException;
+
+        @Query("SELECT COUNT(*) FROM binding_record WHERE id IN (?, ?)")
+        int countBySingleArray(Object[] values) throws SQLException;
 
         @Query("SELECT id FROM binding_record WHERE id = :id")
         Long byMap(Map<String, Object> parameters) throws SQLException;
