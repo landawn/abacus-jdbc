@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -233,6 +234,26 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
 
         verify(mockPreparedStatement).setTimestamp(1, new Timestamp(1_000L));
         verify(mockPreparedStatement, never()).close();
+    }
+
+    @Test
+    void setAsciiStream_rejectsNegativeLength() {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setAsciiStream("param1", new ByteArrayInputStream(new byte[] { 1 }), -1L));
+        assertTrue(failure.getMessage().contains("can't be negative"));
+    }
+
+    @Test
+    void setParameters_skipsReservedTimeNameWithoutABeanProperty() throws SQLException {
+        final NamedQuery query = createQueryWithParameters(ImmutableList.of("param1", "now", "sysTime", "sysDate"));
+        final TestEntity entity = new TestEntity();
+        entity.setParam1("value1");
+
+        assertSame(query, query.setParameters(entity));
+
+        verify(mockPreparedStatement).setString(1, "value1");
+        verify(mockPreparedStatement, never()).setObject(eq(2), isNull());
+        verify(mockPreparedStatement, never()).setString(eq(2), anyString());
     }
 
     @Test
