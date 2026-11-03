@@ -378,6 +378,35 @@ class JdbcDaoCacheTest extends JdbcTestSupport {
     }
 
     @Test
+    public void testDaoCacheByMapUpdate_TableSegmentMatchedInPlaceIgnoringCase() throws Exception {
+        final Map<String, Object> backingMap = new HashMap<>();
+        final Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap(backingMap);
+
+        final Method method = Object.class.getMethods()[0];
+        final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(method, ImmutableList.empty(), Object.class);
+
+        backingMap.put("m#USERS#1#[1]", "upper");
+        backingMap.put("#Users#", "tableKey");
+        backingMap.put("m#user#1#[1]", "prefixTable");
+        backingMap.put("m#users2#1#[1]", "longerTable");
+        backingMap.put("m##users#[1]", "emptyTableSegment");
+        backingMap.put("m#users", "noSecondSeparator");
+        backingMap.put("users", "noSeparator");
+        backingMap.put(null, "nullKey");
+
+        cache.update("#users#", null, null, null, methodSignature);
+
+        assertFalse(backingMap.containsKey("m#USERS#1#[1]"));
+        assertFalse(backingMap.containsKey("#Users#"));
+        assertEquals("prefixTable", backingMap.get("m#user#1#[1]"));
+        assertEquals("longerTable", backingMap.get("m#users2#1#[1]"));
+        assertEquals("emptyTableSegment", backingMap.get("m##users#[1]"));
+        assertEquals("noSecondSeparator", backingMap.get("m#users"));
+        assertEquals("noSeparator", backingMap.get("users"));
+        assertEquals("nullKey", backingMap.get(null));
+    }
+
+    @Test
     public void testDaoCacheByMapUpdate_EmptyTableName() throws Exception {
         Jdbc.DaoCacheByMap cache = new Jdbc.DaoCacheByMap();
 

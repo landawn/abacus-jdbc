@@ -88,10 +88,12 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if {@code entity} has no property for a named parameter in {@code namedInsertSql}
      *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
+     * @throws UnsupportedOperationException if this is a non-update DAO (such as a {@link UncheckedNonUpdateDao}) and {@code namedInsertSql}
+     *         is not a {@code SELECT} or {@code INSERT} statement
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
-    void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, UncheckedSQLException;
+    void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException;
 
     /**
      * Batch saves (inserts) multiple entities using the default batch size.
@@ -236,6 +238,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
+     * @throws UnsupportedOperationException if this is a non-update DAO (such as a {@link UncheckedNonUpdateDao}) and {@code namedInsertSql}
+     *         is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
@@ -247,7 +251,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     @Beta
     @Override
     default void batchSave(final String namedInsertSql, final Collection<? extends T> entities)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException {
         batchSave(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -274,6 +278,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
+     * @throws UnsupportedOperationException if this is a non-update DAO (such as a {@link UncheckedNonUpdateDao}) and {@code namedInsertSql}
+     *         is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
@@ -285,6 +291,6 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     @Beta
     @Override
     void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException;
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
 }

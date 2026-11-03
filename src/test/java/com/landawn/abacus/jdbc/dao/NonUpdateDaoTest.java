@@ -15,6 +15,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -56,7 +57,14 @@ public class NonUpdateDaoTest extends TestBase {
     interface TestNonUpdateDao extends NonUpdateDao<TestEntity, TestNonUpdateDao> {
     }
 
+    interface TestUncheckedNonUpdateDao extends UncheckedNonUpdateDao<TestEntity, TestUncheckedNonUpdateDao> {
+    }
+
     private TestNonUpdateDao createDao() throws SQLException {
+        return createDao(TestNonUpdateDao.class);
+    }
+
+    private <D extends DaoBase<TestEntity, D>> D createDao(final Class<D> daoInterface) throws SQLException {
         final DataSource ds = mock(DataSource.class);
         final Connection conn = mock(Connection.class);
         final DatabaseMetaData meta = mock(DatabaseMetaData.class);
@@ -72,7 +80,7 @@ public class NonUpdateDaoTest extends TestBase {
         when(conn.prepareStatement(anyString(), any(int[].class))).thenReturn(stmt);
         when(conn.prepareStatement(anyString(), any(String[].class))).thenReturn(stmt);
 
-        return JdbcUtil.createDao(TestNonUpdateDao.class, ds);
+        return JdbcUtil.createDao(daoInterface, ds);
     }
 
     @Test
@@ -122,6 +130,28 @@ public class NonUpdateDaoTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery("UPDATE test SET name = :name"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(ParsedSql.parse("DELETE FROM test WHERE id = :id")));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult("UPDATE test SET name = :name"));
+    }
+
+    // InsertOps/UncheckedInsertOps document this UnsupportedOperationException for save/batchSave with named SQL: the SQL is
+    // prepared through the proxy's SQL-kind gate, and batchSave checks the SQL kind also for an empty batch (as batchInsert
+    // does): arguments are validated before the empty-collection return.
+    @Test
+    public void testSaveAndBatchSaveWithNamedSql_NonInsertSqlRejected() throws SQLException {
+        final TestNonUpdateDao dao = createDao();
+        final TestEntity entity = new TestEntity();
+        final String updateSql = "UPDATE test SET name = :name WHERE id = :id";
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.save(updateSql, entity));
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(updateSql, List.of(entity)));
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(updateSql, List.of(entity), 10));
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(updateSql, List.of()));
+        dao.batchSave("INSERT INTO test (id, name) VALUES (:id, :name)", List.of());
+
+        final TestUncheckedNonUpdateDao uncheckedDao = createDao(TestUncheckedNonUpdateDao.class);
+
+        assertThrows(UnsupportedOperationException.class, () -> uncheckedDao.save(updateSql, entity));
+        assertThrows(UnsupportedOperationException.class, () -> uncheckedDao.batchSave(updateSql, List.of(entity), 10));
+        assertThrows(UnsupportedOperationException.class, () -> uncheckedDao.batchSave(updateSql, List.of()));
     }
 
     @Test

@@ -350,8 +350,9 @@ public enum QueryOperation {
      * and, for some single-result conventions, the method name. A {@code SELECT} can therefore become
      * a list, dataset, stream, existence check, first/unique-row lookup, or scalar lookup. An
      * {@code UPDATE}/{@code DELETE} (or other non-{@code SELECT}, non-{@code INSERT} statement) becomes an
-     * update operation only when the method returns {@code int}, {@code long}, {@code boolean}, {@code void}
-     * or one of their wrappers ({@code long}/{@code Long} selects {@link #largeUpdate}); any other return type
+     * update operation only when the method returns {@code int}, {@code long}, {@code boolean} or one of their
+     * wrappers, or {@code void} ({@code long}/{@code Long} selects {@link #largeUpdate}); any other return type,
+     * {@code Void} included,
      * fails DAO creation with {@link UnsupportedOperationException}. An {@code INSERT} is dispatched to
      * the dedicated generated-key path. A stored procedure call ({@code procedure = true}) is executed as an
      * update for those update-count return types and as a query otherwise.</p>

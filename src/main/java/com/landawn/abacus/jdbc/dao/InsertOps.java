@@ -52,8 +52,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param entity the entity to insert
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     void save(final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -72,8 +72,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     void save(final T entity, final Collection<String> propNamesToSave) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -94,11 +94,13 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if {@code entity} has no property for a named parameter in {@code namedInsertSql}
      *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
+     * @throws UnsupportedOperationException if this is a non-update DAO (such as a {@link NonUpdateDao}) and {@code namedInsertSql}
+     *         is not a {@code SELECT} or {@code INSERT} statement
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
-    void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException;
 
     /**
      * Batch saves (inserts) multiple entities using the default batch size.
@@ -218,6 +220,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
+     * @throws UnsupportedOperationException if this is a non-update DAO (such as a {@link NonUpdateDao}) and {@code namedInsertSql}
+     *         is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
@@ -228,7 +232,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      */
     @Beta
     default void batchSave(final String namedInsertSql, final Collection<? extends T> entities)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException, SQLException {
         batchSave(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -248,6 +252,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
+     * @throws UnsupportedOperationException if this is a non-update DAO (such as a {@link NonUpdateDao}) and {@code namedInsertSql}
+     *         is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
@@ -258,6 +264,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      */
     @Beta
     void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException, SQLException;
 
 }

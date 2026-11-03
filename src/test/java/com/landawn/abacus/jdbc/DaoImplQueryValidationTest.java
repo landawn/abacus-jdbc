@@ -108,7 +108,7 @@ class DaoImplQueryValidationTest extends TestBase {
                 // A batch query bound no parameters: every call failed with an unset parameter (or ignored the batch rows).
                 Arguments.of(BatchSelectDao.class, UnsupportedOperationException.class, "Batch execution is only supported for INSERT/UPDATE/DELETE"),
                 Arguments.of(BatchProcedureQueryDao.class, UnsupportedOperationException.class, "Batch execution is only supported for INSERT/UPDATE/DELETE"),
-                Arguments.of(MappedUnknownKeyDao.class, IllegalArgumentException.class, "No method found by mapped key"),
+                Arguments.of(MappedUnknownKeyDao.class, IllegalArgumentException.class, "No property found by mapped key"),
                 Arguments.of(MappedWrongOperationDao.class, IllegalArgumentException.class, "QueryOperation for method annotated by @MappedByKey"),
                 Arguments.of(MappedWrongReturnDao.class, IllegalArgumentException.class, "annotated by @MappedByKey must be"),
                 Arguments.of(MappedWrongKeyTypeDao.class, IllegalArgumentException.class, "annotated by @MappedByKey must be"),
@@ -117,7 +117,7 @@ class DaoImplQueryValidationTest extends TestBase {
                 Arguments.of(MappedWildcardValueTypeDao.class, IllegalArgumentException.class,
                         "annotated by @MappedByKey must be: Map<K, V> with concrete (non-wildcard) type arguments, K being Long or a supertype and V being Record or a supertype"),
                 Arguments.of(ConflictingMergeKeyDao.class, IllegalArgumentException.class, "must be same"),
-                Arguments.of(MergedUnknownKeyDao.class, IllegalArgumentException.class, "No method found by merged id"),
+                Arguments.of(MergedUnknownKeyDao.class, IllegalArgumentException.class, "No property found by merged id"),
                 Arguments.of(MergedWrongOperationDao.class, IllegalArgumentException.class, "QueryOperation for method annotated by @MergedById"),
                 Arguments.of(MergedWrongReturnDao.class, IllegalArgumentException.class, "annotated by @MergedById must be"),
                 Arguments.of(MergedWildcardReturnDao.class, IllegalArgumentException.class,

@@ -72,65 +72,6 @@ public class SqlLogConfigTest extends TestBase {
         assertEquals(1000, config.sqlPerfLogThresholdMillis);
     }
 
-    @Test
-    public void testSetGeneralLogging() {
-        SqlLogConfig config = new SqlLogConfig(false, 100);
-
-        config.setSqlLogEnabled(true, 3000);
-
-        assertTrue(config.isEnabled);
-        assertEquals(3000, config.maxSqlLogLength);
-    }
-
-    @Test
-    public void testSetGeneralLoggingWithDefaultLength() {
-        SqlLogConfig config = new SqlLogConfig(true, 500);
-
-        config.setSqlLogEnabled(false, -50);
-
-        assertFalse(config.isEnabled);
-        assertEquals(JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH, config.maxSqlLogLength);
-    }
-
-    @Test
-    public void testSetPerformanceLogging() {
-        SqlLogConfig config = new SqlLogConfig(true, 100);
-
-        config.setSqlPerfLogThresholdMillis(2000L, 4000);
-
-        assertEquals(2000L, config.sqlPerfLogThresholdMillis);
-        assertEquals(4000, config.maxSqlLogLength);
-    }
-
-    @Test
-    public void testSetPerformanceLoggingWithDefaultLength() {
-        SqlLogConfig config = new SqlLogConfig(1000L, 500);
-
-        config.setSqlPerfLogThresholdMillis(3000L, 0);
-
-        assertEquals(3000L, config.sqlPerfLogThresholdMillis);
-        assertEquals(JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH, config.maxSqlLogLength);
-    }
-
-    @Test
-    public void testMixedUsage() {
-        // Create with general logging
-        SqlLogConfig config = new SqlLogConfig(true, 1000);
-        assertTrue(config.isEnabled);
-        assertEquals(1000, config.maxSqlLogLength);
-        assertEquals(Long.MAX_VALUE, config.sqlPerfLogThresholdMillis);
-
-        // Switch to performance logging
-        config.setSqlPerfLogThresholdMillis(5000L, 2000);
-        assertEquals(5000L, config.sqlPerfLogThresholdMillis);
-        assertEquals(2000, config.maxSqlLogLength);
-
-        // Switch back to general logging
-        config.setSqlLogEnabled(false, 3000);
-        assertFalse(config.isEnabled);
-        assertEquals(3000, config.maxSqlLogLength);
-    }
-
     // Regression: Strings.abbreviate(sql, maxWidth) throws IllegalArgumentException for maxWidth 1-3,
     // and JdbcUtil.logSql/handleSqlLog call it with the configured maxSqlLogLength (the latter from a
     // finally block that must never throw). The config must therefore never hold a value of 1-3: it is
@@ -141,17 +82,25 @@ public class SqlLogConfigTest extends TestBase {
         assertEquals(4, new SqlLogConfig(true, 1).maxSqlLogLength);
         assertEquals(4, new SqlLogConfig(true, 3).maxSqlLogLength);
         assertEquals(4, new SqlLogConfig(500L, 2).maxSqlLogLength);
-
-        final SqlLogConfig config = new SqlLogConfig(true, 1000);
-        config.setSqlLogEnabled(true, 3);
-        assertEquals(4, config.maxSqlLogLength);
-        config.setSqlPerfLogThresholdMillis(500L, 1);
-        assertEquals(4, config.maxSqlLogLength);
+        assertEquals(4, new SqlLogConfig(500L, 1).maxSqlLogLength);
 
         // 4 is already usable and must not be altered.
         assertEquals(4, new SqlLogConfig(true, 4).maxSqlLogLength);
 
         // The invariant this guards: truncation at the configured width never throws.
         assertEquals("S...", Strings.abbreviate("SELECT * FROM users", new SqlLogConfig(true, 3).maxSqlLogLength));
+    }
+
+    // JdbcUtil hands the same default instances to every thread at the default settings (see JdbcUtil.sqlLogConfig()), so
+    // a config must not be mutable: changing a shared default would change the logging of all those threads.
+    @Test
+    public void testInstancesAreImmutable() {
+        for (final java.lang.reflect.Field field : SqlLogConfig.class.getDeclaredFields()) {
+            assertTrue(java.lang.reflect.Modifier.isFinal(field.getModifiers()), field.toString());
+        }
+
+        for (final java.lang.reflect.Method method : SqlLogConfig.class.getDeclaredMethods()) {
+            assertFalse(method.getName().startsWith("set"), method.toString());
+        }
     }
 }

@@ -284,6 +284,46 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
         verify(preparedStatement).close();
     }
 
+    // A Runnable written in Kotlin (or using a sneaky throw) can throw a checked exception. It must not skip the older
+    // handlers, such as the one that returns a data-source query's connection.
+    @Test
+    void close_handlerThrowsUndeclaredCheckedException_runsOlderHandlersAndRethrowsIt() throws SQLException {
+        final java.io.IOException checkedFailure = new java.io.IOException("handler failed with a checked exception");
+        final RuntimeException olderFailure = new RuntimeException("older handler failed");
+        final AtomicInteger connectionReleases = new AtomicInteger();
+
+        query.onClose(connectionReleases::incrementAndGet).onClose(() -> {
+            throw olderFailure;
+        }).onClose(() -> throwUndeclared(checkedFailure));
+
+        final Throwable thrown = assertThrows(Throwable.class, query::close);
+
+        assertSame(checkedFailure, thrown);
+        assertArrayEquals(new Throwable[] { olderFailure }, thrown.getSuppressed());
+        assertEquals(1, connectionReleases.get());
+        assertNull(query.closeHandler);
+        verify(preparedStatement).close();
+    }
+
+    // The cleanup after a failed argument check must keep the argument failure primary also when a close handler throws
+    // an undeclared checked exception, which close() rethrows unchanged.
+    @Test
+    void checkArgNotNull_handlerThrowsUndeclaredCheckedException_keepsTheArgumentFailurePrimary() throws SQLException {
+        final java.io.IOException checkedFailure = new java.io.IOException("handler failed with a checked exception");
+
+        query.onClose(() -> throwUndeclared(checkedFailure));
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> query.checkArgNotNull(null, "rowMapper"));
+
+        assertArrayEquals(new Throwable[] { checkedFailure }, thrown.getSuppressed());
+        verify(preparedStatement).close();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <X extends Throwable> void throwUndeclared(final Throwable failure) throws X {
+        throw (X) failure;
+    }
+
     @Test
     public void testClosePreservesFailuresFromEveryCloseHandler() {
         final RuntimeException olderFailure = new RuntimeException("older handler failed");
@@ -318,6 +358,27 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
 
         assertSame(statementFailure, thrown);
         assertArrayEquals(new Throwable[] { handlerFailure }, thrown.getSuppressed());
+        verify(preparedStatement).close();
+        assertDoesNotThrow(query::close);
+    }
+
+    // A handler's undeclared checked exception escaped the RuntimeException | Error catch that suppresses handler failures
+    // onto a statement cleanup failure, and replaced that failure. The older handlers must still run.
+    @Test
+    void close_statementCleanupFailsAndHandlerThrowsUndeclaredCheckedException_keepsTheCleanupFailurePrimary() throws SQLException {
+        final Error statementFailure = new Error("statement reset failed");
+        final java.io.IOException checkedFailure = new java.io.IOException("handler failed with a checked exception");
+        final AtomicInteger connectionReleases = new AtomicInteger();
+        when(preparedStatement.getFetchSize()).thenReturn(10);
+        query.setFetchSize(20);
+        doThrow(statementFailure).when(preparedStatement).setFetchSize(10);
+        query.onClose(connectionReleases::incrementAndGet).onClose(() -> throwUndeclared(checkedFailure));
+
+        final Error thrown = assertThrows(Error.class, query::close);
+
+        assertSame(statementFailure, thrown);
+        assertArrayEquals(new Throwable[] { checkedFailure }, thrown.getSuppressed());
+        assertEquals(1, connectionReleases.get());
         verify(preparedStatement).close();
         assertDoesNotThrow(query::close);
     }

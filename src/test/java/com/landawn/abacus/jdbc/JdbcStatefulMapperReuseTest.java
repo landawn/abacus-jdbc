@@ -337,6 +337,31 @@ public class JdbcStatefulMapperReuseTest extends TestBase {
         assertEquals(Map.of("ID", 3L, "NAME", "n3"), mapMapper.apply(fresh.rs, JdbcUtil.getColumnLabels(fresh.rs)));
     }
 
+    // ResultSetLayout references the bound result set weakly. Once that result set is collected, the cleared reference
+    // must not match a null argument: the stale layout was applied and the constant getter returned a row instead of
+    // the IllegalArgumentException that a null result set gets on the first call.
+    @Test
+    public void testClearedResultSetReferenceDoesNotBindANullResultSet() throws Exception {
+        final Jdbc.RowMapper<Object[]> mapper = Jdbc.RowMapper.toArray((rs, columnIndex) -> "x");
+        final java.lang.ref.WeakReference<ResultSet> collected = applyToUnreachableResultSet(mapper);
+
+        for (int i = 0; i < 100 && collected.get() != null; i++) {
+            System.gc();
+            Thread.sleep(10);
+        }
+
+        org.junit.jupiter.api.Assumptions.assumeTrue(collected.get() == null, "the result set was not garbage-collected");
+        assertThrows(IllegalArgumentException.class, () -> mapper.apply(null));
+    }
+
+    private static java.lang.ref.WeakReference<ResultSet> applyToUnreachableResultSet(final Jdbc.RowMapper<Object[]> mapper) throws SQLException {
+        final ReexecutableResultSet unreachable = new ReexecutableResultSet();
+        unreachable.execute(List.of("id"), 1L);
+        assertArrayEquals(new Object[] { "x" }, mapper.apply(unreachable.rs));
+
+        return new java.lang.ref.WeakReference<>(unreachable.rs);
+    }
+
     @Test
     public void testRowConsumersReinitializeForEachResultSetLayout() throws SQLException {
         final List<List<Object>> rows = new ArrayList<>();

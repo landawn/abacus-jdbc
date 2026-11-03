@@ -26,10 +26,9 @@ package com.landawn.abacus.jdbc;
  *       useful for identifying slow queries in production environments</li>
  * </ul>
  *
- * <p>{@link JdbcUtil} keeps a separate per-thread instance for each mode and reads only that mode's
- * fields from it, so the mode switch performed by {@link #setSqlLogEnabled(boolean, int)} or
- * {@link #setSqlPerfLogThresholdMillis(long, int)} (which resets the other mode's field on the same
- * instance) never turns off the other kind of logging.</p>
+ * <p>Instances are immutable. {@link JdbcUtil} keeps a separate per-thread instance for each mode, replaced
+ * by a new one whenever the thread's settings change, and reads only that mode's fields from it. A thread at
+ * the default settings holds no instance and reads a default instance shared by every thread.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -48,8 +47,8 @@ package com.landawn.abacus.jdbc;
  * @see JdbcUtil#setSqlPerfLogThresholdMillis(long)
  */
 final class SqlLogConfig {
-    // Note: instances are strictly thread-confined (held in ThreadLocals in JdbcUtil and only read/written
-    // by the owning thread), so the fields deliberately are NOT volatile.
+    // WHY final fields and no setters: JdbcUtil shares its default instances across all threads (see
+    // JdbcUtil.sqlLogConfig()), so mutating one would change the logging of every thread at the defaults.
 
     /**
      * The smallest usable value for {@link #maxSqlLogLength}: {@code Strings.abbreviate} rejects any
@@ -60,17 +59,17 @@ final class SqlLogConfig {
     static final int MIN_MAX_SQL_LOG_LENGTH = 4;
 
     /** {@code true} if general SQL logging (logging every executed statement) is enabled. */
-    boolean isEnabled;
+    final boolean isEnabled;
 
     /** The maximum length, in characters, of a SQL statement that will be logged; longer statements are truncated. */
-    int maxSqlLogLength;
+    final int maxSqlLogLength;
 
     /**
      * The minimum execution time, in milliseconds, for performance logging. A statement is logged only when its
      * elapsed execution time is greater than or equal to this value. {@code Long.MAX_VALUE} effectively disables
      * performance logging, and a negative value also disables it.
      */
-    long sqlPerfLogThresholdMillis;
+    final long sqlPerfLogThresholdMillis;
 
     /**
      * Constructs a SqlLogConfig for general SQL logging.
@@ -133,69 +132,6 @@ final class SqlLogConfig {
         this.sqlPerfLogThresholdMillis = sqlPerfLogThresholdMillis;
         this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);
         isEnabled = false;
-    }
-
-    /**
-     * Updates the configuration for general SQL logging.
-     * When enabled, all SQL statements will be logged regardless of execution time.
-     *
-     * <p>This method switches the configuration to general SQL logging mode,
-     * where all statements are logged. The performance-based logging threshold is
-     * reset to {@code Long.MAX_VALUE} (effectively disabled).</p>
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlLogConfig config = new SqlLogConfig(false, 1000);
-     *
-     * // Later, enable general SQL logging
-     * config.setSqlLogEnabled(true, 2000);
-     *
-     * // Disable SQL logging
-     * config.setSqlLogEnabled(false, 1000);
-     * }</pre>
-     *
-     * @param isEnabled {@code true} to enable SQL logging for all statements, {@code false} to disable.
-     * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
-     *                        to 4, the smallest length the truncation marker supports.
-     */
-    void setSqlLogEnabled(final boolean isEnabled, final int maxSqlLogLength) {
-        this.isEnabled = isEnabled;
-        this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);
-        this.sqlPerfLogThresholdMillis = Long.MAX_VALUE;
-    }
-
-    /**
-     * Updates the configuration for performance-based SQL logging.
-     * Only SQL statements whose execution time reaches or exceeds the threshold will be logged.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlLogConfig config = new SqlLogConfig(true, 1000);
-     *
-     * // Switch to performance-based logging for queries over 500ms
-     * config.setSqlPerfLogThresholdMillis(500L, 2000);
-     *
-     * // Change threshold to 1 second
-     * config.setSqlPerfLogThresholdMillis(1000L, 2000);
-     *
-     * // Log all queries based on execution time (threshold = 0)
-     * config.setSqlPerfLogThresholdMillis(0L, 2000);
-     * }</pre>
-     *
-     * @param sqlPerfLogThresholdMillis the minimum execution time in milliseconds for logging.
-     *                                      SQL statements whose execution time is greater than or equal to this
-     *                                      threshold will be logged. Set to {@code 0} to log every executed query
-     *                                      based on this mechanism; pass a negative value to disable performance
-     *                                      logging entirely.
-     * @param maxSqlLogLength the maximum length of SQL statements to log. If {@code <= 0},
-     *                        {@link JdbcUtil#DEFAULT_MAX_SQL_LOG_LENGTH} is used; values of 1-3 are raised
-     *                        to 4, the smallest length the truncation marker supports.
-     */
-    void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
-        this.isEnabled = false;
-        this.sqlPerfLogThresholdMillis = sqlPerfLogThresholdMillis;
-        this.maxSqlLogLength = normalizeMaxSqlLogLength(maxSqlLogLength);
     }
 
     /**

@@ -177,6 +177,38 @@ class JdbcUtilLoggingTest extends JdbcUtilTestSupport {
         assertDoesNotThrow(() -> JdbcUtil.enableSqlLog(-1));
     }
 
+    // Regression: the SQL-log thread-locals had initial values, so reading them (as every statement execution does) left a
+    // SqlLogConfig on each pooled thread, which kept a web application's class loader reachable after undeploy. A thread
+    // holds a value only while its settings differ from the defaults.
+    @Test
+    public void testSqlLogThreadLocalsHoldNoValueAtDefaults() throws Exception {
+        final List<Object> held = new ArrayList<>();
+        final Thread thread = new Thread(() -> {
+            assertFalse(JdbcUtil.isSqlLogEnabled());
+            assertEquals(JdbcUtil.DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS, JdbcUtil.getSqlPerfLogThresholdMillis());
+            JdbcUtil.logSql("SELECT 1");
+            held.add(JdbcUtil.isSQLLogEnabled_TL.get());
+            held.add(JdbcUtil.sqlPerfLogThresholdMillis_TL.get());
+
+            JdbcUtil.enableSqlLog(64);
+            JdbcUtil.setSqlPerfLogThresholdMillis(5);
+            assertTrue(JdbcUtil.isSqlLogEnabled());
+            assertEquals(64, JdbcUtil.sqlLogConfig().maxSqlLogLength);
+            assertEquals(5, JdbcUtil.getSqlPerfLogThresholdMillis());
+
+            JdbcUtil.setSqlLogEnabled(false, JdbcUtil.DEFAULT_MAX_SQL_LOG_LENGTH);
+            JdbcUtil.setSqlPerfLogThresholdMillis(JdbcUtil.DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS);
+            held.add(JdbcUtil.isSQLLogEnabled_TL.get());
+            held.add(JdbcUtil.sqlPerfLogThresholdMillis_TL.get());
+        });
+
+        thread.start();
+        thread.join(TimeUnit.SECONDS.toMillis(30));
+
+        assertEquals(4, held.size());
+        held.forEach(org.junit.jupiter.api.Assertions::assertNull);
+    }
+
     @Test
     public void testDisableSqlLog() {
         JdbcUtil.enableSqlLog();

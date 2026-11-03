@@ -1028,6 +1028,48 @@ public class DaoImplIntegrationTest extends TestBase {
     public interface MismatchedFieldOnlyIdDao extends CrudDao<FieldOnlyAccount, String, MismatchedFieldOnlyIdDao> {
     }
 
+    public interface FieldOnlyAccountKeyedDao extends CrudDao<FieldOnlyAccount, Long, FieldOnlyAccountKeyedDao> {
+        @Query("SELECT id, name FROM field_only_account ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MappedByKey
+        Map<Long, FieldOnlyAccount> mapById() throws SQLException;
+
+        @Query("SELECT id, name FROM field_only_account ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MergedById
+        List<FieldOnlyAccount> listMergedById() throws SQLException;
+    }
+
+    // @MappedByKey/@MergedById naming a property that is a public field without a getter were rejected at DAO creation
+    // ("No method found by mapped key/merged id"), although the query function reads such properties through the bean
+    // info (entityInfo.getPropInfo), as every other DAO path does.
+    @Test
+    public void testCreateDao_MappedByKeyAndMergedByIdOnFieldOnlyProperty() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS field_only_account (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(64))");
+        }
+
+        try {
+            final FieldOnlyAccountKeyedDao keyedDao = JdbcUtil.createDao(FieldOnlyAccountKeyedDao.class, ds);
+            final FieldOnlyAccount account = new FieldOnlyAccount();
+            account.name = "keyed";
+
+            final Long id = keyedDao.insert(account);
+
+            final Map<Long, FieldOnlyAccount> byId = keyedDao.mapById();
+            assertEquals(1, byId.size());
+            assertEquals("keyed", byId.get(id).name);
+
+            final List<FieldOnlyAccount> merged = keyedDao.listMergedById();
+            assertEquals(1, merged.size());
+            assertEquals(id.longValue(), merged.get(0).id);
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS field_only_account");
+            }
+        }
+    }
+
     // An entity whose id property is a public field without a getter (a bean property for Beans.isBeanClass) failed CrudDao
     // creation with a NullPointerException while the declared 'ID' type was checked against the id property's type.
     @Test

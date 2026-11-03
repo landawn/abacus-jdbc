@@ -35,7 +35,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *
  * <p>The inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery} overloads accept only
  * {@code SELECT} and {@code INSERT} statements at runtime (any other SQL kind fails with
- * {@link UnsupportedOperationException}), enforced centrally by the DAO proxy.</p>
+ * {@link UnsupportedOperationException}), enforced centrally by the DAO proxy; the {@code save(namedInsertSql, entity)}
+ * and {@code batchSave(namedInsertSql, ...)} overloads run their SQL through it as well.</p>
  *
  * <p>The SQL argument is validated <i>before</i> its kind is inspected, so a {@code null} or empty
  * {@code sql}/{@code namedSql} still fails with the same {@link IllegalArgumentException} a full

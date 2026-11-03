@@ -525,8 +525,14 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         final SqlTransaction tran = entities.size() > 1 || JdbcUtil.isInTransaction(dataSource()) ? JdbcUtil.beginTransaction(dataSource()) : null;
         Throwable failure = null;
         final Map<Object, T> dbIdEntityMap;
+        // Each entity's match key, in iteration order, computed once: the lookup, the classification and the returned list all
+        // need it, and a composite key builds a Seid (copying its value map once per match property) on every computation.
+        // batchInsert only writes generated IDs onto entities that matched no row, whose key matches no row before or after.
+        final List<?> keys;
 
         try {
+            keys = N.map(entities, keysExtractor);
+
             // De-duplicate lookup keys before splitting them into query batches. Without this, equal
             // keys that landed in different batches returned the same database row more than once,
             // and the throwing merger below incorrectly reported a duplicate database result.
@@ -537,7 +543,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                             .split(batchSize)
                             .flatmap(it -> list(DaoUtil.singlePropValuesToCondition(uniquePropInfo.name, it, entityInfo)))
                             .toList()
-                    : Seq.of(N.distinct(N.map(entities, entityIdExtractor)), SQLException.class) //
+                    : Seq.of(N.distinct((List<EntityId>) keys), SQLException.class) //
                             .split(batchSize)
                             // Each key holds EVERY match property (entityIdExtractor sets them all, null included), so unlike a
                             // caller-supplied EntityId (see DaoUtil.entityIdToCondition) it cannot be incomplete and pair an
@@ -548,9 +554,23 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                             .toList();
 
             dbIdEntityMap = Stream.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.throwingMerger());
-            final Map<Boolean, List<T>> map = Stream.of(entities).groupTo(it -> dbIdEntityMap.containsKey(keysExtractor.apply(it)), Fn.identity());
-            final List<T> entitiesToUpdate = map.get(true);
-            final List<T> entitiesToInsert = map.get(false);
+
+            final List<T> entitiesToInsert = new ArrayList<>();
+            final List<T> entitiesToUpdate = new ArrayList<>();
+            final List<T> dbEntitiesToUpdate = new ArrayList<>(); // the loaded row of each element of entitiesToUpdate
+            int idx = 0;
+
+            for (final T it : entities) {
+                final T dbEntity = dbIdEntityMap.get(keys.get(idx++));
+
+                if (dbEntity == null) {
+                    entitiesToInsert.add(it);
+                } else {
+                    entitiesToUpdate.add(it);
+                    dbEntitiesToUpdate.add(dbEntity);
+                }
+            }
+
             final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
             if (N.notEmpty(entitiesToInsert)) {
@@ -564,21 +584,22 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                     ignoredPropNames.addAll(idPropNameList);
                 }
 
-                final List<T> dbEntitiesToUpdate = Stream.of(entitiesToUpdate)
-                        .map(it -> Beans.mergeInto(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
-                        .toList();
+                for (int i = 0, size = entitiesToUpdate.size(); i < size; i++) {
+                    Beans.mergeInto(entitiesToUpdate.get(i), dbEntitiesToUpdate.get(i), false, ignoredPropNames);
+                }
 
                 if (N.isEmpty(idPropNameList)) {
                     batchUpdate(dbEntitiesToUpdate, batchSize);
                 } else {
                     final List<T> idKeyedEntities = new ArrayList<>();
                     final List<T> nullKeyedEntities = new ArrayList<>();
+                    final List<PropInfo> idPropInfos = N.map(idPropNameList, entityInfo::getPropInfo);
 
                     for (final T dbEntity : dbEntitiesToUpdate) {
                         boolean hasNullId = false;
 
-                        for (final String idName : idPropNameList) {
-                            if (entityInfo.getPropInfo(idName).getPropValue(dbEntity) == null) {
+                        for (final PropInfo idPropInfo : idPropInfos) {
+                            if (idPropInfo.getPropValue(dbEntity) == null) {
                                 hasNullId = true;
                                 break;
                             }
@@ -629,11 +650,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         }
 
         final List<T> result = new ArrayList<>(entities.size());
+        int idx = 0;
 
         // Classification groups inserts and updates for efficient batch execution, but callers
         // should not observe that internal grouping in the returned list.
         for (final T entity : entities) {
-            final T dbEntity = dbIdEntityMap.get(keysExtractor.apply(entity));
+            final T dbEntity = dbIdEntityMap.get(keys.get(idx++));
             result.add(dbEntity == null ? entity : dbEntity);
         }
 

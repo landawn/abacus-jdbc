@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -14,13 +15,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
+import com.landawn.abacus.jdbc.dao.Dao;
+import com.landawn.abacus.jdbc.dao.DaoBase;
+import com.landawn.abacus.util.ClassUtil;
+import com.landawn.abacus.util.Strings;
 
 @Tag("2025")
 @Tag("integration")
@@ -77,6 +86,77 @@ class JdbcUtilColumnConverterLifecycleTest {
         assertSame(JdbcUtil.columnConvertersOf(java.sql.Date.class), JdbcUtil.columnConvertersOf(java.sql.Date.class));
         assertFalse(JdbcUtil.columnConvertersOf(java.sql.Date.class) == JdbcUtil.columnConvertersOf(UUID.class),
                 "java.sql.Date values keep their timestamp-aware conversion");
+    }
+
+    // Regression: BUILT_IN_DAO_UPDATE_METHODS came from a class-path scan through abacus-common's class loader. For a
+    // JdbcUtil defined by another loader (abacus-jdbc in a web application, abacus-common in a shared parent) the scan found
+    // the parent's copies of the DAO interfaces, none assignable to this DaoBase, so the set was empty (and JdbcUtil failed
+    // to initialize when the parent could not see the DAO package at all).
+    @Test
+    void builtInDaoUpdateMethods_childLoadedJdbcUtil_areFoundWithoutClassPathScan() throws Exception {
+        final URL classes = JdbcUtil.class.getProtectionDomain().getCodeSource().getLocation();
+
+        try (URLClassLoader loader = new URLClassLoader(new URL[] { classes }, JdbcUtilColumnConverterLifecycleTest.class.getClassLoader()) {
+            @Override
+            protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
+                if (!name.startsWith("com.landawn.abacus.jdbc.")) {
+                    return super.loadClass(name, resolve);
+                }
+
+                synchronized (getClassLoadingLock(name)) {
+                    final Class<?> loaded = findLoadedClass(name);
+                    return loaded != null ? loaded : findClass(name);
+                }
+            }
+        }) {
+            final Class<?> jdbcUtil = loader.loadClass(JdbcUtil.class.getName());
+            assertSame(loader, jdbcUtil.getClassLoader());
+
+            final java.lang.reflect.Field field = jdbcUtil.getDeclaredField("BUILT_IN_DAO_UPDATE_METHODS");
+            field.setAccessible(true);
+            final Set<?> methods = (Set<?>) field.get(null);
+            final Set<String> signatures = new HashSet<>();
+
+            for (final Object method : methods) {
+                final Method m = (Method) method;
+                assertSame(loader, m.getDeclaringClass().getClassLoader(), m.toString());
+                signatures.add(m.toString());
+            }
+
+            assertEquals(signaturesOf(JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS), signatures);
+        }
+    }
+
+    // Pins completeness: walking the sealed DAO hierarchy finds exactly the methods a scan of the DAO package finds.
+    @Test
+    void builtInDaoUpdateMethods_matchPackageScan() {
+        final Set<String> scanned = new HashSet<>();
+
+        for (final Class<?> cls : ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) {
+            if (!DaoBase.class.isAssignableFrom(cls)) {
+                continue;
+            }
+
+            for (final Method method : cls.getDeclaredMethods()) {
+                if (Modifier.isPublic(method.getModifiers()) && !Modifier.isStatic(method.getModifiers()) && method.getAnnotation(NonDBOperation.class) == null
+                        && JdbcUtil.UPDATE_METHOD_NAME_SET.stream().anyMatch(e -> Strings.containsIgnoreCase(method.getName(), e))) {
+                    scanned.add(method.toString());
+                }
+            }
+        }
+
+        assertFalse(scanned.isEmpty());
+        assertEquals(scanned, signaturesOf(JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS));
+    }
+
+    private static Set<String> signaturesOf(final Set<Method> methods) {
+        final Set<String> signatures = new HashSet<>();
+
+        for (final Method method : methods) {
+            signatures.add(method.toString());
+        }
+
+        return signatures;
     }
 
     private void assertProbePasses(final Class<?> probe, final String successMessage, final String... jvmOptions) throws Exception {

@@ -227,6 +227,41 @@ public class CapabilityGatingTest extends TestBase {
         assertEquals(3, dao.count(com.landawn.abacus.query.Filters.alwaysTrue()));
     }
 
+    // save/batchSave with a named SQL run it through the proxy's gated prepareNamedQuery (documented on NonUpdateDao and
+    // in the package docs): an UPDATE or DELETE passed to them is rejected, an INSERT still runs.
+    @Test
+    public void testNonUpdateCrudDao_SaveWithSqlGate() throws SQLException {
+        final org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:capability_gating_save_sql_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
+        JdbcUtil.executeUpdate(ds, "CREATE TABLE account (id BIGINT PRIMARY KEY, name VARCHAR(32))");
+        JdbcUtil.executeUpdate(ds, "INSERT INTO account (id, name) VALUES (1, 'a')");
+
+        final NuCrudDao dao = JdbcUtil.createDao(NuCrudDao.class, ds);
+        final UncheckedNuCrudDao uncheckedDao = JdbcUtil.createDao(UncheckedNuCrudDao.class, ds);
+        final Account account = new Account();
+        account.setId(1);
+        account.setName("changed");
+
+        final String deleteSql = "DELETE FROM account WHERE id = :id";
+        final String updateSql = "UPDATE account SET name = :name WHERE id = :id";
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.save(deleteSql, account));
+        assertThrows(UnsupportedOperationException.class, () -> dao.save(updateSql, account));
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(deleteSql, List.of(account), 1));
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchSave(updateSql, List.of(account, account), 1));
+        assertThrows(UnsupportedOperationException.class, () -> uncheckedDao.save(updateSql, account));
+        assertThrows(UnsupportedOperationException.class, () -> uncheckedDao.batchSave(deleteSql, List.of(account), 1));
+
+        assertEquals("a", dao.queryForString("name", 1L).orElseNull());
+
+        final Account second = new Account();
+        second.setId(2);
+        second.setName("b");
+
+        dao.save("INSERT INTO account (id, name) VALUES (:id, :name)", second);
+        assertEquals(2, dao.count(com.landawn.abacus.query.Filters.alwaysTrue()));
+    }
+
     @Test
     public void testFullDao_PrepareNotGated() throws SQLException {
         final FullDao dao = JdbcUtil.createDao(FullDao.class, newDataSource());

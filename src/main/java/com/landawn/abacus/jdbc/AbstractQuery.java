@@ -441,7 +441,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
                 try {
                     handler.run();
-                } catch (final RuntimeException | Error failure) {
+                } catch (final Throwable failure) { // NOSONAR
+                    // Throwable, not just RuntimeException | Error: a handler written in a language without checked exceptions
+                    // (or using a sneaky throw) can throw a checked one, which must not skip the older handlers, such as the
+                    // one that releases a data-source query's connection (as java.util.stream's composed close handlers do).
                     if (primaryFailure == null) {
                         primaryFailure = failure;
                     } else if (failure != primaryFailure) {
@@ -450,11 +453,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-            if (primaryFailure instanceof RuntimeException runtimeFailure) {
-                throw runtimeFailure;
-            } else if (primaryFailure instanceof Error error) {
-                throw error;
+            if (primaryFailure != null) {
+                throw CloseHandlers.<RuntimeException> rethrow(primaryFailure);
             }
+        }
+
+        /** Rethrows {@code failure} unchanged, including a checked exception that a handler threw undeclared. */
+        @SuppressWarnings("unchecked")
+        private static <X extends Throwable> RuntimeException rethrow(final Throwable failure) throws X {
+            throw (X) failure;
         }
     }
 
@@ -3088,6 +3095,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets multiple parameters of the same type starting from index 1.
+     * The values are bound as by {@link #setParametersFrom(int, Object[])}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3109,6 +3117,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets multiple parameters from a Collection starting from index 1.
+     * The values are bound as by {@link #setParametersFrom(int, Collection)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3311,6 +3320,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets multiple parameters of the same type starting from the specified index.
+     * If the array's component type is one of the types accepted by a {@code PreparedStatement.setXxx(int, T)}
+     * setter (for example {@code Integer[]} or {@code BigDecimal[]}), every element, including a {@code null} one,
+     * is bound through the Abacus {@link Type} of that component type, so a {@code null} element becomes a typed
+     * SQL {@code NULL}. Otherwise (for example {@code Object[]} or {@code LocalDate[]}) each element is bound as by
+     * {@link #setObject(int, Object)}, where a {@code null} element is passed to the driver as an untyped {@code NULL}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3352,6 +3366,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets multiple parameters from a Collection starting from the specified index.
+     * Each element is bound as by {@link #setObject(int, Object)}, so a {@code null} element is passed to the driver as
+     * an untyped {@code NULL}; use {@link #setParametersFrom(int, Collection, Class)} to bind every element, including
+     * {@code null}, through one declared type.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5673,9 +5690,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Optional<String> email = query
      *     .setInt(1, userId)
-     *     .queryForSingleNonNull(String.class);   // SELECT email FROM users WHERE id = ?
+     *     .queryForSingleNonNull(String.class);   // SELECT email FROM users WHERE id = ? (a SQL NULL email throws NullPointerException)
      *
-     * email.ifPresent(e -> sendNotification(e));
+     * email.ifPresent(e -> sendNotification(e));   // empty only when no user has the id
      * }</pre>
      *
      * @param <V> the type of the single result value to be returned
@@ -6611,7 +6628,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map the result row to
      * @return An {@code Optional} containing the mapped object if exactly one record is found, otherwise empty
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also, once a row is found, if {@code targetType} is a bean class
+     *         with invalid property metadata, the row has an unmapped bean column, or a scalar target has other than one column
      * @throws SQLException if executing the query, reading the column labels or values of the first row, or advancing to check for a second row
      *         fails; also if closing a consumed result set fails
      * @throws DuplicateResultException if the query finds more than one record
@@ -6747,7 +6765,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map the result row to
      * @return The mapped object if exactly one record is found, otherwise {@code null}
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also, once a row is found, if {@code targetType} is a bean class
+     *         with invalid property metadata, the row has an unmapped bean column, or a scalar target has other than one column
      * @throws SQLException if executing the query, reading the column labels or values of the first row, or advancing to check for a second row
      *         fails; also if closing a consumed result set fails
      * @throws DuplicateResultException if the query finds more than one record
@@ -6930,7 +6949,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map the result row to
      * @return An {@code Optional} containing the first result, or empty if no result is found
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also, once a row is found, if {@code targetType} is a bean class
+     *         with invalid property metadata, the row has an unmapped bean column, or a scalar target has other than one column
      * @throws SQLException if executing the query or reading the column labels or values of the first row fails; also if closing a consumed
      *         result set fails
      * @throws NullPointerException if the mapped object for the found row is {@code null}
@@ -7126,7 +7146,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map the result row to
      * @return The first result mapped to the specified type, or {@code null} if no result is found
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also, once a row is found, if {@code targetType} is a bean class
+     *         with invalid property metadata, the row has an unmapped bean column, or a scalar target has other than one column
      * @throws SQLException if executing the query or reading the column labels or values of the first row fails; also if closing a consumed
      *         result set fails
      * @throws NullPointerException if the mapped object for the found row is {@code null}
@@ -7837,8 +7858,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @return A list of lists, where each inner list represents one ResultSet
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} is null; also if a returned row has an unmapped bean column or a scalar target has
-     *         other than one column
+     * @throws IllegalArgumentException if {@code targetType} is null; also, once a result set is processed, if {@code targetType} is a bean
+     *         class with invalid property metadata, a returned row has an unmapped bean column, or a scalar target has other than one column
      * @throws SQLException if executing the statement, retrieving any of its result sets, or reading their column labels or row values fails,
      *         or draining the remaining results fails
      * @see #listAllResultSets(Jdbc.RowMapper)
@@ -8152,7 +8173,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param func the function to apply to the list. Must not be {@code null}.
      * @return The result of applying the function to the list
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} or {@code func} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} or {@code func} is {@code null}, or {@code targetType} is a bean class with invalid
+     *         property metadata (this query is then closed); also if a returned row has an unmapped bean column or a scalar target has other
+     *         than one column
      * @throws SQLException if executing the query or reading the result set fails, or mapping a row throws {@code SQLException}; also if closing
      *         a consumed result set fails
      * @throws E if the function throws an exception
@@ -8294,7 +8317,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @param consumer the consumer to process the list. Must not be {@code null}.
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} or {@code consumer} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} or {@code consumer} is {@code null}, or {@code targetType} is a bean class with invalid
+     *         property metadata (this query is then closed); also if a returned row has an unmapped bean column or a scalar target has other
+     *         than one column
      * @throws SQLException if executing the query or reading the result set fails, or mapping a row throws {@code SQLException}; also if closing
      *         a consumed result set fails
      * @throws E if the {@code consumer} throws an exception
@@ -11736,7 +11761,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     final void closeSuppressingFailure(final Throwable primaryFailure) {
         try {
             close();
-        } catch (final RuntimeException | Error closeFailure) {
+        } catch (final Throwable closeFailure) { // NOSONAR
+            // Throwable: close() rethrows a checked exception that a close handler threw undeclared (see CloseHandlers.run),
+            // which must not replace the primary failure either.
             logger.error(closeFailure, "Failed to close Query");
 
             if (closeFailure != primaryFailure) {
@@ -11812,7 +11839,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             } catch (final RuntimeException | Error primaryFailure) {
                 try {
                     localCloseHandler.run();
-                } catch (final RuntimeException | Error handlerFailure) {
+                } catch (final Throwable handlerFailure) { // NOSONAR
+                    // Throwable: a handler can throw an undeclared checked exception (see CloseHandlers.run), which must
+                    // not replace the statement cleanup failure either.
                     if (handlerFailure != primaryFailure) {
                         primaryFailure.addSuppressed(handlerFailure);
                     }

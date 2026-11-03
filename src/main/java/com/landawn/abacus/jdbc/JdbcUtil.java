@@ -440,7 +440,7 @@ public final class JdbcUtil {
      * The public, non-static update methods declared by the built-in DAO interfaces in the DAO package,
      * excluding methods annotated with {@link NonDBOperation}; used to recognize update operations on DAO proxies.
      */
-    static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(ClassUtil.findClassesInPackage(Dao.class.getPackageName(), false, true)) //
+    static final Set<Method> BUILT_IN_DAO_UPDATE_METHODS = StreamEx.of(builtInDaoInterfaces()) //
             .filter(DaoBase.class::isAssignableFrom)
             .flatMapArray(Class::getDeclaredMethods)
             .filter(it -> Modifier.isPublic(it.getModifiers()) && !Modifier.isStatic(it.getModifiers()))
@@ -466,18 +466,48 @@ public final class JdbcUtil {
      */
     static volatile Throwables.Function<Statement, String, SQLException> _sqlExtractor = DEFAULT_SQL_EXTRACTOR; //NOSONAR
 
+    // WHY no ThreadLocal.withInitial for the two SQL-log configurations: every statement execution reads them, so an initial
+    // value was installed on every pooled server thread that ran a statement, and that SqlLogConfig (a class of this library)
+    // kept a web application's class loader reachable after undeploy. A thread now holds a value only while its settings
+    // differ from the defaults (see setSqlLogEnabled/setSqlPerfLogThresholdMillis); readers fall back to these shared
+    // defaults, which is safe because SqlLogConfig is immutable.
+    private static final SqlLogConfig DEFAULT_SQL_LOG_CONFIG = new SqlLogConfig(false, DEFAULT_MAX_SQL_LOG_LENGTH);
+
+    private static final SqlLogConfig DEFAULT_SQL_PERF_LOG_CONFIG = new SqlLogConfig(DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS, DEFAULT_MAX_SQL_LOG_LENGTH);
+
     /**
      * Per-thread configuration holding whether general SQL logging (logging every executed statement) is enabled
-     * and the maximum length of logged SQL.
+     * and the maximum length of logged SQL; unset while the thread uses the defaults (read it through {@link #sqlLogConfig()}).
      */
-    static final ThreadLocal<SqlLogConfig> isSQLLogEnabled_TL = ThreadLocal.withInitial(() -> new SqlLogConfig(false, DEFAULT_MAX_SQL_LOG_LENGTH));
+    static final ThreadLocal<SqlLogConfig> isSQLLogEnabled_TL = new ThreadLocal<>();
 
     /**
      * Per-thread configuration holding the SQL performance-log threshold in milliseconds
-     * and the maximum length of logged SQL.
+     * and the maximum length of logged SQL; unset while the thread uses the defaults (read it through {@link #sqlPerfLogConfig()}).
      */
-    static final ThreadLocal<SqlLogConfig> sqlPerfLogThresholdMillis_TL = ThreadLocal
-            .withInitial(() -> new SqlLogConfig(DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS, DEFAULT_MAX_SQL_LOG_LENGTH));
+    static final ThreadLocal<SqlLogConfig> sqlPerfLogThresholdMillis_TL = new ThreadLocal<>();
+
+    /**
+     * Returns the current thread's SQL-logging configuration, or the shared default one.
+     *
+     * @return the SQL-logging configuration in effect on the current thread
+     */
+    static SqlLogConfig sqlLogConfig() {
+        final SqlLogConfig config = isSQLLogEnabled_TL.get();
+
+        return config == null ? DEFAULT_SQL_LOG_CONFIG : config;
+    }
+
+    /**
+     * Returns the current thread's SQL performance-logging configuration, or the shared default one.
+     *
+     * @return the SQL performance-logging configuration in effect on the current thread
+     */
+    static SqlLogConfig sqlPerfLogConfig() {
+        final SqlLogConfig config = sqlPerfLogThresholdMillis_TL.get();
+
+        return config == null ? DEFAULT_SQL_PERF_LOG_CONFIG : config;
+    }
 
     /**
      * Per-thread flag that, when {@code true}, disables participation in Spring-managed transactions
@@ -567,6 +597,37 @@ public final class JdbcUtil {
      * The innermost {@link DaoCacheScope} currently open on the current thread, used to enforce last-opened, first-closed nesting.
      */
     private static final ThreadLocal<DaoCacheScope> daoCacheScope_TL = new ThreadLocal<>();
+
+    /**
+     * Returns the built-in DAO interfaces: those reachable from the sealed roots {@link DaoBase} and
+     * {@link com.landawn.abacus.jdbc.dao.JoinEntityBase} through their permitted subtypes. Every built-in DAO interface is
+     * {@code sealed} or {@code non-sealed}, so it has a sealed direct supertype that permits it.
+     *
+     * <p>WHY not a class-path scan of the DAO package: {@code ClassUtil.findClassesInPackage} resolves through abacus-common's
+     * class loader. With abacus-jdbc in a child loader (e.g. a web application's) and abacus-common in a parent, it found no
+     * DAO package (failing this class's initialization) or the parent's copies of the interfaces, none assignable to this
+     * {@code DaoBase}, and an empty set.</p>
+     *
+     * @return the built-in DAO interfaces, roots included
+     */
+    private static Set<Class<?>> builtInDaoInterfaces() {
+        final Set<Class<?>> result = new java.util.LinkedHashSet<>();
+        final java.util.Deque<Class<?>> pending = new java.util.ArrayDeque<>(List.of(DaoBase.class, com.landawn.abacus.jdbc.dao.JoinEntityBase.class));
+
+        while (!pending.isEmpty()) {
+            final Class<?> cls = pending.poll();
+
+            if (result.add(cls)) {
+                final Class<?>[] permitted = cls.getPermittedSubclasses();
+
+                if (permitted != null) {
+                    pending.addAll(List.of(permitted));
+                }
+            }
+        }
+
+        return result;
+    }
 
     /**
      * Returns whether Spring's {@code DataSourceUtils} can be loaded and initialized through this class's class loader, which
@@ -3414,7 +3475,8 @@ public final class JdbcUtil {
      * This mapping is crucial for the automatic object-relational mapping (ORM) features,
      * allowing {@code JdbcUtil} to populate entity objects from a {@code ResultSet}.
      * Only properties that declare an explicit column name (e.g., {@code @Column("user_id")}) are included;
-     * properties mapped purely by naming convention are not. Besides each declared column name, the map also
+     * properties mapped purely by naming convention are not, nor are properties excluded from the table mapping
+     * ({@code @NonColumn}, or the {@code columnFields}/{@code nonColumnFields} of {@code @Table}). Besides each declared column name, the map also
      * contains its lower- and upper-case variants for case-insensitive lookups (an exact declared spelling
      * always wins over a folded variant).
      *
@@ -3539,10 +3601,8 @@ public final class JdbcUtil {
      * }
      *
      * // Stream processing for large result sets
-     * try (Stream<PaymentTransaction> stream = JdbcUtil.prepareQuery(dataSource,
-     *         "SELECT * FROM transactions WHERE amount > ?")
-     *     .setDouble(1, 1000.0)
-     *     .stream(PaymentTransaction.class)) {
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM transactions WHERE amount > ?");
+     *         Stream<PaymentTransaction> stream = query.setDouble(1, 1000.0).stream(PaymentTransaction.class)) {
      *
      *     double totalAmount = stream
      *         .filter(t -> t.getStatus().equals("COMPLETED"))
@@ -3553,10 +3613,11 @@ public final class JdbcUtil {
      * }
      *
      * // Working with Dataset (column-oriented data structure)
-     * Dataset dataset = JdbcUtil.prepareQuery(dataSource,
-     *         "SELECT name, email, age FROM users WHERE department = ?")
-     *     .setString(1, "Engineering")
-     *     .query();
+     * final Dataset dataset;
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT name, email, age FROM users WHERE department = ?")) {
+     *     dataset = query.setString(1, "Engineering").query();
+     * }
      * dataset.forEach(row -> {
      *     // Columns are positional, in SELECT order: name=0, email=1, age=2
      *     System.out.println(row.get(0) + " - " + row.get(1));
@@ -7226,7 +7287,7 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static ResultSet executeQuery(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogConfig();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -7277,7 +7338,7 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static int executeUpdate(final PreparedStatement stmt, final Runnable afterExecution) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogConfig();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -7333,7 +7394,7 @@ public final class JdbcUtil {
      *         the statement is not executed in that case, so use {@link #executeUpdate(PreparedStatement)} with such a driver.
      */
     static long executeLargeUpdate(final PreparedStatement stmt) throws SQLException, UnsupportedOperationException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogConfig();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -7382,7 +7443,7 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static int[] executeBatch(final Statement stmt, final Runnable afterExecution) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogConfig();
         final boolean logSql = JdbcUtil.isToHandleSqlLog(sqlLogConfig);
         final long startTimeMillis = logSql ? System.currentTimeMillis() : 0;
         final long startTimeNanos = logSql ? System.nanoTime() : 0;
@@ -7423,7 +7484,7 @@ public final class JdbcUtil {
      *         {@link #executeBatch(Statement)} with such a driver instead of retrying on the same batch.
      */
     static long[] executeLargeBatch(final Statement stmt) throws SQLException, UnsupportedOperationException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogConfig();
         final boolean logSql = JdbcUtil.isToHandleSqlLog(sqlLogConfig);
         final long startTimeMillis = logSql ? System.currentTimeMillis() : 0;
         final long startTimeNanos = logSql ? System.nanoTime() : 0;
@@ -7550,7 +7611,7 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static boolean execute(final PreparedStatement stmt) throws SQLException {
-        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+        final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogConfig();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
             final long startTimeMillis = System.currentTimeMillis();
@@ -8763,7 +8824,8 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to create a stream from.
      * @param targetClass The class of the result type. Column names from the ResultSet will be mapped to properties of this class.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if {@code rs} or {@code targetClass} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} or {@code targetClass} is {@code null}, or {@code targetClass} is a bean
+     *         class with conflicting or invalid property metadata (checked when this method is called, before any row is read).
      */
     public static <T> Stream<T> stream(final ResultSet rs, final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.rs);
@@ -13358,7 +13420,7 @@ public final class JdbcUtil {
      *        the truncation marker supports.
      */
     static void setSqlLogEnabled(final boolean enabled, final int maxSqlLogLength) {
-        final SqlLogConfig config = isSQLLogEnabled_TL.get();
+        final SqlLogConfig config = sqlLogConfig();
 
         if (logger.isDebugEnabled() && config.isEnabled != enabled) {
             if (enabled) {
@@ -13368,7 +13430,14 @@ public final class JdbcUtil {
             }
         }
 
-        config.setSqlLogEnabled(enabled, maxSqlLogLength);
+        final SqlLogConfig updated = new SqlLogConfig(enabled, maxSqlLogLength);
+
+        // Back to the defaults: hold no value (see DEFAULT_SQL_LOG_CONFIG for why).
+        if (!updated.isEnabled && updated.maxSqlLogLength == DEFAULT_SQL_LOG_CONFIG.maxSqlLogLength) {
+            isSQLLogEnabled_TL.remove();
+        } else {
+            isSQLLogEnabled_TL.set(updated);
+        }
     }
 
     /**
@@ -13439,7 +13508,7 @@ public final class JdbcUtil {
      *
      */
     public static void disableSqlLog() {
-        setSqlLogEnabled(false, isSQLLogEnabled_TL.get().maxSqlLogLength);
+        setSqlLogEnabled(false, sqlLogConfig().maxSqlLogLength);
     }
 
     /**
@@ -13456,7 +13525,7 @@ public final class JdbcUtil {
      * @return {@code true} if SQL logging is enabled in the current thread, {@code false} otherwise.
      */
     public static boolean isSqlLogEnabled() {
-        return isSQLLogEnabled_TL.get().isEnabled;
+        return sqlLogConfig().isEnabled;
     }
 
     /**
@@ -13470,7 +13539,7 @@ public final class JdbcUtil {
             return;
         }
 
-        final SqlLogConfig sqlLogConfig = isSQLLogEnabled_TL.get();
+        final SqlLogConfig sqlLogConfig = sqlLogConfig();
 
         if (sqlLogConfig.isEnabled) {
             if (sql.length() <= sqlLogConfig.maxSqlLogLength) {
@@ -13708,7 +13777,7 @@ public final class JdbcUtil {
      *        length the truncation marker supports.
      */
     public static void setSqlPerfLogThresholdMillis(final long sqlPerfLogThresholdMillis, final int maxSqlLogLength) {
-        final SqlLogConfig config = sqlPerfLogThresholdMillis_TL.get();
+        final SqlLogConfig config = sqlPerfLogConfig();
         // synchronized (sqlPerfLogThresholdMillis_TL) {
         if (logger.isDebugEnabled() && config.sqlPerfLogThresholdMillis != sqlPerfLogThresholdMillis) {
             if (sqlPerfLogThresholdMillis >= 0) {
@@ -13718,7 +13787,15 @@ public final class JdbcUtil {
             }
         }
 
-        config.setSqlPerfLogThresholdMillis(sqlPerfLogThresholdMillis, maxSqlLogLength);
+        final SqlLogConfig updated = new SqlLogConfig(sqlPerfLogThresholdMillis, maxSqlLogLength);
+
+        // Back to the defaults: hold no value (see DEFAULT_SQL_LOG_CONFIG for why).
+        if (updated.sqlPerfLogThresholdMillis == DEFAULT_SQL_PERF_LOG_CONFIG.sqlPerfLogThresholdMillis
+                && updated.maxSqlLogLength == DEFAULT_SQL_PERF_LOG_CONFIG.maxSqlLogLength) {
+            sqlPerfLogThresholdMillis_TL.remove();
+        } else {
+            sqlPerfLogThresholdMillis_TL.set(updated);
+        }
         // }
     }
 
@@ -13736,7 +13813,7 @@ public final class JdbcUtil {
      *         performance logging is disabled on the current thread.
      */
     public static long getSqlPerfLogThresholdMillis() {
-        return sqlPerfLogThresholdMillis_TL.get().sqlPerfLogThresholdMillis;
+        return sqlPerfLogConfig().sqlPerfLogThresholdMillis;
     }
 
     /**
@@ -13767,7 +13844,7 @@ public final class JdbcUtil {
     public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws IllegalArgumentException, E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        final SqlLogConfig config = isSQLLogEnabled_TL.get();
+        final SqlLogConfig config = sqlLogConfig();
         final boolean savedEnabled = config.isEnabled;
         final int savedMaxSqlLogLength = config.maxSqlLogLength;
 
@@ -13814,7 +13891,7 @@ public final class JdbcUtil {
     public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<? extends R, E> sqlAction) throws IllegalArgumentException, E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
-        final SqlLogConfig config = isSQLLogEnabled_TL.get();
+        final SqlLogConfig config = sqlLogConfig();
         final boolean savedEnabled = config.isEnabled;
         final int savedMaxSqlLogLength = config.maxSqlLogLength;
 

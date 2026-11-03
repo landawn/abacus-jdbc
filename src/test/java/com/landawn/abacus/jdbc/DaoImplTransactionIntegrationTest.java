@@ -125,10 +125,9 @@ class DaoImplTransactionIntegrationTest extends TestBase {
         final Throwables.Supplier<Integer, SQLException> work = () -> {
             invoked.set(true);
             assertEquals(transactional, JdbcUtil.isInTransaction(dataSource));
-            assertEquals(logging == Logging.SQL || logging == Logging.BOTH, JdbcUtil.isSQLLogEnabled_TL.get().isEnabled);
-            assertEquals(logging == Logging.SQL || logging == Logging.BOTH ? 321 : 137, JdbcUtil.isSQLLogEnabled_TL.get().maxSqlLogLength);
-            assertEquals(logging == Logging.PERFORMANCE || logging == Logging.BOTH ? 1234L : 91L,
-                    JdbcUtil.sqlPerfLogThresholdMillis_TL.get().sqlPerfLogThresholdMillis);
+            assertEquals(logging == Logging.SQL || logging == Logging.BOTH, JdbcUtil.sqlLogConfig().isEnabled);
+            assertEquals(logging == Logging.SQL || logging == Logging.BOTH ? 321 : 137, JdbcUtil.sqlLogConfig().maxSqlLogLength);
+            assertEquals(logging == Logging.PERFORMANCE || logging == Logging.BOTH ? 1234L : 91L, JdbcUtil.sqlPerfLogConfig().sqlPerfLogThresholdMillis);
 
             try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "INSERT INTO transaction_record (id) VALUES (1)")) {
                 query.configureStatement(statement -> {
@@ -166,10 +165,10 @@ class DaoImplTransactionIntegrationTest extends TestBase {
                     assertEquals(1, query.queryForInt().get());
                 }
             }
-            assertFalse(JdbcUtil.isSQLLogEnabled_TL.get().isEnabled);
-            assertEquals(137, JdbcUtil.isSQLLogEnabled_TL.get().maxSqlLogLength);
-            assertEquals(91L, JdbcUtil.sqlPerfLogThresholdMillis_TL.get().sqlPerfLogThresholdMillis);
-            assertEquals(149, JdbcUtil.sqlPerfLogThresholdMillis_TL.get().maxSqlLogLength);
+            assertFalse(JdbcUtil.sqlLogConfig().isEnabled);
+            assertEquals(137, JdbcUtil.sqlLogConfig().maxSqlLogLength);
+            assertEquals(91L, JdbcUtil.sqlPerfLogConfig().sqlPerfLogThresholdMillis);
+            assertEquals(149, JdbcUtil.sqlPerfLogConfig().maxSqlLogLength);
         } finally {
             if (outer != null) {
                 outer.rollbackIfNotCommitted();
@@ -232,8 +231,8 @@ class DaoImplTransactionIntegrationTest extends TestBase {
             }
         }
 
-        assertFalse(JdbcUtil.isSQLLogEnabled_TL.get().isEnabled);
-        assertEquals(91L, JdbcUtil.sqlPerfLogThresholdMillis_TL.get().sqlPerfLogThresholdMillis);
+        assertFalse(JdbcUtil.sqlLogConfig().isEnabled);
+        assertEquals(91L, JdbcUtil.sqlPerfLogConfig().sqlPerfLogThresholdMillis);
     }
 
     // A non-transactional Spring scope (SUPPORTS with synchronization) binds an auto-commit connection: REQUIRED must still
@@ -336,8 +335,8 @@ class DaoImplTransactionIntegrationTest extends TestBase {
             assertEquals(0, resultSet.getInt(1));
         }
 
-        assertFalse(JdbcUtil.isSQLLogEnabled_TL.get().isEnabled);
-        assertEquals(91L, JdbcUtil.sqlPerfLogThresholdMillis_TL.get().sqlPerfLogThresholdMillis);
+        assertFalse(JdbcUtil.sqlLogConfig().isEnabled);
+        assertEquals(91L, JdbcUtil.sqlPerfLogConfig().sqlPerfLogThresholdMillis);
     }
 
     // A JdbcUtil transaction opened inside a Spring transaction participates in it, and the method joins it as a nested scope:

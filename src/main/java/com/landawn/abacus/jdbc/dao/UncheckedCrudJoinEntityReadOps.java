@@ -497,6 +497,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null},
      *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or, when matching records are found, if no join property of the specified type is found in the
@@ -536,6 +537,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return a list of entities with join entities loaded as specified (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
@@ -575,6 +577,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null},
      *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or, when matching records are found, if no join property of the specified type is found in the
@@ -616,6 +619,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element,
      *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or, when matching records are found, if no join property is found for one of the specified types
@@ -658,6 +662,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return a list of entities with selected properties and join entities as specified (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
@@ -700,6 +705,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or {@code batchSize} is not positive,
      *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or, when matching records are found, if no join property of the specified type is found in the
@@ -760,6 +766,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or if {@code batchSize} is not positive,
      *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or, when matching records are found, if no join property is found for one of the specified types
@@ -826,6 +833,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
      *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property

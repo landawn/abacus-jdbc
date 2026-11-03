@@ -560,8 +560,10 @@ public final class DaoUtil {
      *                                  is {@code null}, is not an {@link EntityId} or is an {@link EntityId} with no keys; if
      *                                  {@code isMap} and a non-null element is not a {@link Map}; if {@code idPropNameList}
      *                                  holds more than one name and a non-null element is a {@link Map} while {@code isMap} is
-     *                                  {@code false}, is not a bean or record, or lacks a declared id property, or every
-     *                                  element of {@code ids} is {@code null}
+     *                                  {@code false}, is not a bean or record, or lacks a declared id property; or if
+     *                                  {@code isEntityId} is {@code false}, {@code isMap} is {@code true} or
+     *                                  {@code idPropNameList} holds more than one name, and every element of {@code ids} is
+     *                                  {@code null} (a single non-{@code Map} id property matches {@code null} with {@code IS NULL})
      */
     static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap,
             final BeanInfo entityInfo) throws IllegalArgumentException {

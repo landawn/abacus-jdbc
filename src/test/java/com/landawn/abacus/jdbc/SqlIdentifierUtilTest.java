@@ -197,6 +197,29 @@ public class SqlIdentifierUtilTest extends TestBase {
     }
 
     @Test
+    public void delimiterAfterLeadingControlCharacterIsStillExplicit() {
+        // splitQualifiedSqlIdentifier trims with String.trim(), which also drops control characters such as U+0001,
+        // and then decodes the delimited part; the delimiter scan must see the same delimiter instead of the control character.
+        assertArrayEquals(new boolean[] { true }, SqlIdentifierUtil.explicitlyDelimitedIdentifierParts("\u0001[MyTable]", 1));
+        assertArrayEquals(new boolean[] { true, false }, SqlIdentifierUtil.explicitlyDelimitedIdentifierParts("\u0001  \"S\".t", 2));
+        assertTrue(SqlIdentifierUtil.startsWithIdentifierDelimiter("\u0001\"Col\""));
+
+        for (final String table : java.util.List.of("\u0001[MyTable]", "\u0001\"MyTable\"", "\u0001`MyTable`", "\u0001\"S\".t")) {
+            final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderTableName(table, null));
+            assertTrue(failure.getMessage().contains("Identifier quoting is disabled"), failure.getMessage());
+        }
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> SqlIdentifierUtil.renderColumnName("\u0001\"MyCol\"", null));
+        assertTrue(failure.getMessage().contains("Identifier quoting is disabled"), failure.getMessage());
+
+        // A control character the parser keeps (not at the start) still makes the part non-delimited and invalid.
+        assertArrayEquals(new boolean[] { false, false }, SqlIdentifierUtil.explicitlyDelimitedIdentifierParts("a.\u0001[b]", 2));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderTableName("a.\u0001[b]", null));
+        assertEquals("users", SqlIdentifierUtil.renderTableName("\u0001users", null));
+    }
+
+    @Test
     public void bareExpressionNamesRequireQuotingRegardlessOfCase() {
         for (final String name : java.util.List.of("ROWNUM", "rownum", "RowNum", "CURRENT_PATH", "current_path", "Current_Path")) {
             assertFalse(SqlIdentifierUtil.isUnquotedIdentifier(name), name);

@@ -257,9 +257,22 @@ final class SqlIdentifierUtil {
      * @return {@code true} if the text starts with {@code "}, {@code `} or {@code [}
      */
     static boolean startsWithIdentifierDelimiter(final String identifier) {
-        final String trimmed = Strings.stripToEmpty(identifier);
+        final String trimmed = stripAsParsed(identifier);
 
         return !trimmed.isEmpty() && isOpeningDelimiter(trimmed.charAt(0));
+    }
+
+    /**
+     * Removes the outer text that {@link JdbcUtil#splitQualifiedSqlIdentifier(String, String)} skips before the
+     * first part can open a delimiter: the characters {@link String#trim()} removes (including control
+     * characters such as U+0001), then Unicode whitespace. Stripping whitespace alone would leave a
+     * leading control character that the parser discards, hiding the delimiter the parser decoded.
+     *
+     * @param identifier the raw, caller-supplied identifier text; may be {@code null}
+     * @return the text with that outer prefix and suffix removed, never {@code null}
+     */
+    private static String stripAsParsed(final String identifier) {
+        return identifier == null ? "" : Strings.stripToEmpty(identifier.trim());
     }
 
     /**
@@ -323,7 +336,7 @@ final class SqlIdentifierUtil {
      */
     static boolean[] explicitlyDelimitedIdentifierParts(final String qualifiedName, final int partCount) throws NegativeArraySizeException {
         final boolean[] result = new boolean[partCount];
-        final String trimmed = Strings.stripToEmpty(qualifiedName);
+        final String trimmed = stripAsParsed(qualifiedName);
         int partIndex = 0;
         char closingQuote = 0;
         boolean atPartStart = true;

@@ -205,7 +205,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
     /**
      * Builds {@link #paramNameIndexMap}, mapping each parameter name to the 1-based positions of all
-     * its occurrences in placeholder order. No-op-safe to call once; overwrites any existing map.
+     * its occurrences in placeholder order. Callers invoke it only while the map is {@code null}; calling it again
+     * rebuilds the map.
      */
     private void initParamNameIndexMap() {
         paramNameIndexMap = N.newHashMap(parameterCount);

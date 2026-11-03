@@ -3735,6 +3735,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
      * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
      *
+     * <p>With MySQL Connector/J streaming, the remaining results are read and released also when mapping fails; any failure
+     * while releasing them is suppressed on the mapping failure. Errors encountered while reading them otherwise propagate.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Simple stored procedure returning employees
@@ -3791,6 +3794,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
      * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
      *
+     * <p>With MySQL Connector/J streaming, the remaining results are read and released also when mapping fails; any failure
+     * while releasing them is suppressed on the mapping failure. Errors encountered while reading them otherwise propagate.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom mapping for complex types
@@ -3834,28 +3840,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         checkArgNotNull(rowMapper, cs.rowMapper);
 
-        Throwable primaryFailure = null;
-
-        try {
-            final List<T> result = new ArrayList<>();
-
-            try (ResultSet rs = executeQueryOrNull()) {
-                if (rs != null) {
-                    while (rs.next()) {
-                        result.add(rowMapper.apply(rs));
-                    }
-                }
+        return listFirstResultSetAndGetOutParameters((rs, result) -> {
+            while (rs.next()) {
+                result.add(rowMapper.apply(rs));
             }
-
-            drainRemainingResultsForOutParams();
-
-            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
-            primaryFailure = e;
-            throw e;
-        } finally {
-            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
-        }
+        });
     }
 
     /**
@@ -3870,6 +3859,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
      * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
+     *
+     * <p>With MySQL Connector/J streaming, the remaining results are read and released also when mapping fails; any failure
+     * while releasing them is suppressed on the mapping failure. Errors encountered while reading them otherwise propagate.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3912,30 +3904,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
 
-        Throwable primaryFailure = null;
-
-        try {
-            final List<T> result = new ArrayList<>();
-
-            try (ResultSet rs = executeQueryOrNull()) {
-                if (rs != null) {
-                    while (rs.next()) {
-                        if (rowFilter.test(rs)) {
-                            result.add(rowMapper.apply(rs));
-                        }
-                    }
+        return listFirstResultSetAndGetOutParameters((rs, result) -> {
+            while (rs.next()) {
+                if (rowFilter.test(rs)) {
+                    result.add(rowMapper.apply(rs));
                 }
             }
-
-            drainRemainingResultsForOutParams();
-
-            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
-            primaryFailure = e;
-            throw e;
-        } finally {
-            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
-        }
+        });
     }
 
     /**
@@ -3949,6 +3924,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
      * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
+     *
+     * <p>With MySQL Connector/J streaming, the remaining results are read and released also when mapping fails; any failure
+     * while releasing them is suppressed on the mapping failure. Errors encountered while reading them otherwise propagate.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3991,30 +3969,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         checkArgNotNull(rowMapper, cs.rowMapper);
 
-        Throwable primaryFailure = null;
+        return listFirstResultSetAndGetOutParameters((rs, result) -> {
+            final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 
-        try {
-            final List<T> result = new ArrayList<>();
-
-            try (ResultSet rs = executeQueryOrNull()) {
-                if (rs != null) {
-                    final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
-
-                    while (rs.next()) {
-                        result.add(rowMapper.apply(rs, columnLabels));
-                    }
-                }
+            while (rs.next()) {
+                result.add(rowMapper.apply(rs, columnLabels));
             }
-
-            drainRemainingResultsForOutParams();
-
-            return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
-            primaryFailure = e;
-            throw e;
-        } finally {
-            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
-        }
+        });
     }
 
     /**
@@ -4028,6 +3989,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
      * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
+     *
+     * <p>With MySQL Connector/J streaming, the remaining results are read and released also when mapping fails; any failure
+     * while releasing them is suppressed on the mapping failure. Errors encountered while reading them otherwise propagate.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4083,31 +4047,56 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(rowFilter, cs.rowFilter);
         checkArgNotNull(rowMapper, cs.rowMapper);
 
+        return listFirstResultSetAndGetOutParameters((rs, result) -> {
+            final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
+
+            while (rs.next()) {
+                if (rowFilter.test(rs, columnLabels)) {
+                    result.add(rowMapper.apply(rs, columnLabels));
+                }
+            }
+        });
+    }
+
+    /**
+     * Executes the stored procedure, collects the rows of its first result set (skipping preceding update counts),
+     * discards the remaining results, and then reads the OUT parameters. If the procedure returns no result set, the
+     * returned list is empty.
+     *
+     * @param <T> the element type of the returned list
+     * @param rowCollector adds the rows of the first result set to the supplied list
+     * @return the collected rows and the OUT parameters
+     * @throws SQLException if executing the stored procedure, reading, closing or draining its results, or reading an OUT
+     *         parameter fails, or {@code rowCollector} throws {@code SQLException}
+     */
+    private <T> Tuple2<List<T>, Jdbc.OutParamResult> listFirstResultSetAndGetOutParameters(
+            final Throwables.BiConsumer<ResultSet, List<T>, SQLException> rowCollector) throws SQLException {
+        ObjIteratorEx<ResultSet> iter = null;
         Throwable primaryFailure = null;
 
         try {
             final List<T> result = new ArrayList<>();
 
-            try (ResultSet rs = executeQueryOrNull()) {
-                if (rs != null) {
-                    final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
+            setForwardFetchDirectionIfUnset();
+            iter = JdbcUtil.iterateAllResultSets(cstmt, JdbcUtil.execute(cstmt), true);
 
-                    while (rs.next()) {
-                        if (rowFilter.test(rs, columnLabels)) {
-                            result.add(rowMapper.apply(rs, columnLabels));
-                        }
-                    }
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                // As in queryAndGetOutParameters, the iterator owns the result: for a MySQL Connector/J streamed result,
+                // closing its wrapper only reads the unread rows, and the iterator discards the remaining results even
+                // after a mapping failure. Closing the driver result here would fail while a later result streams.
+                try (ResultSet rs = JdbcUtil.nextResultSet(iter)) {
+                    rowCollector.accept(rs, result);
                 }
-            }
 
-            drainRemainingResultsForOutParams();
+                drainRemainingResultsForOutParams();
+            }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
         } catch (final SQLException | RuntimeException | Error e) {
             primaryFailure = e;
             throw e;
         } finally {
-            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 

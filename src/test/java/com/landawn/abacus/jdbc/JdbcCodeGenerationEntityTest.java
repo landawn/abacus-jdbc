@@ -687,6 +687,31 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
         assertTrue(result.contains("javax.persistence"));
     }
 
+    // Selecting the javax annotations rewrites only the default jakarta Table/Column/Id imports: a requested jakarta import that
+    // merely starts with one of those names (TableGenerator, ColumnResult, IdClass) used to be turned into a javax import.
+    @Test
+    public void testGenerateEntityClass_JavaxSelectionKeepsRequestedJakartaImportsWithSamePrefix() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .tableAnnotationClass(javax.persistence.Table.class)
+                .columnAnnotationClass(javax.persistence.Column.class)
+                .idAnnotationClass(javax.persistence.Id.class)
+                .idFields(java.util.Set.of("id"))
+                .classNamesToImport(List.of("jakarta.persistence.TableGenerator", "jakarta.persistence.ColumnResult", "jakarta.persistence.IdClass"))
+                .build();
+        final String result = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        for (final String annotation : List.of("Table", "Column", "Id")) {
+            assertTrue(result.contains("import javax.persistence." + annotation + ";"), result);
+            assertFalse(result.contains("import jakarta.persistence." + annotation + ";"), result);
+        }
+
+        for (final String requested : List.of("TableGenerator", "ColumnResult", "IdClass")) {
+            assertTrue(result.contains("import jakarta.persistence." + requested + ";"), result);
+            assertFalse(result.contains("import javax.persistence." + requested + ";"), result);
+        }
+    }
+
     // mapBigIntegerToLong — L873-L874
     @Test
     public void testGenerateEntityClass_WithMapBigIntegerToLong() throws SQLException {

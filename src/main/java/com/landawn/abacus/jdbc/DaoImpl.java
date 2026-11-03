@@ -2971,7 +2971,9 @@ final class DaoImpl {
 
     /**
      * Finds an outer row-limiting clause ({@code LIMIT}, {@code OFFSET}, {@code FETCH FIRST} or {@code FETCH NEXT}) in a
-     * literal condition, ignoring quoted tokens, comments and nested SQL such as subqueries.
+     * literal condition, ignoring quoted tokens, comments and nested SQL such as subqueries. The keyword alone decides:
+     * unlike {@link #indexOfTrailingRowClauses(String, boolean)}, no row count has to follow, so an unquoted column named
+     * {@code limit} or {@code offset} also counts.
      *
      * <p>As in {@link #hasTopLevelOrderBy(String)}, when the parentheses seen by the tokenizer do not balance the nesting
      * depth cannot be trusted, and any of those keywords anywhere in the text is accepted instead.</p>
@@ -5600,6 +5602,12 @@ final class DaoImpl {
                             N.checkArgNotEmpty(namedInsertSql, cs.namedInsertSql);
                             N.checkArgPositive(batchSize, cs.batchSize);
 
+                            // Checked here as batchInsert(namedInsertSql, ...) does, before the empty-collection return: the proxy's
+                            // SQL-kind gate in prepareNamedQuery below is reached only for a non-empty collection.
+                            if (isNonUpdateDao && !SqlParser.isReadOrInsertQuery(namedInsertSql)) {
+                                throw new UnsupportedOperationException("Only SELECT and INSERT queries are supported in a non-update DAO");
+                            }
+
                             if (N.isEmpty(entities)) {
                                 return null;
                             }
@@ -7085,7 +7093,7 @@ final class DaoImpl {
                                 // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
                                 // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
                                 return isOneId ? ret : idGetter.apply(entity);
-                            }).orElse(idGetter.apply(entity));
+                            }).orElseGet(() -> idGetter.apply(entity));
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
@@ -7140,7 +7148,7 @@ final class DaoImpl {
                                 // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
                                 // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
                                 return isOneId ? ret : idGetter.apply(entity);
-                            }).orElse(idGetter.apply(entity));
+                            }).orElseGet(() -> idGetter.apply(entity));
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
@@ -7201,7 +7209,7 @@ final class DaoImpl {
                                 // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
                                 // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
                                 return isOneId ? ret : idGetter.apply(entity);
-                            }).orElse(idGetter.apply(entity));
+                            }).orElseGet(() -> idGetter.apply(entity));
                         };
                     } else if (methodName.equals("batchInsert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                             && int.class.equals(paramTypes[1])) {
@@ -8921,11 +8929,13 @@ final class DaoImpl {
                     }
 
                     if (Strings.isNotEmpty(mappedByKey)) {
-                        final Method mappedByKeyMethod = Beans.getPropGetter(entityClass, mappedByKey);
+                        // Resolved through the bean info, as the query function reads the key: Beans.getPropGetter has no getter
+                        // for a property backed only by a public field, so such a key was rejected here although it maps fine.
+                        final PropInfo mappedByKeyPropInfo = entityInfo == null ? null : entityInfo.getPropInfo(mappedByKey);
 
-                        if (mappedByKeyMethod == null) {
+                        if (mappedByKeyPropInfo == null) {
                             throw new IllegalArgumentException(
-                                    "No method found by mapped key: " + mappedByKey + " in entity class: " + ClassUtil.getCanonicalClassName(entityClass));
+                                    "No property found by mapped key: " + mappedByKey + " in entity class: " + ClassUtil.getCanonicalClassName(entityClass));
                         }
 
                         if (!(queryOperation == QueryOperation.DEFAULT || queryOperation == QueryOperation.list)) {
@@ -8937,11 +8947,11 @@ final class DaoImpl {
                         final Class<?> secondReturnEleType = getSecondReturnEleType(method);
 
                         if (!(Map.class.isAssignableFrom(returnType)
-                                && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(ClassUtil.wrap(mappedByKeyMethod.getReturnType())))
+                                && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(ClassUtil.wrap(mappedByKeyPropInfo.clazz)))
                                 && (secondReturnEleType != null) && secondReturnEleType.isAssignableFrom(entityClass))) {
                             throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
                                     + ") annotated by @MappedByKey must be: Map<K, V> with concrete (non-wildcard) type arguments, K being "
-                                    + ClassUtil.getSimpleClassName(ClassUtil.wrap(mappedByKeyMethod.getReturnType())) + " or a supertype and V being "
+                                    + ClassUtil.getSimpleClassName(ClassUtil.wrap(mappedByKeyPropInfo.clazz)) + " or a supertype and V being "
                                     + ClassUtil.getSimpleClassName(entityClass) + " or a supertype. It can't be: " + method.getGenericReturnType());
                         }
 
@@ -8993,10 +9003,9 @@ final class DaoImpl {
                             }
                         } else {
                             for (final String mergedById : mergedByIds) {
-                                final Method mergedByIdMethod = Beans.getPropGetter(entityClass, mergedById);
-
-                                if (mergedByIdMethod == null) {
-                                    throw new IllegalArgumentException("No method found by merged id: " + mergedById + " in entity class: "
+                                // Through the bean info, as for @MappedByKey above: a field-only property has no getter.
+                                if (entityInfo == null || entityInfo.getPropInfo(mergedById) == null) {
+                                    throw new IllegalArgumentException("No property found by merged id: " + mergedById + " in entity class: "
                                             + ClassUtil.getCanonicalClassName(entityClass));
                                 }
                             }
@@ -9529,10 +9538,10 @@ final class DaoImpl {
                 if (transactionalAnno == null || transactionalAnno.propagation() == Propagation.SUPPORTS) {
                     if (hasSqlLogAnno || hasPerfLogAnno) {
                         call = (proxy, args) -> {
-                            final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                            final SqlLogConfig sqlLogConfig = JdbcUtil.sqlLogConfig();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogConfig();
                             final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
@@ -9575,10 +9584,10 @@ final class DaoImpl {
                                         + transactionalAnno.propagation() + ") must be called in a transaction.");
                             }
 
-                            final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                            final SqlLogConfig sqlLogConfig = JdbcUtil.sqlLogConfig();
                             final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                             final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+                            final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogConfig();
                             final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                             final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
@@ -9659,10 +9668,10 @@ final class DaoImpl {
 
                         return JdbcUtil.callOutsideTransaction(dataSource, () -> {
                             if (hasSqlLogAnno || hasPerfLogAnno) {
-                                final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                                final SqlLogConfig sqlLogConfig = JdbcUtil.sqlLogConfig();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogConfig();
                                 final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                                 final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
@@ -9737,10 +9746,10 @@ final class DaoImpl {
 
                         if (hasSqlLogAnno || hasPerfLogAnno) {
                             return JdbcUtil.callOutsideTransaction(dataSource, () -> {
-                                final SqlLogConfig sqlLogConfig = JdbcUtil.isSQLLogEnabled_TL.get();
+                                final SqlLogConfig sqlLogConfig = JdbcUtil.sqlLogConfig();
                                 final boolean prevSqlLogEnabled = sqlLogConfig.isEnabled;
                                 final int prevMaxSqlLogLength = sqlLogConfig.maxSqlLogLength;
-                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+                                final SqlLogConfig sqlPerfLogConfig = JdbcUtil.sqlPerfLogConfig();
                                 final long prevMinExecutionTimeForSqlPerfLog = sqlPerfLogConfig.sqlPerfLogThresholdMillis;
                                 final int prevMaxPerfSqlLogLength = sqlPerfLogConfig.maxSqlLogLength;
 
@@ -11198,12 +11207,37 @@ final class DaoImpl {
 
     /** Copies wrapper structure while delegating native backing containers and arbitrary values to Kryo. */
     private static final class ImmutableContainerCopySerializer extends com.esotericsoftware.kryo.Serializer<Object> {
-        private final ClassValue<ContainerCopyLayout> layouts = new ClassValue<>() {
+        // WHY two caches (as JdbcUtil.columnConvertersOf): a ClassValue stores its value on the copied class, and the layouts
+        // are defined by this class's loader, so a plain ClassValue entry on a JDK view class (a bootstrap class such as
+        // Collections.unmodifiableList's) kept a child-loaded abacus-jdbc's loader (e.g. a redeployed web application's)
+        // reachable for the life of the JVM. A strong map holds only classes that cannot outlive this class; a class of a
+        // descendant loader goes to the ClassValue, and one of an unrelated loader is not cached.
+        private static final ClassLoader serializerClassLoader = ImmutableContainerCopySerializer.class.getClassLoader();
+        private final Map<Class<?>, ContainerCopyLayout> layouts = new ConcurrentHashMap<>();
+        private final ClassValue<ContainerCopyLayout> descendantLayouts = new ClassValue<>() {
             @Override
             protected ContainerCopyLayout computeValue(final Class<?> type) {
                 return new ContainerCopyLayout(type);
             }
         };
+
+        private ContainerCopyLayout layoutOf(final Class<?> type) {
+            final ContainerCopyLayout layout = layouts.get(type);
+
+            if (layout != null) {
+                return layout;
+            }
+
+            final ClassLoader typeClassLoader = type.getClassLoader();
+
+            if (JdbcUtil.isSameOrAncestorClassLoader(typeClassLoader, serializerClassLoader)) {
+                return layouts.computeIfAbsent(type, ContainerCopyLayout::new);
+            } else if (JdbcUtil.isSameOrAncestorClassLoader(serializerClassLoader, typeClassLoader)) {
+                return descendantLayouts.get(type);
+            } else {
+                return new ContainerCopyLayout(type);
+            }
+        }
 
         /** Returns the bounded wrapper families and JDK views whose fields need constructor-free copying. */
         private Set<Class<?>> supportedTypes() {
@@ -11241,7 +11275,7 @@ final class DaoImpl {
         @Override
         public Object copy(final com.esotericsoftware.kryo.Kryo kryo, final Object original) {
             ContainerCopyAccess.requireAvailable();
-            return layouts.get(original.getClass()).copy(kryo, original);
+            return layoutOf(original.getClass()).copy(kryo, original);
         }
 
         @Override

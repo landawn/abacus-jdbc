@@ -217,6 +217,66 @@ class CallableQueryMySqlStreamingTest {
         fixture.assertExhausted();
     }
 
+    // listAndGetOutParameters used to close the first driver result itself before advancing, which Connector/J
+    // rejects while a later result streams (the list call failed), and skipped the drain after a mapper failure.
+    @ParameterizedTest(name = "variant={0}")
+    @ValueSource(ints = { 0, 1, 2, 3 })
+    void listAndGetOutParameters_streamingMultipleResults_listsTheFirstAndReleasesTheRest(final int variant) throws Exception {
+        final Fixture fixture = new Fixture(true, 3, 2);
+        final CallableQuery query = new CallableQuery(fixture.callable);
+
+        final Tuple2<List<Integer>, Jdbc.OutParamResult> result = list(query, variant, rs -> 1);
+
+        assertEquals(List.of(1, 1, 1), result._1);
+        assertNotNull(result._2);
+        assertEquals(3, fixture.cursors.get(0).position);
+        assertEquals(2, fixture.cursors.get(1).position);
+        assertTrue(fixture.cursors.get(1).result.isClosed());
+        fixture.assertExhausted();
+        assertEquals(ResultSet.FETCH_REVERSE, fixture.fetchDirection);
+        verify(fixture.callable).close();
+    }
+
+    @ParameterizedTest(name = "variant={0}")
+    @ValueSource(ints = { 0, 1, 2, 3 })
+    void listAndGetOutParameters_streamingMapperFailure_stillDrainsAllRemainingResults(final int variant) throws Exception {
+        final Fixture fixture = new Fixture(true, 3, 2);
+        final IllegalStateException failure = new IllegalStateException("mapper failed");
+        final CallableQuery query = new CallableQuery(fixture.callable);
+
+        assertSame(failure, assertThrows(IllegalStateException.class, () -> list(query, variant, rs -> {
+            throw failure;
+        })));
+
+        assertEquals(0, failure.getSuppressed().length);
+        assertEquals(3, fixture.cursors.get(0).position);
+        assertEquals(2, fixture.cursors.get(1).position);
+        fixture.assertExhausted();
+        verify(fixture.callable).close();
+    }
+
+    @ParameterizedTest(name = "variant={0}")
+    @ValueSource(ints = { 0, 1, 2, 3 })
+    void listAndGetOutParameters_streamingProcedureErrorAtLaterResult_propagates(final int variant) throws Exception {
+        final Fixture fixture = new Fixture(true, 3, 2);
+        final SQLException failure = new SQLException("procedure failed at EOF", "45000");
+        fixture.cursors.get(1).eofFailure = failure;
+        final CallableQuery query = new CallableQuery(fixture.callable);
+
+        assertSame(failure, assertThrows(SQLException.class, () -> list(query, variant, rs -> 1)));
+        verify(fixture.callable).close();
+    }
+
+    private static Tuple2<List<Integer>, Jdbc.OutParamResult> list(final CallableQuery query, final int variant, final Jdbc.RowMapper<Integer> mapper)
+            throws SQLException {
+        return switch (variant) {
+            case 0 -> query.listAndGetOutParameters(mapper);
+            case 1 -> query.listAndGetOutParameters(rs -> true, mapper);
+            case 2 -> query.listAndGetOutParameters((rs, labels) -> mapper.apply(rs));
+            default -> query.listAndGetOutParameters((rs, labels) -> true, (rs, labels) -> mapper.apply(rs));
+        };
+    }
+
     private static Tuple2<Integer, Jdbc.OutParamResult> extract(final CallableQuery query, final boolean labels, final Jdbc.ResultExtractor<Integer> extractor)
             throws SQLException {
         // Streaming Connector/J does not support registered OUT parameters, so only buffered fixtures register them.

@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -301,6 +302,136 @@ public class DBLockTest extends TestBase {
         assertInstanceOf(ScheduledExecutorService.class, DBLock.scheduledExecutor);
         // The shared executor should not be shut down during normal operation
         assertFalse(DBLock.scheduledExecutor.isShutdown(), "scheduledExecutor should not be shut down");
+    }
+
+    // The JVM-wide refresh pool creates its threads lazily on whichever thread schedules work while it has fewer than
+    // eight, and the shutdown hook thread on the thread initializing DBLock. Neither may inherit that caller's context
+    // class loader, inheritable thread-locals or (before JDK 24) the access control context of its stack, which holds the
+    // protection domain of every class on it: with this library shared by several applications, they would pin the
+    // caller's (e.g. a web application's) class loader in the pool, and in the hook until JVM exit. A private copy of
+    // DBLock gives a fresh executor, so the first scheduled task deterministically creates a new pool thread.
+    @Test
+    @SuppressWarnings("removal")
+    public void testRefreshExecutorThreadsDoNotInheritCallerContextLoaderOrThreadLocals() throws Exception {
+        final ClassLoader appLoader = DBLock.class.getClassLoader();
+        final byte[] bytes;
+
+        try (java.io.InputStream in = appLoader.getResourceAsStream("com/landawn/abacus/jdbc/DBLock.class")) {
+            bytes = in.readAllBytes();
+        }
+
+        final ClassLoader isolatedLoader = new ClassLoader(appLoader) {
+            @Override
+            protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException {
+                if (!DBLock.class.getName().equals(name)) {
+                    return super.loadClass(name, resolve);
+                }
+
+                synchronized (getClassLoadingLock(name)) {
+                    final Class<?> loaded = findLoadedClass(name);
+                    return loaded != null ? loaded : defineClass(name, bytes, 0, bytes.length);
+                }
+            }
+        };
+
+        final ClassLoader callerLoader = new java.net.URLClassLoader(new java.net.URL[0], appLoader);
+        final InheritableThreadLocal<String> inherited = new InheritableThreadLocal<>();
+        final Class<?> hooksClass = Class.forName("java.lang.ApplicationShutdownHooks");
+        final Field hooksField = hooksClass.getDeclaredField("hooks");
+        final Field inheritableThreadLocalsField = Thread.class.getDeclaredField("inheritableThreadLocals");
+        // Both are JDK internals: readable only with --add-opens java.base/java.lang, which the Maven build passes but an IDE
+        // runner may not.
+        org.junit.jupiter.api.Assumptions.assumeTrue(hooksField.trySetAccessible() && inheritableThreadLocalsField.trySetAccessible(),
+                "requires --add-opens java.base/java.lang=ALL-UNNAMED");
+        final Map<?, ?> hooks = (Map<?, ?>) hooksField.get(null);
+
+        final java.util.List<Thread> newHooks = new java.util.ArrayList<>();
+        final java.util.concurrent.atomic.AtomicReference<ClassLoader> poolThreadLoader = new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicReference<Object> poolThreadAccessContext = new java.util.concurrent.atomic.AtomicReference<>();
+        // Before JDK 24 every thread keeps the access control context of its creator's stack; JDK 21 clears it when the
+        // thread exits, so the pool thread's is read while its task runs.
+        final Field accessContextField = Runtime.version().feature() < 24 ? Thread.class.getDeclaredField("inheritedAccessControlContext") : null;
+
+        if (accessContextField != null) {
+            accessContextField.setAccessible(true);
+        }
+        final java.util.concurrent.atomic.AtomicReference<Class<?>> isolatedDBLockClass = new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicReference<String> poolThreadValue = new java.util.concurrent.atomic.AtomicReference<>("unset");
+        final java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+
+        final Thread caller = new Thread(() -> {
+            inherited.set("caller value");
+            Thread.currentThread().setContextClassLoader(callerLoader);
+
+            try {
+                final java.util.Set<Object> hooksBefore;
+                synchronized (hooksClass) {
+                    hooksBefore = new java.util.HashSet<>(hooks.keySet());
+                }
+
+                final Class<?> isolatedDBLock = Class.forName(DBLock.class.getName(), true, isolatedLoader);
+                isolatedDBLockClass.set(isolatedDBLock);
+
+                for (final Object hook : new java.util.ArrayList<>(hooks.keySet())) {
+                    if (!hooksBefore.contains(hook)) {
+                        newHooks.add((Thread) hook);
+                    }
+                }
+
+                final Field executorField = isolatedDBLock.getDeclaredField("scheduledExecutor");
+                executorField.setAccessible(true);
+                final ScheduledExecutorService executor = (ScheduledExecutorService) executorField.get(null);
+
+                try {
+                    executor.schedule(() -> {
+                        poolThreadLoader.set(Thread.currentThread().getContextClassLoader());
+
+                        if (accessContextField != null) {
+                            try {
+                                poolThreadAccessContext.set(accessContextField.get(Thread.currentThread()));
+                            } catch (final IllegalAccessException e) {
+                                throw new IllegalStateException(e);
+                            }
+                        }
+                        poolThreadValue.set(inherited.get());
+                    }, 0, TimeUnit.MILLISECONDS).get(30, TimeUnit.SECONDS);
+                } finally {
+                    executor.shutdownNow();
+                }
+            } catch (final Throwable e) {
+                failure.set(e);
+            }
+        });
+
+        caller.start();
+        caller.join(60_000);
+
+        try {
+            if (failure.get() != null) {
+                throw new AssertionError(failure.get());
+            }
+
+            assertSame(isolatedLoader, poolThreadLoader.get(), "pool thread must use DBLock's own class loader as context loader");
+            assertNull(poolThreadValue.get(), "pool thread must not inherit the caller's inheritable thread-locals");
+
+            assertEquals(1, newHooks.size(), "initializing DBLock registers exactly one shutdown hook");
+            assertSame(isolatedLoader, newHooks.get(0).getContextClassLoader(), "shutdown hook must not pin the caller's context loader");
+            assertNull(inheritableThreadLocalsField.get(newHooks.get(0)), "shutdown hook must not inherit the caller's inheritable thread-locals");
+
+            if (accessContextField != null) {
+                // Created in a privileged block, each thread keeps only DBLock's own protection domain, not that of this test
+                // class, which was on the creating stack.
+                final java.security.AccessControlContext expected = new java.security.AccessControlContext(
+                        new java.security.ProtectionDomain[] { isolatedDBLockClass.get().getProtectionDomain() });
+
+                assertEquals(expected, poolThreadAccessContext.get(), "pool thread must not keep the caller's protection domains");
+                assertEquals(expected, accessContextField.get(newHooks.get(0)), "shutdown hook must not keep the caller's protection domains");
+            }
+        } finally {
+            for (final Thread hook : newHooks) {
+                Runtime.getRuntime().removeShutdownHook(hook);
+            }
+        }
     }
 
     // Test constant values are appropriate

@@ -154,6 +154,28 @@ public class BinaryKeyMatchingTest extends TestBase {
         assertEquals("max", petDao.getOrNull(existing.getId()).getName());
     }
 
+    // Two content-equal keys that fell into different lookup batches must be looked up once: otherwise the same row is
+    // loaded twice and the duplicate check reports two rows for one key. A Long key is de-duplicated and both entities
+    // update the one row; a binary key must behave the same.
+    @Test
+    public void batchUpsertTreatsContentEqualBinaryKeysInDifferentLookupBatchesAsOneKey() {
+        final BinKeyPet existing = insertPet(key(7, 7), "rex");
+        final BinKeyPet first = new BinKeyPet();
+        first.setOwnerId(key(7, 7));
+        first.setName("max");
+        final BinKeyPet second = new BinKeyPet();
+        second.setOwnerId(key(7, 7));
+        second.setName("bella");
+
+        final List<BinKeyPet> saved = petDao.batchUpsert(List.of(first, second), List.of("ownerId"), 1);
+
+        assertEquals(2, saved.size());
+        assertEquals(existing.getId(), saved.get(0).getId());
+        assertEquals(existing.getId(), saved.get(1).getId());
+        assertEquals(1, petDao.count(Filters.alwaysTrue()));
+        assertEquals("bella", petDao.getOrNull(existing.getId()).getName());
+    }
+
     // Content matching also restores the documented check that one key must not match two existing rows.
     @Test
     public void batchUpsertRejectsTwoExistingRowsSharingOneBinaryKey() {

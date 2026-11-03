@@ -1051,7 +1051,9 @@ public final class JdbcCodeGenerationUtil {
 
             if (isJavaPersistenceTable) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
-                headPart = headPart.replace("jakarta.persistence.Table", tableAnnotationClassName);
+                // Replace the whole default import line only: a bare prefix replace also rewrote requested imports such as
+                // jakarta.persistence.TableGenerator into javax ones when javax.persistence is selected.
+                headPart = headPart.replace("import jakarta.persistence.Table;" + LINE_SEPARATOR, "import " + tableAnnotationClassName + ";" + LINE_SEPARATOR);
                 headPart = removeCompetingBuiltInImports(headPart, tableAnnotationClassName);
             } else {
                 headPart = isAbacusTable ? removeCompetingBuiltInImports(headPart, tableAnnotationClassName)
@@ -1064,7 +1066,8 @@ public final class JdbcCodeGenerationUtil {
 
             if (isJavaPersistenceColumn) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
-                headPart = headPart.replace("jakarta.persistence.Column", columnAnnotationClassName);
+                headPart = headPart.replace("import jakarta.persistence.Column;" + LINE_SEPARATOR,
+                        "import " + columnAnnotationClassName + ";" + LINE_SEPARATOR);
                 headPart = removeCompetingBuiltInImports(headPart, columnAnnotationClassName);
             } else {
                 headPart = isAbacusColumn ? removeCompetingBuiltInImports(headPart, columnAnnotationClassName)
@@ -1083,7 +1086,7 @@ public final class JdbcCodeGenerationUtil {
                 headPart = removeUnrequestedImport(headPart, "com.landawn.abacus.annotation.Id", requestedImports);
             } else if (isJavaPersistenceId) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
-                headPart = headPart.replace("jakarta.persistence.Id", idAnnotationClassName);
+                headPart = headPart.replace("import jakarta.persistence.Id;" + LINE_SEPARATOR, "import " + idAnnotationClassName + ";" + LINE_SEPARATOR);
                 headPart = removeCompetingBuiltInImports(headPart, idAnnotationClassName);
             } else {
                 headPart = isAbacusId ? removeCompetingBuiltInImports(headPart, idAnnotationClassName)

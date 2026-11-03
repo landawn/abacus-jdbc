@@ -33,11 +33,12 @@
  * its mutation policy allows — disallowed operations are absent from the type rather than
  * failing with {@link UnsupportedOperationException} at runtime. The raw-SQL
  * {@code prepareQuery}/{@code prepareNamedQuery} overloads (and their {@code *ForLargeResult}
- * forms) are the one exception: they remain
+ * forms) are the exception: they remain
  * present on the restricted variants, so their SQL kind is checked at runtime and a disallowed
  * statement does fail with {@link UnsupportedOperationException} — after the SQL argument itself
  * has been validated, so a {@code null} or empty statement still yields
- * {@link IllegalArgumentException}.</p>
+ * {@link IllegalArgumentException}. The same runtime check applies to the {@code save}, {@code batchSave},
+ * {@code insert} and {@code batchInsert} overloads of the non-update variants that take a named insert SQL.</p>
  *
  * <p>{@link com.landawn.abacus.jdbc.dao.JoinEntityHelper} and
  * {@link com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper} provide operations for entity

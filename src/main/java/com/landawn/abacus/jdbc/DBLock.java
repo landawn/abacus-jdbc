@@ -21,10 +21,12 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
@@ -36,7 +38,6 @@ import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.IOUtil;
-import com.landawn.abacus.util.MoreExecutors;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Strings;
 
@@ -177,11 +178,52 @@ public final class DBLock implements AutoCloseable {
      */
     static final ScheduledExecutorService scheduledExecutor;
     static {
-        final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(8);
+        // The pool creates its threads lazily, on whichever thread schedules a refresh task while it has fewer than eight,
+        // and the shutdown hook thread is created on the thread initializing this class. Neither may inherit that caller's
+        // context class loader, inheritable thread-locals or (before JDK 24) access control context: kept by this JVM-wide
+        // pool, and by the hook until JVM exit, they would pin an application's class loader when several applications
+        // share this library.
+        final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(8,
+                isolatedThreadFactory(Thread.ofPlatform().name("DBLock-refresh-", 1).daemon(true)));
         executor.setKeepAliveTime(180, TimeUnit.SECONDS);
         executor.allowCoreThreadTimeOut(true);
         executor.setRemoveOnCancelPolicy(true);
-        scheduledExecutor = MoreExecutors.getExitingScheduledExecutorService(executor);
+        scheduledExecutor = Executors.unconfigurableScheduledExecutorService(executor);
+
+        // Same as MoreExecutors.getExitingScheduledExecutorService(executor), whose hook thread would inherit both.
+        Runtime.getRuntime().addShutdownHook(isolatedThreadFactory(Thread.ofPlatform().name("DBLock-shutdown-hook")).newThread(() -> {
+            executor.shutdown();
+
+            try {
+                executor.awaitTermination(120, TimeUnit.SECONDS);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }));
+    }
+
+    /**
+     * Returns a factory of normal-priority threads configured by {@code builder} that inherit neither the creating thread's
+     * inheritable thread-locals, nor its context class loader (their context class loader is this class's loader), nor,
+     * before JDK 24, the access control context of its stack (they inherit only this class's protection domain).
+     *
+     * @param builder the thread builder, with the name and daemon status set
+     * @return the thread factory
+     */
+    @SuppressWarnings("removal")
+    private static ThreadFactory isolatedThreadFactory(final Thread.Builder.OfPlatform builder) {
+        final ThreadFactory factory = builder.priority(Thread.NORM_PRIORITY).inheritInheritableThreadLocals(false).factory();
+        final ClassLoader classLoader = DBLock.class.getClassLoader();
+
+        return runnable -> {
+            // WHY privileged: before JDK 24 a new thread keeps AccessController.getContext() of its creator, which holds the
+            // protection domain, and so the class loader, of every class on the creating stack (an application's request
+            // handler, say). Created in a privileged block it keeps only the frames up to this one. From JDK 24 on no
+            // context is kept and doPrivileged just runs the action.
+            final Thread thread = java.security.AccessController.doPrivileged((java.security.PrivilegedAction<Thread>) () -> factory.newThread(runnable));
+            thread.setContextClassLoader(classLoader);
+            return thread;
+        };
     }
 
     /**

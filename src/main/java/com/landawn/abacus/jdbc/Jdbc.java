@@ -206,7 +206,9 @@ public final class Jdbc {
         boolean isBoundTo(final ResultSet rs) {
             final Reference<ResultSet> ref = boundResultSet;
 
-            return ref != null && ref.get() == rs;
+            // rs != null: once the bound result set is collected, ref.get() returns null and must not match a null
+            // argument, which would apply the stale layout instead of failing like the first call does.
+            return ref != null && rs != null && ref.get() == rs;
         }
 
         /**
@@ -8717,8 +8719,24 @@ public final class Jdbc {
      * @return {@code true} if the cache key contains a table name equal to {@code tableName} (ignoring case), {@code false} otherwise
      */
     private static boolean cacheKeyMatchesTable(final String defaultCacheKey, final String tableName) {
-        final String cachedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SEPARATOR);
+        // Called once per cached key on every invalidation: compare the segment in place instead of allocating it
+        // (same result as substringBetween(key, separator).equalsIgnoreCase(tableName)).
+        if (defaultCacheKey == null) {
+            return false;
+        }
 
-        return Strings.isNotEmpty(cachedTableName) && cachedTableName.equalsIgnoreCase(tableName);
+        final String separator = JdbcUtil.CACHE_KEY_SEPARATOR;
+        final int firstSeparatorIndex = defaultCacheKey.indexOf(separator);
+
+        if (firstSeparatorIndex < 0) {
+            return false;
+        }
+
+        final int tableNameIndex = firstSeparatorIndex + separator.length();
+        final int secondSeparatorIndex = defaultCacheKey.indexOf(separator, tableNameIndex);
+        final int tableNameLength = secondSeparatorIndex - tableNameIndex;
+
+        return secondSeparatorIndex >= 0 && tableNameLength > 0 && tableNameLength == tableName.length()
+                && defaultCacheKey.regionMatches(true, tableNameIndex, tableName, 0, tableNameLength);
     }
 }

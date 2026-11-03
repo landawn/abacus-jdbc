@@ -407,6 +407,29 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         assertTrue(secondMissing.getOrders().isEmpty());
     }
 
+    // Pins the null-element contract of the collection overloads: their one-element path passes the element to
+    // setParameters without the single-entity overloads' up-front check, and the batch path binds each element. JoinInfo's
+    // parameter setters reject a null source entity with the single-entity overloads' IAE before binding anything (even
+    // with allowNullOrDefaultJoinKeys = true), and setParameters closes the query, so no pooled connection is kept.
+    @Test
+    public void testCollectionOverloadsRejectNullElementLikeSingleEntityOverloads() {
+        final JoinUser u = userDao.getOrNull(seedUser("NullElement", 1.0).getId());
+        final com.zaxxer.hikari.HikariPoolMXBean pool = ((com.zaxxer.hikari.HikariDataSource) ds).getHikariPoolMXBean();
+
+        final String singleMessage = assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntities((JoinUser) null, "orders")).getMessage();
+        assertEquals(singleMessage, assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities((JoinUser) null, "orders")).getMessage());
+
+        for (final List<JoinUser> users : List.of(java.util.Arrays.asList((JoinUser) null), java.util.Arrays.asList(u, null))) {
+            assertEquals(singleMessage, assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntities(users, "orders")).getMessage());
+            assertEquals(0, pool.getActiveConnections(), "the prepared query's connection must be released");
+
+            assertEquals(singleMessage, assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(users, "orders")).getMessage());
+            assertEquals(0, pool.getActiveConnections(), "the prepared query's connection must be released");
+        }
+
+        assertEquals(1, orderCountForUser(u.getId()));
+    }
+
     @Test
     public void testSparseBatchMapJoinReplacesMissingValuesAndEnforcesCardinality() {
         final JoinUser withoutProfile = seedUser("MissingProfile");

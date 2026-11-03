@@ -52,8 +52,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @return the number of rows updated (typically 1 if successful, 0 if not found); also 0, without executing any
      *         statement, if the entity class has no updatable non-ID property
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -79,8 +79,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty, or if
      *         an element of it is {@code null} or names no property of the entity class (and is not a raw SET expression)
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final T entity, final Collection<String> propNamesToUpdate) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -100,8 +100,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     default int update(final String propName, final Object propValue, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -137,8 +137,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final Map<String, Object> updateProps, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
