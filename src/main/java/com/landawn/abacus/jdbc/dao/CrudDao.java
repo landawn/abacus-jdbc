@@ -531,15 +531,18 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         final List<?> keys;
 
         try {
-            keys = N.map(entities, keysExtractor);
+            // A single match property is read once: the raw values are looked up (N.distinct compares arrays by content),
+            // and their content-comparing keys (see keysExtractor) classify the entities.
+            final List<Object> keyValues = uniquePropNameList.size() == 1 ? N.map(entities, singleKeyExtractor) : null;
+            keys = keyValues == null ? N.map(entities, keysExtractor) : N.map(keyValues, DaoUtil::valueKey);
 
             // De-duplicate lookup keys before splitting them into query batches. Without this, equal
             // keys that landed in different batches returned the same database row more than once,
             // and the throwing merger below incorrectly reported a duplicate database result.
             // Query by the resolved property name (as the composite-key path does via Seid): getPropInfo also
             // accepts non-canonical spellings (e.g. "FIRSTNAME") that the SQL builder cannot map to a column.
-            final List<T> dbEntities = uniquePropNameList.size() == 1
-                    ? Seq.of(N.distinct(N.map(entities, singleKeyExtractor)), SQLException.class)
+            final List<T> dbEntities = keyValues != null
+                    ? Seq.of(N.distinct(keyValues), SQLException.class)
                             .split(batchSize)
                             .flatmap(it -> list(DaoUtil.singlePropValuesToCondition(uniquePropInfo.name, it, entityInfo)))
                             .toList()
