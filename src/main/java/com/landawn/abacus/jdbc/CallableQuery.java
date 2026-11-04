@@ -474,7 +474,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         } else {
             try {
                 cstmt.setLong(parameterName, value.longValueExact());
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { // NOSONAR - also close on an undeclared checked exception (Kotlin, sneaky throw)
                 closeSuppressingFailure(e);
                 throw e;
             }
@@ -1777,7 +1777,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             for (final Map.Entry<String, ?> entry : parameters.entrySet()) {
                 setObject(entry.getKey(), entry.getValue());
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - also close on an undeclared checked exception (Kotlin, sneaky throw)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -1821,8 +1821,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterNamesToSet the names of the procedure parameters to bind; each name must resolve to a property of the
      *                       {@code entity} class
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code entity} is {@code null} or is not a bean class (it has no property getter/setter method and no
-     *         public field), or if {@code parameterNamesToSet} is {@code null}, contains a {@code null} element, or contains a name that does
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, is not a bean class (it has no property getter/setter method and no
+     *         public field) or its class has invalid property metadata (for example a blank-padded {@code @Column} name), or if
+     *         {@code parameterNamesToSet} is {@code null}, contains a {@code null} element, or contains a name that does
      *         not correspond to a property of the {@code entity} class; all listed names are checked before any property value is read or bound,
      *         and this query is closed before the exception is thrown
      * @throws SQLException if binding a value fails, for example because the driver rejects a name in {@code parameterNamesToSet}
@@ -1837,11 +1838,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 "Unsupported parameter type: " + ClassUtil.getCanonicalClassName(cls) + ". Only Entity/Record types are supported here");
         checkArgNotNull(parameterNamesToSet, cs.parameterNamesToSet);
 
-        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-        final List<String> names = new ArrayList<>(parameterNamesToSet);
-        final PropInfo[] propInfos = new PropInfo[names.size()];
-
         try {
+            // Inside the try: copying a custom Collection runs its code (toArray), which may fail, and must close the query too.
+            final List<String> names = new ArrayList<>(parameterNamesToSet);
+            final PropInfo[] propInfos = new PropInfo[names.size()];
+
+            // Inside the try: invalid bean metadata (e.g. a blank-padded @Column name) fails here and must close the query too.
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
+
             for (int i = 0; i < names.size(); i++) {
                 final String parameterName = names.get(i);
                 propInfos[i] = entityInfo.getPropInfo(parameterName);
@@ -1873,7 +1877,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
                 propInfo.dbType.set(cstmt, parameterName, propValue);
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - also close on an undeclared checked exception (Kotlin, sneaky throw)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -1908,7 +1912,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param parameters a bean/entity whose properties supply the values, or a {@link Map} of name-&gt;value
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code parameters} is {@code null}, or is neither a bean nor a {@link Map}
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}, is neither a bean nor a {@link Map}, or is a bean whose class
+     *         has invalid property metadata; this query is closed before the exception is thrown
      * @throws SQLException if binding a value fails, for example because the driver rejects a bean property name or map key
      *         that is not a parameter of the stored procedure or the statement is closed; this query is closed before the exception is rethrown
      * @see #setParameters(Object, Collection)
@@ -2453,7 +2458,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             registrar.accept(this);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - also close on an undeclared checked exception (Kotlin, sneaky throw)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -2508,7 +2513,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         try {
             registrar.accept(this, parameter);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - also close on an undeclared checked exception (Kotlin, sneaky throw)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -3264,7 +3269,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -3338,7 +3343,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -3442,7 +3447,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -3515,7 +3520,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -3607,7 +3612,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result1, result2, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -3709,7 +3714,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             drainRemainingResultsForOutParams();
 
             return Tuple.of(result1, result2, result3, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -4092,7 +4097,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(result, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -4136,7 +4141,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null} or a bean class with invalid property metadata (this query is then
+     *         closed); also if a returned row has an unmapped bean column or a scalar target has other than one column
      * @throws SQLException if executing the stored procedure, advancing to the next result set, mapping a row,
      *         or reading an OUT parameter fails
      * @see #listAllResultSetsAndGetOutParameters(RowMapper)
@@ -4146,6 +4152,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
+        // WHY: the extractor below resolves bean metadata lazily, per result set; validate it now, as listAndGetOutParameters(Class)
+        // does, so an invalid bean class fails before the stored procedure runs (and commits) and also with no result set.
+        rowMapperOrClose(targetType);
 
         ObjIteratorEx<ResultSet> iter = null;
         Throwable primaryFailure = null;
@@ -4164,7 +4173,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -4240,7 +4249,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -4320,7 +4329,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -4403,7 +4412,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -4502,7 +4511,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -4518,8 +4527,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The method performs the following cleanup operations:</p>
      * <ol>
      *   <li>Calls {@code clearParameters()} on the {@code CallableStatement}; a warning is
-     *       logged if it throws {@link SQLException} or a {@link RuntimeException}, and that exception is not
-     *       propagated</li>
+     *       logged if it throws {@link SQLException}, a {@link RuntimeException} or a checked exception it does not
+     *       declare, and that exception is not propagated (an {@link Error} is, once the statement is closed)</li>
      *   <li>Delegates to {@code super.closeStatement()}, which restores the statement properties this query
      *       changed (such as the fetch direction) and then closes the statement</li>
      * </ol>
@@ -4532,10 +4541,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     protected void closeStatement() {
         try {
             cstmt.clearParameters();
-        } catch (final SQLException | RuntimeException e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             // Best-effort cleanup, mirroring JdbcUtil.clearParameters: a RuntimeException from a broken
-            // driver must not escape close() (e.g., out of a try-with-resources block).
-            logger.warn(e, "Failed to clear parameters");
+            // driver must not escape close() (e.g., out of a try-with-resources block). An undeclared checked
+            // one escaped the SQLException | RuntimeException catch and skipped the close handler that releases a
+            // data-source query's connection.
+            logResetFailure(e, "Failed to clear parameters");
         } finally {
             super.closeStatement();
         }

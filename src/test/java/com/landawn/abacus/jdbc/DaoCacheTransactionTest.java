@@ -807,6 +807,47 @@ class DaoCacheTransactionTest extends TestBase {
         };
     }
 
+    /**
+     * Wraps the test's data source: every {@code executeBatch} of a prepared statement runs, then reports
+     * {@code Statement.SUCCESS_NO_INFO} for each statement, as Oracle's drivers before 12c do for a prepared batch.
+     */
+    private javax.sql.DataSource noUpdateCountDataSource() {
+        return new org.springframework.jdbc.datasource.DelegatingDataSource(dataSource) {
+            @Override
+            public Connection getConnection() throws SQLException {
+                final Connection target = super.getConnection();
+
+                return (Connection) java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class },
+                        (proxy, method, args) -> {
+                            final Object result = invokeOn(target, method, args);
+
+                            if (result instanceof final java.sql.PreparedStatement statement && method.getName().equals("prepareStatement")) {
+                                return java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(),
+                                        new Class<?>[] { java.sql.PreparedStatement.class }, (stmtProxy, stmtMethod, stmtArgs) -> {
+                                            final Object stmtResult = invokeOn(statement, stmtMethod, stmtArgs);
+
+                                            if (stmtMethod.getName().equals("executeBatch")) {
+                                                java.util.Arrays.fill((int[]) stmtResult, Statement.SUCCESS_NO_INFO);
+                                            }
+
+                                            return stmtResult;
+                                        });
+                            }
+
+                            return result;
+                        });
+            }
+        };
+    }
+
+    private static Object invokeOn(final Object target, final java.lang.reflect.Method method, final Object[] args) throws Throwable {
+        try {
+            return method.invoke(target, args);
+        } catch (final java.lang.reflect.InvocationTargetException e) {
+            throw e.getCause();
+        }
+    }
+
     /** The unresolved transactions listed now that weren't before the test: the registry is process-wide. */
     private List<SpringTransactionTracker.UnresolvedTransaction> newUnresolvedTransactions() {
         return SpringTransactionTracker.unresolvedTransactions().stream().filter(record -> !unresolvedBefore.contains(record.id())).toList();
@@ -1062,6 +1103,105 @@ class DaoCacheTransactionTest extends TestBase {
         }
     }
 
+    // Review 2026-11-02: a built-in batch write returns the sum of the positive update counts, so with a driver that reports
+    // Statement.SUCCESS_NO_INFO for its statements (Oracle before 12c, for every statement of a prepared batch) it returns 0
+    // although it changed rows. The built-in caches took that 0 for "no row changed" and skipped the invalidation, so the
+    // cache of an openDaoCacheScope (a cache by map by default) kept serving the old result of a CRUD DAO's reads.
+    @Test
+    void aBuiltInBatchWriteWhoseDriverReportsNoUpdateCounts_invalidatesTheBuiltInScopeCaches() throws Exception {
+        final NoUpdateCountItemDao itemDao = JdbcUtil.createDao(NoUpdateCountItemDao.class, noUpdateCountDataSource());
+        final Jdbc.DefaultDaoCache defaultCache = new Jdbc.DefaultDaoCache(100, 0);
+
+        try {
+            for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), defaultCache)) {
+                try (Statement statement = keeper.createStatement()) {
+                    statement.executeUpdate("DELETE FROM cache_tx_item");
+                    statement.executeUpdate("INSERT INTO cache_tx_item (id, name) VALUES (1, 'a'), (2, 'b'), (3, 'c')");
+                }
+
+                try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(cache)) {
+                    assertEquals(3, itemDao.countItems()); // cached in the scope
+
+                    assertEquals(0, itemDao.batchDelete(List.of(item(1), item(2))), "every update count is SUCCESS_NO_INFO");
+                    assertEquals(1, countRows(), "the rows were deleted");
+                    assertEquals(1, itemDao.countItems(), "the scope's cache was invalidated: " + cache.getClass().getSimpleName());
+
+                    assertEquals(0, itemDao.batchDeleteByIds(List.of(3L)), "a single-element batch too");
+                    assertEquals(0, countRows());
+                    assertEquals(0, itemDao.countItems(), "the scope's cache was invalidated: " + cache.getClass().getSimpleName());
+                }
+            }
+        } finally {
+            defaultCache.close();
+        }
+    }
+
+    // batchUpdate reports the same 0 for a driver's SUCCESS_NO_INFO counts, and must invalidate as batchDelete does.
+    @Test
+    void aBuiltInBatchUpdateWhoseDriverReportsNoUpdateCounts_invalidatesTheBuiltInScopeCaches() throws Exception {
+        final NoUpdateCountItemDao itemDao = JdbcUtil.createDao(NoUpdateCountItemDao.class, noUpdateCountDataSource());
+        final Jdbc.DefaultDaoCache defaultCache = new Jdbc.DefaultDaoCache(100, 0);
+
+        try {
+            for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), defaultCache)) {
+                try (Statement statement = keeper.createStatement()) {
+                    statement.executeUpdate("DELETE FROM cache_tx_item");
+                    statement.executeUpdate("INSERT INTO cache_tx_item (id, name) VALUES (1, 'a'), (2, 'b'), (3, 'c')");
+                }
+
+                try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(cache)) {
+                    assertEquals(0, itemDao.countRenamedItems()); // cached in the scope
+
+                    assertEquals(0, itemDao.batchUpdate(List.of(item(1), item(2))), "every update count is SUCCESS_NO_INFO");
+                    assertEquals(2, itemDao.countRenamedItems(), "the scope's cache was invalidated: " + cache.getClass().getSimpleName());
+
+                    assertEquals(0, itemDao.batchUpdate(List.of(item(3))), "a single-element batch too");
+                    assertEquals(3, itemDao.countRenamedItems(), "the scope's cache was invalidated: " + cache.getClass().getSimpleName());
+                }
+            }
+        } finally {
+            defaultCache.close();
+        }
+    }
+
+    // A built-in batch write of an empty (or null) collection runs no SQL (it returns 0 at once): it no longer invalidates the
+    // cache, which made a loop of empty batches scan and clear the table's entries every time.
+    @Test
+    void aBuiltInBatchWriteOfNoElement_leavesTheBuiltInScopeCachesAlone() throws Exception {
+        final NoUpdateCountItemDao itemDao = JdbcUtil.createDao(NoUpdateCountItemDao.class, dataSource);
+        final Jdbc.DefaultDaoCache defaultCache = new Jdbc.DefaultDaoCache(100, 0);
+
+        try {
+            for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), defaultCache)) {
+                try (Statement statement = keeper.createStatement()) {
+                    statement.executeUpdate("DELETE FROM cache_tx_item");
+                    statement.executeUpdate("INSERT INTO cache_tx_item (id, name) VALUES (1, 'a')");
+                }
+
+                try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(cache)) {
+                    assertEquals(1, itemDao.countItems()); // cached in the scope
+
+                    try (Statement statement = keeper.createStatement()) {
+                        statement.executeUpdate("INSERT INTO cache_tx_item (id, name) VALUES (2, 'b')"); // not seen by the cache
+                    }
+
+                    assertEquals(0, itemDao.batchDelete(List.of()));
+                    assertEquals(0, itemDao.batchDeleteByIds(List.of()));
+                    assertEquals(0, itemDao.batchUpdate(List.of()));
+                    assertEquals(0, itemDao.batchUpdate(List.of(), 10));
+                    assertEquals(0, itemDao.batchDelete(null));
+                    assertEquals(1, itemDao.countItems(), "an empty batch did not invalidate: " + cache.getClass().getSimpleName());
+
+                    // A non-empty batch that changed no row still invalidates (its 0 may hide SUCCESS_NO_INFO counts).
+                    assertEquals(0, itemDao.batchDeleteByIds(List.of(99L)));
+                    assertEquals(2, itemDao.countItems(), "a non-empty batch invalidated: " + cache.getClass().getSimpleName());
+                }
+            }
+        } finally {
+            defaultCache.close();
+        }
+    }
+
     // Round 17 review (tests): a write whose propagation leaves the transaction (NOT_SUPPORTED) commits on its own, so it
     // invalidates the cache right away, also when the transaction then rolls back.
     @ParameterizedTest(name = "spring={0}")
@@ -1309,6 +1449,17 @@ class DaoCacheTransactionTest extends TestBase {
         @CacheResult(enabled = true)
         @Query("SELECT COUNT(*) FROM cache_tx_item")
         int cachedCount() throws SQLException;
+    }
+
+    // A DAO cache needs a NonUpdate/ReadOnly DAO, which has no batch update or delete: a CRUD DAO's reads are cached by the
+    // cache of an openDaoCacheScope only.
+    public interface NoUpdateCountItemDao extends com.landawn.abacus.jdbc.dao.CrudDao<CachedItem, Long, NoUpdateCountItemDao> {
+        @Query("SELECT COUNT(*) FROM cache_tx_item")
+        int countItems() throws SQLException;
+
+        // item(id) names its row "x" + id.
+        @Query("SELECT COUNT(*) FROM cache_tx_item WHERE name LIKE 'x%'")
+        int countRenamedItems() throws SQLException;
     }
 
     @CacheResult(enabled = true, filter = { "cached", "dataSource" })

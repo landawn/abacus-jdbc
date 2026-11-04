@@ -106,8 +106,8 @@ import com.landawn.abacus.util.stream.Stream;
  * // junction-table column for matching.
  * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
  *                                               "employees", "projects");
- * List<Employee> employees = employeeDao.list(Filters.alwaysTrue());
- * List<Project> projects = projectDao.list(Filters.alwaysTrue());
+ * List<Employee> employees = employeeDao.list(Filters.in("employeeId", employeeIds));
+ * List<Project> projects = projectDao.list(Filters.in("employeeId", employeeIds));
  * joinInfo.setJoinPropEntities(employees, projects);
  * }</pre>
  *
@@ -1716,10 +1716,10 @@ public final class JoinInfo {
      *                                   .setParameters(employee, builder._2)
      *                                   .list(Project.class);
      *
-     * // Or use batch loading for multiple employees
-     * List<Employee> employees = employeeDao.list(Filters.alwaysTrue());
-     * List<Project> allProjects = projectDao.list(Filters.alwaysTrue());
-     * joinInfo.setJoinPropEntities(employees, allProjects);
+     * // Or assign the projects of several employees fetched in one query
+     * List<Employee> employees = employeeDao.list(Filters.in("employeeId", employeeIds));
+     * List<Project> projects = projectDao.list(Filters.in("employeeId", employeeIds));
+     * joinInfo.setJoinPropEntities(employees, projects);
      * }</pre>
      *
      * @param daoClass the DAO class associated with the entity, must not be {@code null}.

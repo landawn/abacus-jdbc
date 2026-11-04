@@ -49,7 +49,10 @@ import com.landawn.abacus.util.RegExUtil;
  * {@link com.landawn.abacus.util.stream.Stream} return type triggers lazy streaming while a
  * {@link com.landawn.abacus.util.u.Optional} return type normally triggers "find first" semantics.
  * Method-name prefixes such as {@code findOnlyOne}, {@code selectOnlyOne}, and {@code queryForUnique}
- * instead require at most one result and reject duplicates.</p>
+ * instead require at most one result and reject duplicates. Either way, an {@code Optional} result is empty only when
+ * no row is found: a found row whose mapped value is {@code null} (a SQL {@code NULL} read as the scalar of, for
+ * example, an {@code Optional<Integer>}) fails the call with {@code NullPointerException}. Declare
+ * {@link com.landawn.abacus.util.u.Nullable Nullable} to receive such a value.</p>
  *
  * <p>An INSERT method whose sole statement argument (each element of the batch for {@link #batch()}) may be the
  * DAO entity, judged from the parameter's declared type, uses the generated-key path regardless of {@link #op()}

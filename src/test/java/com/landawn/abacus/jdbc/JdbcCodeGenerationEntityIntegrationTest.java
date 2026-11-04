@@ -207,6 +207,47 @@ class JdbcCodeGenerationEntityIntegrationTest extends JdbcCodeGenerationUtilTest
         }
     }
 
+    // The table-name overloads accept surrounding whitespace (trimmed for the metadata query, the class name and the
+    // primary-key lookup), but emitted it in @Table, which abacus-common's BeanInfo rejects ("must not start or end with any
+    // whitespace"): the generated entity compiled, yet every use of it failed.
+    @Test
+    public void testGenerateEntityClass_TableNameWithSurroundingWhitespaceGivesUsableEntity(@TempDir final Path directory) throws Exception {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_padded_table_" + System.nanoTime(), "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE padded_table (padded_key INT PRIMARY KEY, note VARCHAR(20))");
+
+            final String code = JdbcCodeGenerationUtil.generateEntityClass(conn, " padded_table ");
+            assertTrue(code.contains("@Table(name = \"padded_table\")"), code);
+            assertTrue(code.contains("    @Id\n    @Column(name = \"PADDED_KEY\")"), code);
+
+            final String queryCode = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "\tpadded_table\n", "SELECT * FROM padded_table WHERE 1 > 2");
+            assertTrue(queryCode.contains("@Table(name = \"padded_table\")"), queryCode);
+
+            // Outer control characters are dropped as by the class name and primary-key lookup (String.trim()): stripping
+            // whitespace alone kept a leading U+0001 in the @Table name.
+            final String controlCode = JdbcCodeGenerationUtil.generateEntityClass(conn, "\u0001padded_table");
+            assertTrue(controlCode.contains("@Table(name = \"padded_table\")"), controlCode);
+            assertTrue(controlCode.contains("public class PaddedTable"), controlCode);
+            assertTrue(controlCode.contains("    @Id\n    @Column(name = \"PADDED_KEY\")"), controlCode);
+            final String controlQueryCode = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, " \u0001padded_table",
+                    "SELECT * FROM padded_table WHERE 1 > 2");
+            assertTrue(controlQueryCode.contains("@Table(name = \"padded_table\")"), controlQueryCode);
+
+            final Path source = directory.resolve("PaddedTable.java");
+            final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+            Files.writeString(source, code, StandardCharsets.UTF_8);
+            final int exitCode = ToolProvider.getSystemJavaCompiler()
+                    .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                            "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
+            assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+
+            try (java.net.URLClassLoader loader = new java.net.URLClassLoader(new java.net.URL[] { directory.toUri().toURL() }, getClass().getClassLoader())) {
+                final Class<?> entityClass = loader.loadClass("PaddedTable");
+                assertEquals("padded_table", com.landawn.abacus.parser.ParserUtil.getBeanInfo(entityClass).tableName.orElseThrow());
+            }
+        }
+    }
+
     // A requested import that equals a default import was skipped as a duplicate, and the default import was then pruned
     // as unused (the scans only recognize annotation lines), so a body using the type did not compile.
     @Test
@@ -433,6 +474,110 @@ class JdbcCodeGenerationEntityIntegrationTest extends JdbcCodeGenerationUtilTest
         assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
     }
 
+    // A declaration after the ';' ending a text block's statement on the closing line gets its java.util import and copy()
+    // assignment, also when that statement ends further out than the line begins (an array initializer, an anonymous class
+    // method or a lambda body closed on the line): only a ';' at the line's starting brace depth was taken, so Map, Set and
+    // Deque were not imported and the source did not compile.
+    @Test
+    public void testGenerateEntityClass_DeclarationsAfterTextBlockStatementsCompile(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .additionalClassBodySource(String.join("\n", //
+                        "    private String sql = \"\"\"", //
+                        "        SELECT 1", //
+                        "        \"\"\"; private List<String> tags;", //
+                        "    private static final String[] QUERIES = { \"\"\"", //
+                        "        SELECT 2", //
+                        "        \"\"\" }; private Map<String, Integer> counts;", //
+                        "    private final Runnable task = new Runnable() {", //
+                        "        public void run() { String s = \"\"\"", //
+                        "            x", //
+                        "            \"\"\"; s.length(); } }; private Set<String> names;", //
+                        "    private final Runnable lambda = () -> { String s = \"\"\"", //
+                        "            y", //
+                        "            \"\"\"; }; private Deque<String> queue;"))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        for (final String type : List.of("List", "Map", "Set", "Deque")) {
+            assertTrue(code.contains("import java.util." + type + ";"), code);
+        }
+
+        for (final String field : List.of("tags", "counts", "names", "queue")) {
+            assertTrue(code.contains("copy." + field + " = this." + field + ";"), code);
+        }
+
+        assertFalse(code.contains("copy.s "), code);
+
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
+    // A '\r' alone ends a line, as in Java source: a declaration after a line comment is recognized (import, copy()).
+    @Test
+    public void testGenerateEntityClass_CarriageReturnLineEndsCompile(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .additionalClassBodySource(String.join("\r", //
+                        "    // tags", //
+                        "    private List<String> tags;", //
+                        "    private String sql = \"\"\"", //
+                        "        SELECT 1", //
+                        "        \"\"\"; private Map<String, Integer> counts;"))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        assertTrue(code.contains("import java.util.List;"), code);
+        assertTrue(code.contains("import java.util.Map;"), code);
+
+        for (final String field : List.of("tags", "counts")) {
+            assertTrue(code.contains("copy." + field + " = this." + field + ";"), code);
+        }
+
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
+    // Block comments inside additional field declarations are ignored by the recognition: the declarations used to be
+    // rejected, or copy() assigned a final field and a declarator inside a comment, so the source did not compile.
+    @Test
+    public void testGenerateEntityClass_BlockCommentsInAdditionalFieldDeclarationsCompile(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .additionalClassBodySource(String.join("\n", //
+                        "    private int count /* items */;", //
+                        "    private /* constant */ final String label = \"/* kept */\";", //
+                        "    private int width = 1 /*, ghost = 2 */, height = 3;", //
+                        "    private int first; /* note */ private List<String> tags;"))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        for (final String field : List.of("count", "width", "height", "first", "tags")) {
+            assertTrue(code.contains("copy." + field + " = this." + field + ";"), code);
+        }
+
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
     @Test
     public void testGeneratedClassCompilesWhenEveryColumnIsExcluded(@TempDir final Path directory) throws IOException {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
@@ -447,7 +592,15 @@ class JdbcCodeGenerationEntityIntegrationTest extends JdbcCodeGenerationUtilTest
         for (final String additionalFields : List.of("", "private static final long version = 1L;", "private final String note = \"fixed\";",
                 "private String note;", "String note;", "@Deprecated private String note;", "@lombok.Builder.Default private final String note = \"fixed\";",
                 "@lombok.Builder.Default\nprivate final String note = \"fixed\";", "private String\n    note;",
-                "private static int first; private final String note = \"fixed\", other = \"second\"; // recognized fields")) {
+                "private static int first; private final String note = \"fixed\", other = \"second\"; // recognized fields",
+                // Block comments (a trailing one, a javadoc comment, one spanning lines) kept @AllArgsConstructor next to
+                // @NoArgsConstructor: "constructor EmptyEntity() is already defined".
+                "private static final long version = 1L; /* note */", "/** The version. */\nprivate static final long version = 1L;",
+                "/*\n * header\n */ private static final long version = 1L;", "/* note */ private String note;",
+                // So did a constant initialized by a text block, whose opening line does not end with ';'.
+                "private static final String SQL = \"\"\"\n    SELECT * FROM t WHERE x = '{' -- @y\n    \"\"\";",
+                "private final String note = \"\"\"\r\n    fixed\r\n    \"\"\"; private static final long version = 1L;",
+                "private static final String SQL = \"\"\"\n    SELECT 1\n    \"\"\"; private String note;")) {
             config.setAdditionalClassBodySource(additionalFields);
             Files.writeString(source, JdbcCodeGenerationUtil.generateEntityClass("empty_entity", resultSet, config), StandardCharsets.UTF_8);
             diagnostics.reset();

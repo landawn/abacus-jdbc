@@ -648,6 +648,192 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
         assertEquals("identity_row", target.invoke(null, "(INSERT INTO identity_row(name) VALUES ('INTO other_row'))"));
     }
 
+    // MySQL/MariaDB and SQL Server accept INSERT without INTO. Its destination was not identified (null), so an insert into
+    // the DAO's own table was taken for one into another table, and its generated key was not written back (4.9.3 did).
+    @Test
+    void insertDestinationWithoutIntoIsTheFirstNameAfterInsertAndItsModifiers() throws ReflectiveOperationException {
+        final Method target = DaoImpl.class.getDeclaredMethod("insertTargetTable", String.class);
+        target.setAccessible(true);
+
+        assertEquals("identity_row", target.invoke(null, "INSERT identity_row(name) VALUES (?)"));
+        assertEquals("identity_row", target.invoke(null, "INSERT LOW_PRIORITY IGNORE identity_row (name) VALUES (?)"));
+        assertEquals("identity_row", target.invoke(null, "insert identity_row (name) value (?)"));
+        assertEquals("`identity_row`", target.invoke(null, "INSERT `identity_row` SET name = ?"));
+        assertEquals("dbo.identity_row", target.invoke(null, "INSERT TOP (5) PERCENT dbo.identity_row (name) SELECT name FROM src"));
+        assertEquals("[dbo].[identity_row]", target.invoke(null, "INSERT [dbo] . [identity_row] WITH (TABLOCK) (name) OUTPUT inserted.id VALUES (?)"));
+        assertEquals("identity_row", target.invoke(null, "INSERT identity_row DEFAULT VALUES"));
+        assertEquals("identity_row", target.invoke(null, "WITH c AS (SELECT 'x' AS name) INSERT identity_row (name) SELECT name FROM c"));
+        assertEquals("identity_row", target.invoke(null, "/* INSERT INTO other_row */ INSERT identity_row (name) VALUES ('INTO other_row')"));
+
+        assertEquals("identity_row", target.invoke(null, "INSERT /*+ hint */ identity_row (name) VALUES (?)"));
+
+        // An INTO before the inserted values still decides; a statement without a destination still yields none.
+        assertEquals("identity_row", target.invoke(null, "INSERT IGNORE INTO identity_row (name) VALUES (?)"));
+        assertEquals("identity_row", target.invoke(null, "INSERT OR REPLACE INTO identity_row (name) VALUES (?)"));
+        assertEquals("identity_row",
+                target.invoke(null, "INSERT ALL INTO identity_row (name) VALUES ('a') INTO other_row (name) VALUES ('b') SELECT 1 FROM dual"));
+        assertEquals(null, target.invoke(null, "INSERT INTO"));
+        assertEquals(null, target.invoke(null, "UPDATE identity_row SET name = ?"));
+    }
+
+    // The INTO of SQL Server's OUTPUT ... INTO clause, or of a later statement, was taken for the destination of an INTO-less
+    // INSERT: an insert into the DAO's own table was taken for one into another table (no key write-back, or an ambiguous key).
+    @Test
+    void insertDestinationWithoutIntoIgnoresOutputIntoAndLaterStatements() throws ReflectiveOperationException {
+        final Method target = DaoImpl.class.getDeclaredMethod("insertTargetTable", String.class);
+        target.setAccessible(true);
+
+        assertEquals("identity_row", target.invoke(null, "INSERT identity_row (name) OUTPUT inserted.id INTO audit_log(user_id) VALUES (?)"));
+        assertEquals("identity_row", target.invoke(null, "INSERT TOP (5) identity_row OUTPUT inserted.id INTO audit_log SELECT name FROM src"));
+        assertEquals("identity_row", target.invoke(null, "INSERT identity_row SET name = ?; INSERT INTO other_row (name) VALUES (?)"));
+        assertEquals("identity_row", target.invoke(null, "INSERT identity_row SET name = ?;"));
+        assertEquals("identity_row", target.invoke(null, "INSERT INTO identity_row (name) VALUES (?); INSERT INTO other_row (name) VALUES (?)"));
+        assertEquals("identity_row", target.invoke(null, "SET NOCOUNT ON; INSERT identity_row (name) VALUES (?)"));
+        // An INTO-less OUTPUT clause or a table named output keeps working.
+        assertEquals("identity_row", target.invoke(null, "INSERT identity_row (name) OUTPUT inserted.id VALUES (?)"));
+        assertEquals("output", target.invoke(null, "INSERT output (name) VALUES (?)"));
+    }
+
+    // MySQL accepts a table named top: TOP was always skipped as SQL Server's modifier, so INSERT top (a) VALUES gave no
+    // destination and INSERT top SET a = ? gave "SET".
+    @Test
+    void insertDestinationWithoutIntoTakesTopForSqlServersModifierOnlyBeforeItsGroup() throws ReflectiveOperationException {
+        final Method target = DaoImpl.class.getDeclaredMethod("insertTargetTable", String.class);
+        target.setAccessible(true);
+
+        assertEquals("top", target.invoke(null, "INSERT top (a) VALUES (?)"));
+        assertEquals("top", target.invoke(null, "INSERT top (a) VALUE (?)"));
+        assertEquals("top", target.invoke(null, "INSERT top (a) SELECT a FROM src"));
+        assertEquals("top", target.invoke(null, "INSERT top SET a = ?"));
+        assertEquals("top", target.invoke(null, "INSERT IGNORE top SET a = ?"));
+        assertEquals("`top`", target.invoke(null, "INSERT `top` (a) VALUES (?)"));
+        assertEquals("top.t", target.invoke(null, "INSERT top.t (a) VALUES (?)"));
+        assertEquals("percent", target.invoke(null, "INSERT percent (a) VALUES (?)"));
+
+        assertEquals("users", target.invoke(null, "INSERT TOP (5) users (name) VALUES (?)"));
+        assertEquals("users", target.invoke(null, "INSERT TOP (5) PERCENT users (name) SELECT name FROM src"));
+        assertEquals("users", target.invoke(null, "INSERT TOP(5) INTO users (name) SELECT name FROM src"));
+        assertEquals("users", target.invoke(null, "INSERT TOP ((SELECT 5)) PERCENT INTO users (name) SELECT name FROM src"));
+
+        // OUTPUT after the column list of a table named top (quoted in SQL Server, where TOP is reserved): it gave "OUTPUT".
+        assertEquals("top", target.invoke(null, "INSERT top (a) OUTPUT inserted.a VALUES (1)"));
+        assertEquals("users", target.invoke(null, "INSERT TOP (5) users OUTPUT inserted.id SELECT name FROM src"));
+    }
+
+    // A SQL Server batch need not separate its statements by ';': the INTO of a later INSERT was taken for the destination of
+    // an INTO-less INSERT before it. A parenthesized query after the column list of a MySQL table named top gave "UNION".
+    @Test
+    void insertDestinationWithoutIntoIgnoresALaterInsertAndAQueryInParenthesesAfterTop() throws ReflectiveOperationException {
+        final Method target = DaoImpl.class.getDeclaredMethod("insertTargetTable", String.class);
+        target.setAccessible(true);
+
+        assertEquals("users", target.invoke(null, "INSERT users (a) EXEC p INSERT INTO audit (x) VALUES (1)"));
+        assertEquals("users", target.invoke(null, "INSERT users (a) EXECUTE p INSERT audit (x) VALUES (1)"));
+        assertEquals("users", target.invoke(null, "INSERT INTO users (a) EXEC p INSERT INTO audit (x) VALUES (1)"));
+        assertEquals("audit", target.invoke(null, "EXEC p INSERT INTO audit (x) VALUES (1)"));
+
+        assertEquals("top", target.invoke(null, "INSERT top (a) (SELECT 1) UNION (SELECT 2)"));
+        assertEquals("top", target.invoke(null, "INSERT top (a) (SELECT 1)"));
+        assertEquals("top", target.invoke(null, "INSERT top (a) (SELECT 1) INSERT INTO audit (x) VALUES (1)"));
+        // SQL Server's TOP (n) is still followed by its target.
+        assertEquals("users", target.invoke(null, "INSERT TOP (5) users (name) EXEC p"));
+        assertEquals("users", target.invoke(null, "INSERT TOP ((SELECT 5)) users (name) SELECT name FROM src"));
+    }
+
+    // SQL Server's table variable: the cursor splits @tv into "@" and "tv", so "@" was taken for the destination.
+    @Test
+    void insertDestinationIsTheWholeTableVariableName() throws ReflectiveOperationException {
+        final Method target = DaoImpl.class.getDeclaredMethod("insertTargetTable", String.class);
+        target.setAccessible(true);
+
+        assertEquals("@tv", target.invoke(null, "INSERT @tv (a) VALUES (?)"));
+        assertEquals("@tv", target.invoke(null, "INSERT INTO @tv (a) VALUES (?)"));
+        assertEquals("@tv", target.invoke(null, "INSERT @tv (a) OUTPUT inserted.a VALUES (?)"));
+        assertEquals("identity_row", target.invoke(null, "INSERT identity_row (name) OUTPUT inserted.id INTO @log VALUES (?)"));
+    }
+
+    @Test
+    void entityInsertWithoutIntoIntoAnotherTableDoesNotWriteBackItsKey() throws SQLException {
+        final NoIntoDao noIntoDao = JdbcUtil.createDao(NoIntoDao.class, addingIntoBeforeH2(ds));
+
+        final IdentityRow row = new IdentityRow();
+        row.setName("copied");
+        noIntoDao.copyRow(row);
+        assertEquals(null, row.getId());
+        assertEquals(1L, count("other_row"));
+        assertEquals(0L, count("identity_row"));
+    }
+
+    @Test
+    void entityInsertWithoutIntoWritesItsGeneratedKeyBack() throws SQLException {
+        final NoIntoDao noIntoDao = JdbcUtil.createDao(NoIntoDao.class, addingIntoBeforeH2(ds));
+
+        final IdentityRow row = new IdentityRow();
+        row.setName("single");
+        noIntoDao.insertRow(row);
+        assertEquals(1L, row.getId());
+
+        final IdentityRow returned = new IdentityRow();
+        returned.setName("returned");
+        assertEquals(2L, noIntoDao.insertRowReturningId(returned));
+        assertEquals(2L, returned.getId());
+
+        final IdentityRow first = new IdentityRow();
+        first.setName("batch 1");
+        final IdentityRow second = new IdentityRow();
+        second.setName("batch 2");
+        noIntoDao.insertRows(List.of(first, second));
+        assertEquals(3L, first.getId());
+        assertEquals(4L, second.getId());
+        assertEquals("batch 2", dao.get(4L).get().getName());
+    }
+
+    public interface NoIntoDao extends CrudDao<IdentityRow, Long, NoIntoDao> {
+        @Query("INSERT identity_row(name) VALUES (:name)")
+        void insertRow(IdentityRow row) throws SQLException;
+
+        @Query("INSERT identity_row(name) VALUES (:name)")
+        Long insertRowReturningId(IdentityRow row) throws SQLException;
+
+        @Query(value = "INSERT identity_row(name) VALUES (:name)", batch = true)
+        void insertRows(List<IdentityRow> rows) throws SQLException;
+
+        @Query("INSERT other_row(name) VALUES (:name)")
+        void copyRow(IdentityRow row) throws SQLException;
+    }
+
+    /**
+     * H2 rejects INSERT without INTO in every compatibility mode: the DAO resolves the INTO-less SQL, and the connections of the
+     * returned data source add the INTO only when preparing the statement.
+     */
+    private static javax.sql.DataSource addingIntoBeforeH2(final javax.sql.DataSource target) {
+        return (javax.sql.DataSource) java.lang.reflect.Proxy.newProxyInstance(DaoImplGeneratedKeyRegressionTest.class.getClassLoader(),
+                new Class<?>[] { javax.sql.DataSource.class }, (dsProxy, dsMethod, dsArgs) -> {
+                    final Object result = invokeUnwrapped(target, dsMethod, dsArgs);
+
+                    if (!(result instanceof final Connection conn)) {
+                        return result;
+                    }
+
+                    return java.lang.reflect.Proxy.newProxyInstance(DaoImplGeneratedKeyRegressionTest.class.getClassLoader(),
+                            new Class<?>[] { Connection.class }, (connProxy, method, args) -> {
+                                if (method.getName().startsWith("prepare") && args != null && args[0] instanceof final String sql) {
+                                    args[0] = sql.replaceFirst("^INSERT (?!INTO )", "INSERT INTO ");
+                                }
+
+                                return invokeUnwrapped(conn, method, args);
+                            });
+                });
+    }
+
+    private static Object invokeUnwrapped(final Object target, final Method method, final Object[] args) throws Throwable {
+        try {
+            return method.invoke(target, args);
+        } catch (final java.lang.reflect.InvocationTargetException e) {
+            throw e.getCause();
+        }
+    }
+
     @Test
     void namedAndPositionalBatchesKeepKeySelectionAcrossChunks() throws SQLException {
         assertEquals(List.of(1L, 2L), dao.positionalBatch(List.of("a", "b"), 1));

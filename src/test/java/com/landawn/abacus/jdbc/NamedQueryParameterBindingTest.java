@@ -432,6 +432,157 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
         verify(mockPreparedStatement).close();
     }
 
+    // User code run while binding (a setter, a custom Map, Collection, EntityId or Type, the batch iterator) written in Kotlin
+    // or using a sneaky throw can throw a checked exception it does not declare. It escaped the SQLException | RuntimeException |
+    // Error cleanup, leaving the statement (and a data-source query's connection, released by a close handler) open.
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "setParametersSetter", "setParametersMap", "setParametersEntityId", "setParametersBean", "setParametersCollection",
+            "setParametersArray", "setParametersSingleValue", "setParametersSelectedNames", "addBatchParametersRows", "addBatchParametersBeanRows",
+            "addBatchParametersCollectionIterator", "addBatchParametersCollectionIsEmpty" })
+    void userCodeThrowsUndeclaredCheckedException_closesQueryAndPropagatesIt(final String operation) throws SQLException {
+        final NamedQuery query = "setParametersSingleValue".equals(operation) ? createQueryWithParameters(ImmutableList.of("param1")) : namedQuery;
+        final java.util.concurrent.atomic.AtomicInteger connectionReleases = new java.util.concurrent.atomic.AtomicInteger();
+        query.onClose(connectionReleases::incrementAndGet);
+
+        final EntityId entityId = mock(EntityId.class);
+        when(entityId.containsKey("param1")).thenReturn(true);
+        when(entityId.get("param1")).thenAnswer(invocation -> throwUndeclaredChecked());
+
+        final org.junit.jupiter.api.function.Executable call = switch (operation) {
+            case "setParametersSetter" -> () -> query.setParameters("x", (sql, q, p) -> throwUndeclaredChecked());
+            case "setParametersMap" -> () -> query.setParameters(new HashMap<String, Object>(Map.of("param1", "x")) {
+                @Override
+                public Object get(final Object key) {
+                    return throwUndeclaredChecked();
+                }
+            });
+            case "setParametersEntityId" -> () -> query.setParameters(entityId);
+            case "setParametersBean" -> () -> query.setParameters(new UndeclaredFailureBean());
+            case "setParametersCollection" -> () -> query.setParameters((Object) new java.util.AbstractList<Object>() {
+                @Override
+                public Object get(final int index) {
+                    return throwUndeclaredChecked();
+                }
+
+                @Override
+                public int size() {
+                    return 2;
+                }
+            });
+            case "setParametersArray" -> () -> query.setParameters((Object) new Object[] { new UndeclaredFailureValue(), "x" });
+            case "setParametersSingleValue" -> () -> query.setParameters(new UndeclaredFailureValue());
+            case "setParametersSelectedNames" -> () -> query.setParameters(new UndeclaredFailureBean(), List.of("param1"));
+            case "addBatchParametersRows" -> () -> query.addBatchParameters(new Iterator<Object>() {
+                @Override
+                public boolean hasNext() {
+                    return true;
+                }
+
+                @Override
+                public Object next() {
+                    return throwUndeclaredChecked();
+                }
+            });
+            case "addBatchParametersBeanRows" -> () -> query.addBatchParameters(List.of(new UndeclaredFailureBean()));
+            // BUG FIX: the custom Collection's own isEmpty()/iterator() ran before the iterator overload's cleanup.
+            case "addBatchParametersCollectionIterator" -> () -> query.addBatchParameters(new java.util.AbstractCollection<Object>() {
+                @Override
+                public Iterator<Object> iterator() {
+                    return throwUndeclaredChecked();
+                }
+
+                @Override
+                public int size() {
+                    return 1;
+                }
+            });
+            case "addBatchParametersCollectionIsEmpty" -> () -> query.addBatchParameters(new java.util.AbstractCollection<Object>() {
+                @Override
+                public Iterator<Object> iterator() {
+                    return List.<Object> of("x").iterator();
+                }
+
+                @Override
+                public int size() {
+                    return throwUndeclaredChecked();
+                }
+            });
+            default -> throw new IllegalArgumentException(operation);
+        };
+
+        final Throwable thrown = assertThrows(Throwable.class, call);
+
+        org.junit.jupiter.api.Assertions.assertInstanceOf(UndeclaredCheckedFailure.class, thrown);
+        assertTrue(query.isClosed);
+        verify(mockPreparedStatement).close();
+        assertEquals(1, connectionReleases.get());
+    }
+
+    @BeforeAll
+    static void registerUndeclaredFailureType() {
+        TypeFactory.registerType(UndeclaredFailureValue.class, new UndeclaredFailureValueType());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T, X extends Throwable> T throwUndeclaredChecked() throws X {
+        throw (X) new UndeclaredCheckedFailure();
+    }
+
+    private static final class UndeclaredCheckedFailure extends Exception {
+        private static final long serialVersionUID = 1L;
+    }
+
+    /** A value class bound through a custom {@code Type} whose {@code set} throws an undeclared checked exception. */
+    public static final class UndeclaredFailureValue {
+    }
+
+    private static final class UndeclaredFailureValueType extends com.landawn.abacus.type.AbstractType<UndeclaredFailureValue> {
+        UndeclaredFailureValueType() {
+            super("NamedQueryParameterBindingTestUndeclaredFailureValue");
+        }
+
+        @Override
+        public Class<UndeclaredFailureValue> javaType() {
+            return UndeclaredFailureValue.class;
+        }
+
+        @Override
+        public String stringOf(final UndeclaredFailureValue value) {
+            return value == null ? null : "undeclared-failure";
+        }
+
+        @Override
+        public UndeclaredFailureValue valueOf(final String str) {
+            return str == null ? null : new UndeclaredFailureValue();
+        }
+
+        @Override
+        public void set(final PreparedStatement stmt, final int columnIndex, final UndeclaredFailureValue value) throws SQLException {
+            throwUndeclaredChecked();
+        }
+    }
+
+    public static class UndeclaredFailureBean {
+        private UndeclaredFailureValue param1 = new UndeclaredFailureValue();
+        private int param2;
+
+        public UndeclaredFailureValue getParam1() {
+            return param1;
+        }
+
+        public void setParam1(final UndeclaredFailureValue param1) {
+            this.param1 = param1;
+        }
+
+        public int getParam2() {
+            return param2;
+        }
+
+        public void setParam2(final int param2) {
+            this.param2 = param2;
+        }
+    }
+
     @Test
     void testSetParameters_Object_EntityId_ExceptionClosesAndRethrows() throws SQLException {
         doThrow(new RuntimeException("forced")).when(mockPreparedStatement).setObject(anyInt(), isNull());
@@ -955,6 +1106,119 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
         new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(money);
         verify(mockPreparedStatement).setString(1, "10 USD");
         verify(mockPreparedStatement, never()).close();
+    }
+
+    // Regression: with one placeholder, classifying a class bound as one value by its registered Type resolves the bean
+    // metadata, which fails for invalid property metadata; that ran before the cleanup block and left the query open.
+    @Test
+    void setParameters_singlePlaceholderTypedClassWithInvalidMetadataClosesQuery() throws SQLException {
+        final NamedQuery query = createQueryWithParameters(ImmutableList.of("price"));
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> query.setParameters(new RegisteredBlankPaddedColumnValue()));
+
+        assertTrue(failure.getMessage().contains("whitespace"), failure.getMessage());
+        assertTrue(query.isClosed);
+        verify(mockPreparedStatement).close();
+    }
+
+    // With two or more placeholders a bean is classified without resolving its metadata, so resolveBeanParameters is where invalid
+    // property metadata fails: the query must be closed as for any other invalid argument.
+    @Test
+    void setParameters_multiPlaceholderBeanWithInvalidMetadataClosesQuery() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setParameters(new AbstractQueryStreamTest.BlankPaddedColumnBean()));
+
+        assertTrue(failure.getMessage().contains("whitespace"), failure.getMessage());
+        assertTrue(namedQuery.isClosed);
+        verify(mockPreparedStatement).close();
+        verify(mockPreparedStatement, never()).addBatch();
+    }
+
+    // The first row of a batch is classified (one placeholder: a class bound as one value by its registered Type) or resolved
+    // (several placeholders: resolveBeanParameters) before any row is queued; invalid metadata there must close the query. When
+    // the first row is null, each later row goes through setParameters(Object), which classifies it on its own.
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "singlePlaceholderRegisteredType", "multiPlaceholderBean", "nullFirstRowThenRegisteredType" })
+    void addBatchParameters_rowWithInvalidMetadataThrowsAndClosesQuery(final String shape) throws SQLException {
+        final List<Object> rows = new ArrayList<>();
+        final NamedQuery query;
+
+        switch (shape) {
+            case "singlePlaceholderRegisteredType" -> {
+                query = createQueryWithParameters(ImmutableList.of("price"));
+                rows.add(new RegisteredBlankPaddedColumnValue());
+            }
+            case "multiPlaceholderBean" -> {
+                query = namedQuery;
+                rows.add(new AbstractQueryStreamTest.BlankPaddedColumnBean());
+            }
+            case "nullFirstRowThenRegisteredType" -> {
+                query = createQueryWithParameters(ImmutableList.of("price"));
+                rows.add(null);
+                rows.add(new RegisteredBlankPaddedColumnValue());
+            }
+            default -> throw new IllegalArgumentException(shape);
+        }
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> query.addBatchParameters(rows));
+
+        assertTrue(failure.getMessage().contains("whitespace"), failure.getMessage());
+        assertTrue(query.isClosed);
+        verify(mockPreparedStatement).close();
+    }
+
+    // A custom Collection of names runs user code when it is copied (toArray). The copy ran before the cleanup block, so a
+    // failing collection left the statement (and a data-source query's connection) open.
+    @Test
+    void setParametersSelectedNames_failingNameCollectionClosesQuery() throws SQLException {
+        final RuntimeException copyFailure = new RuntimeException("toArray failed");
+        final Collection<String> names = new java.util.AbstractCollection<>() {
+            @Override
+            public Iterator<String> iterator() {
+                throw copyFailure;
+            }
+
+            @Override
+            public int size() {
+                return 1;
+            }
+
+            @Override
+            public Object[] toArray() {
+                throw copyFailure;
+            }
+        };
+
+        final RuntimeException thrown = assertThrows(RuntimeException.class, () -> namedQuery.setParameters(new TestEntity(), names));
+
+        assertSame(copyFailure, thrown);
+        assertTrue(namedQuery.isClosed);
+        verify(mockPreparedStatement).close();
+    }
+
+    @BeforeAll
+    static void registerBlankPaddedColumnValueType() {
+        TypeFactory.registerType(RegisteredBlankPaddedColumnValue.class, v -> v.getName(), str -> {
+            final RegisteredBlankPaddedColumnValue v = new RegisteredBlankPaddedColumnValue();
+            v.setName(str);
+            return v;
+        });
+        assertFalse(N.typeOf(RegisteredBlankPaddedColumnValue.class).isBean());
+    }
+
+    /** Bound as one value by its registered Type, but its property metadata is invalid (a blank-padded column name). */
+    public static class RegisteredBlankPaddedColumnValue {
+        @Column(" name ")
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
     }
 
     // Registering a scalar Type must not make a valid nested name bind the whole root for a single placeholder.

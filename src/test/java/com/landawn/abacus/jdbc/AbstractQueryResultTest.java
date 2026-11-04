@@ -664,6 +664,23 @@ class AbstractQueryResultTest extends AbstractQueryTestSupport {
         verify(limitedStatement).close();
     }
 
+    // Regression: listAllResultSets(Class) resolved the bean metadata only once a result set was processed, so a bean class with
+    // invalid property metadata failed after the statement had run (and auto-committed its writes), and never when it returned no
+    // result set. It must fail before execution, closing the query, as list(Class) does.
+    @Test
+    public void testListAllResultSets_InvalidBeanTargetType_FailsBeforeExecutionAndClosesQuery() throws SQLException {
+        when(preparedStatement.execute()).thenReturn(false);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> query.listAllResultSets(AbstractQueryStreamTest.BlankPaddedColumnBean.class));
+
+        assertTrue(failure.getMessage().contains("whitespace"));
+        assertTrue(query.isClosed);
+        verify(preparedStatement, never()).execute();
+        verify(preparedStatement).close();
+    }
+
     @Test
     @Tag("2025")
     @SuppressWarnings("deprecation")

@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.exception.UncheckedInterruptedException;
@@ -112,9 +113,10 @@ public final class DaoUtil {
         /**
          * Returns the value wrapped to be bound with the property's type, or the value itself (bound by its runtime class) when
          * it is not an instance of the property's class: the property type would reject it, e.g. a {@code Long} given for an
-         * {@code int} property.
+         * {@code int} property. A {@code null} value is wrapped too: it renders {@code = ?} and binds SQL {@code NULL} with the
+         * property's type (in a {@code SET} clause, or a by-id predicate, which then matches no row), not {@code IS NULL}.
          *
-         * @param value the value
+         * @param value the value; may be {@code null}
          * @param propInfo the property the value is written to or compared with
          * @return the wrapped value, or {@code value}
          */
@@ -1248,12 +1250,23 @@ public final class DaoUtil {
      * Used by {@link #uncheckedComplete(List)} and {@link #uncheckedCompleteSum(List)} to surface
      * failures from completed futures. An existing {@link UncheckedSQLException} is rethrown
      * unchanged. A {@link SQLException}, or an exception whose cause is one, is wrapped in an
-     * {@code UncheckedSQLException}; otherwise the exception is converted to a runtime exception
-     * via {@link ExceptionUtil#toRuntimeException}. Later collected failures remain suppressed.
-     * This consumer never returns normally when invoked — it always throws.
+     * {@code UncheckedSQLException}; an {@link Error} a future's task threw is rethrown as itself; otherwise the
+     * exception is converted to a runtime exception via {@link ExceptionUtil#toRuntimeException}. Later collected
+     * failures remain suppressed. This consumer never returns normally when invoked — it always throws.
      * </p>
      */
-    static final Throwables.Consumer<? super Exception, UncheckedSQLException> throwUncheckedSQLException = e -> {
+    static final Throwables.Consumer<? super Exception, UncheckedSQLException> throwUncheckedSQLException = e -> throwUnchecked(e, false);
+
+    /**
+     * Throws {@code e} as {@link UncheckedSQLException} (or another runtime exception), as {@link #throwUncheckedSQLException} does.
+     *
+     * @param e the failure to throw
+     * @param callInterrupt whether an {@link InterruptedException} (unwrapped) interrupts the current thread: {@code true}
+     *        for a failure thrown on the current thread, {@code false} for one collected from a future (see
+     *        {@link #toRuntimeException(Exception, boolean)})
+     * @throws UncheckedSQLException always, or another runtime exception or {@code Error}
+     */
+    private static void throwUnchecked(final Exception e, final boolean callInterrupt) throws UncheckedSQLException {
         if (e instanceof UncheckedSQLException) {
             throw (UncheckedSQLException) e;
         } else if (e instanceof SQLException) {
@@ -1261,9 +1274,9 @@ public final class DaoUtil {
         } else if (e.getCause() instanceof SQLException) {
             throw new UncheckedSQLException(transferSuppressed(e, (SQLException) e.getCause()));
         } else {
-            throw ExceptionUtil.toRuntimeException(e, true);
+            throw toRuntimeException(e, callInterrupt);
         }
-    };
+    }
 
     /**
      * A consumer that re-throws an exception as a checked {@link SQLException} when possible, or as a runtime exception otherwise.
@@ -1271,9 +1284,9 @@ public final class DaoUtil {
      * Used by {@link #complete(List)} and {@link #completeSum(List)} to surface failures from
      * completed futures. If the exception is a {@link SQLException} or has a SQLException as its
      * cause, the SQLException is re-thrown. Suppressed failures collected on an enclosing exception
-     * are transferred to that SQLException. Otherwise, the exception is converted to a runtime
-     * exception via {@link ExceptionUtil#toRuntimeException}. This consumer never returns normally
-     * when invoked — it always throws.
+     * are transferred to that SQLException. An {@link Error} a future's task threw is rethrown as itself.
+     * Otherwise, the exception is converted to a runtime exception via {@link ExceptionUtil#toRuntimeException}.
+     * This consumer never returns normally when invoked — it always throws.
      * </p>
      */
     static final Throwables.Consumer<? super Exception, SQLException> throwSQLExceptionAction = e -> {
@@ -1282,9 +1295,45 @@ public final class DaoUtil {
         } else if (e.getCause() instanceof SQLException) {
             throw transferSuppressed(e, (SQLException) e.getCause());
         } else {
-            throw ExceptionUtil.toRuntimeException(e, true);
+            throw toRuntimeException(e, false);
         }
     };
+
+    /**
+     * Converts a failure collected from a future (or, for {@link #uncheckedSql}, thrown on the calling thread) that is
+     * neither an SQL failure nor wraps one to the runtime exception to throw, or throws the {@link Error} it carries.
+     *
+     * <p>WHY: {@link ContinuableFuture#getAsResult()} reports a task that threw an {@code Error} (a driver's
+     * {@code LinkageError}, an {@code AssertionError}) as the {@link ExecutionException} carrying it, which
+     * {@code ExceptionUtil.toRuntimeException(e, true)} turned into an {@code UncheckedException} wrapping the {@code Error}:
+     * the parallel join loads and deletes reported it as a plain runtime exception, while their sequential overloads
+     * propagate the {@code Error} itself. The later failures are collected on {@code e} as suppressed exceptions, and the
+     * conversion unwraps wrappers ({@code ExecutionException}, and the {@code InvocationTargetException} or
+     * {@code UndeclaredThrowableException} a task may throw around an {@code Error} or another exception), so they are moved
+     * to whatever is thrown instead of {@code e}: they were lost for a task that threw such a wrapper.</p>
+     *
+     * @param e the collected failure
+     * @param callInterrupt whether an {@link InterruptedException} (unwrapped) interrupts the current thread
+     * @return the runtime exception to throw
+     * @throws Error if {@code e} carries an {@code Error}
+     */
+    private static RuntimeException toRuntimeException(final Exception e, final boolean callInterrupt) throws Error {
+        final RuntimeException converted;
+
+        try {
+            // callInterrupt is false for a failure collected from a future: getAsResult() reports an InterruptedException a
+            // task itself failed with unwrapped, so the conversion can't tell it from an interrupted wait and would interrupt
+            // the calling thread, which nothing interrupted (awaitAll() restores the interrupt status after a wait that was
+            // actually interrupted). It is true for a failure thrown on the calling thread (uncheckedSql), whose interrupt
+            // status must be restored, as before the futures path stopped passing true.
+            converted = ExceptionUtil.toRuntimeException(e, callInterrupt, true);
+        } catch (final Error error) {
+            throw transferSuppressed(e, error);
+        }
+
+        // Returned as is, or wrapped as the cause (a checked exception), e keeps its suppressed failures reachable.
+        return converted == e || converted.getCause() == e ? converted : transferSuppressed(e, converted);
+    }
 
     /**
      * Completes all futures in the list and propagates the first failure as an unchecked exception.
@@ -1293,7 +1342,8 @@ public final class DaoUtil {
      * of the calling thread: the interruption is collected as a failure and the interrupt status is restored once every
      * future has completed. SQL-related failures
      * are translated to {@link UncheckedSQLException}; other failures retain their runtime exception
-     * semantics. Later failures are attached as suppressed exceptions to the first failure.
+     * semantics, and an {@link Error} thrown by a future's task is rethrown as itself. Later failures are attached as
+     * suppressed exceptions to the first failure.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -1330,7 +1380,8 @@ public final class DaoUtil {
      * not cut short by an interrupt of the calling thread: the interruption is collected as a failure and the interrupt
      * status is restored once every future has completed.
      * SQL-related failures are translated to {@link UncheckedSQLException}; other failures retain their
-     * runtime exception semantics. Later failures are attached as suppressed exceptions to the first failure.
+     * runtime exception semantics, and an {@link Error} thrown by a future's task is rethrown as itself. Later failures
+     * are attached as suppressed exceptions to the first failure.
      * This is typically used for batch update/insert/delete operations where the return value indicates
      * the number of affected rows.
      * </p>
@@ -1376,7 +1427,8 @@ public final class DaoUtil {
      * of the calling thread: the interruption is collected as a failure and the interrupt status is restored once every
      * future has completed. SQL-related failures
      * are propagated as a checked {@link SQLException}; other failures retain their runtime exception
-     * semantics. Later failures are attached as suppressed exceptions to the first failure.
+     * semantics, and an {@link Error} thrown by a future's task is rethrown as itself. Later failures are attached as
+     * suppressed exceptions to the first failure.
      * This is the checked exception variant of {@link #uncheckedComplete(List)}.
      * </p>
      *
@@ -1413,7 +1465,8 @@ public final class DaoUtil {
      * not cut short by an interrupt of the calling thread: the interruption is collected as a failure and the interrupt
      * status is restored once every future has completed.
      * SQL-related failures are propagated as a checked {@link SQLException}; other failures retain their
-     * runtime exception semantics. Later failures are attached as suppressed exceptions to the first failure.
+     * runtime exception semantics, and an {@link Error} thrown by a future's task is rethrown as itself. Later failures
+     * are attached as suppressed exceptions to the first failure.
      * This is the checked exception variant of {@link #uncheckedCompleteSum(List)}, typically used for batch operations
      * where the return value indicates the total number of affected rows.
      * </p>
@@ -1552,7 +1605,7 @@ public final class DaoUtil {
      * @param target the exception that receives the suppressed exceptions and is returned.
      * @return {@code target} with the suppressed exceptions of {@code source} added to it.
      */
-    private static <E extends Exception> E transferSuppressed(final Exception source, final E target) {
+    private static <E extends Throwable> E transferSuppressed(final Exception source, final E target) {
         for (final Throwable suppressed : source.getSuppressed()) {
             if (suppressed != target) {
                 addSuppressedIfDifferent(target, suppressed);
@@ -1590,8 +1643,11 @@ public final class DaoUtil {
         try {
             return action.get();
         } catch (final Exception e) {
-            throwUncheckedSQLException.accept(e);
-            throw new AssertionError("Unreachable: throwUncheckedSQLException always throws");
+            // callInterrupt = true: unlike a future's failure, an InterruptedException here (sneaky, or wrapped in the
+            // UndeclaredThrowableException of a DAO proxy) was thrown on this thread; sharing the futures conversion lost
+            // its interrupt status.
+            throwUnchecked(e, true);
+            throw new AssertionError("Unreachable: throwUnchecked always throws");
         }
     }
 }

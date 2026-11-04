@@ -44,12 +44,16 @@ import com.landawn.abacus.util.u.Optional;
  * <p>Contains no database-modifying operation, so it can be mixed into read-only unchecked DAOs
  * (see {@link UncheckedReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
  *
- * <p>A {@code null} or empty source-property selection loads all default source properties. Properties used as
- * source join keys are selected automatically and may therefore be populated even when omitted from a
- * selective read. Streams are caller-owned and must be closed. Parallel loaders may partially populate entities before a
- * task fails. Inside a transaction on the DAO's data source, their tasks run on the calling thread, in the transaction (on
- * other threads they would run outside it, each on a connection of its own, and miss its uncommitted writes); outside one,
- * on the executor.</p>
+ * <p>A {@code null} or empty source-property selection loads all default source properties. Properties used as source
+ * join keys are selected automatically and may therefore be populated even when omitted from a selective read. Streams
+ * are caller-owned and must be closed. The overloads taking several property names check all of them, by the rules of
+ * the single-name overload, before loading the join of any. The names are checked also with no entities to load (a
+ * {@code null} or empty collection): the {@code loadJoinEntities} overloads reject a name that is not a {@code @JoinedBy}
+ * property, and the {@code loadJoinEntitiesIfAbsent} overloads, for which no property is then {@code null} on an entity, a
+ * {@code null} or empty name or one that names no property of the DAO's entity class. Parallel loaders may partially
+ * populate entities before a task fails. Inside a transaction on the DAO's data source, their tasks run on the calling
+ * thread, in the transaction (on other threads they would run outside it, each on a connection of its own, and miss its
+ * uncommitted writes); outside one, on the executor.</p>
  *
  * <p>The inherited join-enrichment stream overloads keep the parent query's connection open while
  * loading each batch's join entities. Outside a transaction that binds the connection, join
@@ -956,7 +960,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns
+     *                 after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
@@ -968,12 +973,17 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
             throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
-        // Every name is checked first: an invalid one failed once the joins of the names before it had been loaded.
+        // Every name is checked first: an invalid one failed once the joins of the names before it had been loaded. Also with
+        // no entities, as the single-name overload does: an invalid name passed unchecked when there was nothing to load.
         JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
+
+        if (N.isEmpty(entities)) {
+            return;
+        }
 
         for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName);
@@ -996,7 +1006,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns
+     *                 after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
@@ -1040,7 +1051,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns
+     *                 after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
      *        are loaded on the calling thread, in the transaction
@@ -1060,13 +1072,17 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(executor, cs.executor);
 
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
         // Every name is checked before any task runs: an invalid one failed in its own task, after the tasks of the names before
-        // it had run (and filled in their joins).
+        // it had run (and filled in their joins). Also with no entities, as the single-name overload does.
         JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
+
+        if (N.isEmpty(entities)) {
+            return;
+        }
 
         final Executor taskExecutor = JoinEntityReadOps.joinTaskExecutor(this, executor);
         final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
@@ -1515,8 +1531,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                 If {@code null} or empty, this method returns after validating {@code joinEntityPropName}
      * @param joinEntityPropName the property name of the join entities to load
      * @throws IllegalArgumentException if {@code entities} contains {@code null},
-     *                                  if {@code joinEntityPropName} is {@code null} or empty, or if {@code entities} is not empty
-     *                                  and its entity class has no property named {@code joinEntityPropName},
+     *                                  if {@code joinEntityPropName} is {@code null} or empty, or if the entity class (the DAO's entity
+     *                                  class if {@code entities} is {@code null} or empty) has no property named {@code joinEntityPropName},
      *                                  or that property is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
@@ -1550,8 +1566,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws IllegalArgumentException if {@code entities} contains {@code null},
-     *                                  if {@code joinEntityPropName} is {@code null} or empty, or if {@code entities} is not empty
-     *                                  and its entity class has no property named {@code joinEntityPropName},
+     *                                  if {@code joinEntityPropName} is {@code null} or empty, or if the entity class (the DAO's entity
+     *                                  class if {@code entities} is {@code null} or empty) has no property named {@code joinEntityPropName},
      *                                  or that property is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
@@ -1573,6 +1589,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
         N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
 
         if (N.isEmpty(entities)) {
+            // The name must still name a property of the entity class: with no entities, a misspelled name passed unchecked.
+            JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, entities, List.of(joinEntityPropName));
             return;
         }
 
@@ -1746,9 +1764,11 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns
+     *                 after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist,
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} is {@code null} or empty or does not exist (in the DAO's
+     *                                  entity class if {@code entities} is {@code null} or empty),
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
@@ -1759,12 +1779,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames)
             throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
-        // Every name is checked first (see checkJoinEntityPropNamesIfAbsent): an invalid one failed once the joins of the names
-        // before it had been loaded.
+        // Every name is checked first (see checkJoinEntityPropNamesIfAbsent), also with no entities: an invalid one failed once
+        // the joins of the names before it had been loaded, or passed unchecked when there was nothing to load.
         for (final String joinEntityPropName : JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, entities, joinEntityPropNames)) {
             loadJoinEntitiesIfAbsent(entities, joinEntityPropName);
         }
@@ -1785,10 +1805,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns
+     *                 after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist,
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} is {@code null} or empty or does not exist (in the DAO's
+     *                                  entity class if {@code entities} is {@code null} or empty),
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
@@ -1830,12 +1852,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns
+     *                 after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
      *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
-     *                                  {@code joinEntityPropNames} does not exist,
+     *                                  {@code joinEntityPropNames} is {@code null} or empty or does not exist (in the DAO's entity class
+     *                                  if {@code entities} is {@code null} or empty),
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
@@ -1851,12 +1875,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(executor, cs.executor);
 
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
-        // Checked before any task runs, as the sequential overload does (see JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent).
+        // Checked before any task runs, also with no entities, as the sequential overload does (see JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent).
         final List<String> absentJoinEntityPropNames = JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, entities, joinEntityPropNames);
+
+        if (absentJoinEntityPropNames.isEmpty()) {
+            return;
+        }
 
         final Executor taskExecutor = JoinEntityReadOps.joinTaskExecutor(this, executor);
         final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(absentJoinEntityPropNames,

@@ -378,6 +378,61 @@ class JdbcUtilParameterBindingTest extends JdbcUtilTestSupport {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "prepareStmt", "prepareCall", "prepareBatchStmt", "prepareBatchCall", "executeUpdate" })
+    public void testStatementPreparationClosesStatementAfterUndeclaredCheckedBindingFailure(final String route) throws SQLException {
+        final Connection conn = mock(Connection.class);
+        final CallableStatement stmt = mock(CallableStatement.class);
+        // A checked exception that setInt does not declare, as a sneaky-throwing Type, getter or driver throws it.
+        final Exception failure = new Exception("undeclared checked binding failure");
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+        when(conn.prepareCall(anyString())).thenReturn(stmt);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw failure;
+        }).when(stmt).setInt(1, 1);
+
+        assertSame(failure, assertThrows(Exception.class, () -> {
+            switch (route) {
+                case "prepareStmt" -> JdbcUtil.prepareStmt(conn, "SELECT ?", 1);
+                case "prepareCall" -> JdbcUtil.prepareCall(conn, "{call proc(?)}", 1);
+                case "prepareBatchStmt" -> JdbcUtil.prepareBatchStmt(conn, "SELECT ?", List.of(1));
+                case "prepareBatchCall" -> JdbcUtil.prepareBatchCall(conn, "{call proc(?)}", List.of(1));
+                default -> JdbcUtil.executeUpdate(conn, "UPDATE account SET status = ?", 1);
+            }
+        }));
+        verify(stmt).close();
+        verify(conn, never()).close();
+    }
+
+    // BUG FIX: closeAfterPreparationFailure caught only SQL/runtime exceptions and errors from stmt.close(): a checked exception
+    // the driver or a wrapper throws without declaring it replaced the binding failure. It is suppressed on that failure now.
+    @ParameterizedTest
+    @ValueSource(strings = { "prepareStmt", "prepareCall", "prepareBatchStmt", "prepareBatchCall", "executeUpdate" })
+    public void testStatementPreparationSuppressesUndeclaredCheckedCloseFailureOnBindingFailure(final String route) throws SQLException {
+        final Connection conn = mock(Connection.class);
+        final CallableStatement stmt = mock(CallableStatement.class);
+        final SQLException failure = new SQLException("binding failure");
+        final Exception closeFailure = new Exception("undeclared checked close failure");
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+        when(conn.prepareCall(anyString())).thenReturn(stmt);
+        doThrow(failure).when(stmt).setInt(1, 1);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw closeFailure;
+        }).when(stmt).close();
+
+        assertSame(failure, assertThrows(SQLException.class, () -> {
+            switch (route) {
+                case "prepareStmt" -> JdbcUtil.prepareStmt(conn, "SELECT ?", 1);
+                case "prepareCall" -> JdbcUtil.prepareCall(conn, "{call proc(?)}", 1);
+                case "prepareBatchStmt" -> JdbcUtil.prepareBatchStmt(conn, "SELECT ?", List.of(1));
+                case "prepareBatchCall" -> JdbcUtil.prepareBatchCall(conn, "{call proc(?)}", List.of(1));
+                default -> JdbcUtil.executeUpdate(conn, "UPDATE account SET status = ?", 1);
+            }
+        }));
+        assertArrayEquals(new Throwable[] { closeFailure }, failure.getSuppressed());
+        verify(stmt).close();
+    }
+
     @Test
     public void testPreparationPreservesBindingFailureIdentityDuringCleanup() throws SQLException {
         final List<Supplier<Throwable>> failureFactories = List.of(() -> new SQLException("binding failed"), () -> new IllegalStateException("binding failed"),

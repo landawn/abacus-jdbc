@@ -213,6 +213,27 @@ public class DBLockTest extends TestBase {
         assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> fixture.lock.unlock("resource-6", "code"));
     }
 
+    // A failed release stops this instance from refreshing the lock: its holder has released it, and the refresh task kept the
+    // row left by the failure alive, so the target stayed locked for every other caller until close(). A retried unlock still
+    // deletes the row.
+    @Test
+    public void testUnlock_FailedDeletionStopsRefreshingTheReleasedLock() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1);
+        final String code = fixture.lock.tryLock("resource-unlock-fails", 60_000L, 50L);
+        assertNotNull(code);
+
+        org.mockito.Mockito.doThrow(new java.sql.SQLException("delete failed")).when(fixture.preparedStatement).executeUpdate();
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> fixture.lock.unlock("resource-unlock-fails", code));
+
+        assertTrue(targetCodePool(fixture.lock).isEmpty());
+        clearInvocations(fixture.dataSource);
+        fixture.lock.refreshLocks();
+        verify(fixture.dataSource, never()).getConnection();
+
+        org.mockito.Mockito.doReturn(1).when(fixture.preparedStatement).executeUpdate();
+        assertTrue(fixture.lock.unlock("resource-unlock-fails", code));
+    }
+
     @Test
     public void testClose() throws Exception {
         final LockFixture fixture = newLockFixture(0, 1, 1);
@@ -520,6 +541,26 @@ public class DBLockTest extends TestBase {
         when(fixture.preparedStatement.executeUpdate()).thenThrow(new RuntimeException("remove expired failed")).thenReturn(1); // lockSQL succeeds on retry
         final String code = fixture.lock.tryLock("resource-exc-remove", 200L, 100L, 0L);
         assertNotNull(code);
+    }
+
+    // The lease of a new row starts once the INSERT's connection is in hand. Taken before a slow acquisition (here after the
+    // expired-row cleanup could get no connection), the timestamps shortened the lease by the wait.
+    @Test
+    public void testTryLock_LeaseStartsOnceTheInsertConnectionIsObtained() throws Exception {
+        final LockFixture fixture = newLockFixture(1);
+        final java.util.concurrent.atomic.AtomicLong obtainedAt = new java.util.concurrent.atomic.AtomicLong();
+        when(fixture.dataSource.getConnection()).thenThrow(new java.sql.SQLException("no connection for the cleanup")).thenAnswer(invocation -> {
+            Thread.sleep(50L);
+            obtainedAt.set(System.currentTimeMillis());
+            return fixture.connection;
+        });
+
+        assertNotNull(fixture.lock.tryLock("resource-lease-start", 60_000L, 0L));
+
+        final ArgumentCaptor<java.sql.Timestamp> updateTime = ArgumentCaptor.forClass(java.sql.Timestamp.class);
+        verify(fixture.preparedStatement).setTimestamp(eq(6), updateTime.capture());
+        assertTrue(updateTime.getValue().getTime() >= obtainedAt.get(),
+                "lease started " + (obtainedAt.get() - updateTime.getValue().getTime()) + " ms before the connection was obtained");
     }
 
     // lockSQL throws on first attempt then succeeds on retry → L474, L478, L482 (retryInterval > 0)

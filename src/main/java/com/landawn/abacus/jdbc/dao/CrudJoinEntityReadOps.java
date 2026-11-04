@@ -509,7 +509,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
@@ -546,7 +547,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
      *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
@@ -583,7 +585,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
@@ -622,7 +625,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or, when matching records are found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for
      *                                  a map-valued property
@@ -662,7 +666,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
      *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
@@ -702,7 +707,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
@@ -760,7 +766,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or, when matching records are found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for
      *                                  a map-valued property
@@ -824,7 +831,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
      *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}

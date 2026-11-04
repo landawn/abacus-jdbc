@@ -2729,6 +2729,53 @@ public class DaoImplIntegrationTest extends TestBase {
         assertTrue(Stream.of(iterableDao.iterableByLastName("None")).toList().isEmpty());
     }
 
+    // A raw Collection return type with an explicit list operation failed DAO creation ("must be sub type of Collection"),
+    // although QueryOperation.DEFAULT and Iterable are served as a List, and the @MergedById validation accepts it.
+    public interface CollectionListOperationDao extends CrudDao<UserAccount, Long, CollectionListOperationDao> {
+        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY id", op = QueryOperation.list)
+        Collection<UserAccount> collectionByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY id", op = QueryOperation.list)
+        @com.landawn.abacus.jdbc.annotation.MergedById
+        Collection<UserAccount> mergedCollectionByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testCustomSelect_RawCollectionReturnTypeWithListOperation() throws SQLException {
+        final CollectionListOperationDao collectionDao = JdbcUtil.createDao(CollectionListOperationDao.class, ds);
+        dao.insert(newUser("Co2", "Co", 20));
+        dao.insert(newUser("Co1", "Co", 10));
+
+        final List<String> expected = List.of("Co2", "Co1");
+
+        assertEquals(expected, Stream.of(collectionDao.collectionByLastName("Co")).map(UserAccount::getFirstName).toList());
+        assertEquals(expected, Stream.of(collectionDao.mergedCollectionByLastName("Co")).map(UserAccount::getFirstName).toList());
+    }
+
+    // No collection factory instantiates a SequencedSet: DAO creation accepted such a method, and every call failed with
+    // IllegalArgumentException after the query had run. It is served as a LinkedHashSet, keeping the row order.
+    public interface SequencedSetReturnDao extends CrudDao<UserAccount, Long, SequencedSetReturnDao> {
+        @Query("SELECT last_name FROM user_account WHERE age >= :minAge ORDER BY age")
+        java.util.SequencedSet<String> lastNamesFromAge(@com.landawn.abacus.jdbc.annotation.Bind("minAge") int minAge) throws SQLException;
+
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MergedById
+        java.util.SequencedSet<UserAccount> mergedByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testCustomSelect_SequencedSetReturnType() throws SQLException {
+        final SequencedSetReturnDao sequencedSetDao = JdbcUtil.createDao(SequencedSetReturnDao.class, ds);
+        dao.insert(newUser("A", "Sq3", 30));
+        dao.insert(newUser("B", "Sq1", 10));
+        dao.insert(newUser("C", "Sq2", 20));
+        dao.insert(newUser("D", "Sq1", 40));
+
+        assertEquals(List.of("Sq1", "Sq2", "Sq3"), new ArrayList<>(sequencedSetDao.lastNamesFromAge(0)));
+        assertEquals(List.of("B", "D"), sequencedSetDao.mergedByLastName("Sq1").stream().map(UserAccount::getFirstName).toList());
+        assertTrue(sequencedSetDao.lastNamesFromAge(100).isEmpty());
+    }
+
     @Test
     public void testCustomSelect_StreamReturn() throws SQLException {
         final AnnotatedQueryDao aqDao = JdbcUtil.createDao(AnnotatedQueryDao.class, ds);

@@ -307,7 +307,7 @@ public @interface CacheResult {
      * {@link com.landawn.abacus.util.Immutable}. Other top-level {@code Immutable} values are stored and returned
      * as-is; their contents must be deeply immutable to avoid sharing mutable state. Values without this
      * marker pass through the selected serializer even if their Java types are immutable, except that
-     * {@link CacheSerialization#JSON} shares {@code java.time} values as-is. Selecting
+     * {@link CacheSerialization#JSON} shares {@code java.time} values and enum constants as-is. Selecting
      * {@link CacheSerialization#KRYO} requires an available Kryo parser whenever copying is needed; this is
      * not checked at DAO creation, so missing dependencies or parser initialization failures surface at
      * invocation time with {@code UnsupportedOperationException}, whose message quotes the failure and states
@@ -327,7 +327,9 @@ public @interface CacheResult {
      * container trees without a custom comparator, one of those wrappers or a {@code null} map key follow
      * the ordinary JSON parser path. A {@code java.sql.Timestamp}, {@code Calendar} or {@code java.time} value is
      * copied exactly (nanos, zone and offset included) as the result, as an optional/nullable's value and anywhere
-     * in such a container tree. JSON does not preserve shared object identity
+     * in such a container tree. A top-level collection or map whose non-public class the parser cannot construct
+     * (for example that of {@code List.of(...)}) is rebuilt as the default container of its kind when the method's
+     * return type accepts it, and an {@code EnumSet} is copied as an {@code EnumSet}. JSON does not preserve shared object identity
      * or cycles. Shared comparator state and bean-property copying retain the limitations described in
      * {@link CacheSerialization#JSON}.</p>
      *

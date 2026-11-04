@@ -359,6 +359,17 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         assertEquals(2, values.size());
     }
 
+    // BUG FIX: a null label reached the driver, and pgjdbc's findColumn(null) throws NullPointerException, which escaped
+    // instead of the IllegalArgumentException that stream(ResultSet, String) gives for the same argument.
+    @Test
+    public void testGetAllColumnValuesByName_NullOrEmptyLabelRejected() throws SQLException {
+        when(mockResultSet.findColumn(null)).thenThrow(new NullPointerException("columnName"));
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getAllColumnValues(mockResultSet, (String) null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getAllColumnValues(mockResultSet, ""));
+        verify(mockResultSet, never()).next();
+    }
+
     // Test getAllColumnValues with Blob values
     @Test
     public void testGetAllColumnValues_BlobColumn() throws SQLException {
@@ -456,6 +467,33 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         Dataset data = JdbcUtil.extractData(mockResultSet);
         assertNotNull(data);
         assertEquals(1, data.size());
+    }
+
+    // The extracted Dataset adopts the column lists built during extraction instead of copying them: pins that it is
+    // still a fully mutable Dataset whose columns are independent of each other and of other extractions.
+    @Test
+    public void testExtractData_ResultOwnsIndependentGrowableColumns() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("name");
+        when(mockResultSet.next()).thenReturn(true, true, false, true, false);
+        when(mockResultSet.getObject(1)).thenReturn(1L, 2L, 3L);
+        when(mockResultSet.getObject(2)).thenReturn("a", "b", "c");
+
+        final Dataset first = JdbcUtil.extractData(mockResultSet);
+        final Dataset second = JdbcUtil.extractData(mockResultSet);
+
+        first.addRow(new Object[] { 9L, "z" });
+        first.set(0, 1, "changed");
+        first.removeRow(1);
+        first.addColumn("flag", List.of(true, false));
+
+        assertEquals(List.of("id", "name", "flag"), first.columnNames());
+        assertEquals(List.of(1L, 9L), first.getColumn("id"));
+        assertEquals(List.of("changed", "z"), first.getColumn("name"));
+        assertEquals(List.of("id", "name"), second.columnNames());
+        assertEquals(List.of(3L), second.getColumn("id"));
+        assertEquals(List.of("c"), second.getColumn("name"));
     }
 
     // A Dataset rejects duplicate/empty column names, so every extraction used to fail with IllegalArgumentException for
@@ -607,6 +645,43 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         assertSame(failure, assertThrows(SQLException.class, () -> JdbcUtil.extractData(rs, true)));
         assertArrayEquals(new Throwable[] { closeFailure }, failure.getSuppressed());
         verify(rs).close();
+    }
+
+    // BUG FIX: extractData(..., closeResultSet = true) recorded only SQL/runtime exceptions and errors as the primary failure:
+    // a RowFilter or RowExtractor throwing a checked exception it does not declare (Kotlin, a sneaky throw) left it unrecorded,
+    // so an Error from closing the result set replaced it. It stays primary now, the close Error suppressed on it.
+    @Test
+    public void testExtractionKeepsUndeclaredCheckedRowCallbackFailurePrimaryWhenClosingThrowsError() throws SQLException {
+        for (final boolean failInFilter : List.of(true, false)) {
+            final Exception failure = new Exception("undeclared checked row callback failure");
+            final AssertionError closeFailure = new AssertionError("result set close failed");
+            final ResultSet rs = mock(ResultSet.class);
+            final ResultSetMetaData metaData = mock(ResultSetMetaData.class);
+            when(rs.getMetaData()).thenReturn(metaData);
+            when(metaData.getColumnCount()).thenReturn(1);
+            when(metaData.getColumnLabel(1)).thenReturn("id");
+            when(rs.next()).thenReturn(true, false);
+            when(rs.getObject(1)).thenReturn(7);
+            doThrow(closeFailure).when(rs).close();
+
+            final RowFilter filter = row -> sneakyThrow(failure);
+            final Jdbc.RowExtractor extractor = (row, output) -> sneakyThrow(failure);
+
+            assertSame(failure, assertThrows(Exception.class, () -> {
+                if (failInFilter) {
+                    JdbcUtil.extractData(rs, 0, 1, filter, true);
+                } else {
+                    JdbcUtil.extractData(rs, 0, 1, extractor, true);
+                }
+            }), "filter=" + failInFilter);
+            assertArrayEquals(new Throwable[] { closeFailure }, failure.getSuppressed());
+            verify(rs).close();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> boolean sneakyThrow(final Throwable e) throws E {
+        throw (E) e;
     }
 
     @Test
@@ -785,6 +860,27 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
     @Test
     public void testGetSubPropInfo_SingleSegment_ReturnsNull() {
         assertNull(JdbcUtil.getSubPropInfo(SubPerson.class, "name"));
+    }
+
+    // A plain (no-dot) name is answered without the static cache: the mappers ask for every column label the entity has no
+    // property for, so caching plain names kept each distinct unmatched label in entityPropInfoQueueMap forever.
+    @Test
+    public void testGetSubPropInfo_SingleSegment_NotRetainedInCache() throws Exception {
+        final Field field = JdbcUtil.class.getDeclaredField("entityPropInfoQueueMap");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        final Map<Class<?>, Map<String, ?>> cache = (Map<Class<?>, Map<String, ?>>) field.get(null);
+
+        final String plainName = "unmatchedPlainLabel_" + System.nanoTime();
+        assertNull(JdbcUtil.getSubPropInfo(SubPerson.class, plainName));
+        final Map<String, ?> afterPlain = cache.get(SubPerson.class);
+        assertFalse(afterPlain != null && afterPlain.containsKey(plainName), "a plain name must not be cached");
+
+        assertNotNull(JdbcUtil.getSubPropInfo(SubPerson.class, "address.city"));
+        final Map<String, ?> afterDotted = cache.get(SubPerson.class);
+        assertNotNull(afterDotted);
+        assertTrue(afterDotted.containsKey("address.city"), "a dotted path is cached");
+        assertFalse(afterDotted.containsKey(plainName));
     }
 
     // First segment not a valid property -> null (short-circuit at i==0).

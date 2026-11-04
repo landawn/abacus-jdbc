@@ -63,8 +63,10 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
         assertTrue(generated.contains("copy.extra = this.extra;"), generated);
     }
 
+    // NotAnAnnotationTable is an interface extending Annotation: it passed every element check, and the generated
+    // "@...NotAnAnnotationTable(name = ...)" did not compile.
     @ParameterizedTest
-    @ValueSource(classes = { WrongTableMember.class, ExtraRequiredTableMember.class, FieldOnlyTable.class })
+    @ValueSource(classes = { WrongTableMember.class, ExtraRequiredTableMember.class, FieldOnlyTable.class, NotAnAnnotationTable.class })
     void rejectsAnnotationsThatCannotRepresentTheGeneratedTable(final Class<? extends Annotation> annotation) {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().tableAnnotationClass(annotation).build();
 
@@ -73,6 +75,43 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
 
         assertTrue(failure.getMessage().contains("tableAnnotationClass"), failure.getMessage());
         assertTrue(failure.getMessage().contains(annotation.getCanonicalName()), failure.getMessage());
+    }
+
+    // The annotation-interface check applies to the column and id annotation classes too, not only to the table one.
+    @Test
+    void rejectsNonAnnotationColumnAndIdAnnotationClasses() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig columnConfig = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .columnAnnotationClass(NotAnAnnotationTable.class)
+                .build();
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, columnConfig));
+        assertTrue(failure.getMessage().contains("columnAnnotationClass must be an annotation interface"), failure.getMessage());
+
+        final JdbcCodeGenerationUtil.EntityCodeConfig idConfig = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .idAnnotationClass(NotAnAnnotationTable.class)
+                .build();
+        failure = assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, idConfig));
+        assertTrue(failure.getMessage().contains("idAnnotationClass must be an annotation interface"), failure.getMessage());
+    }
+
+    // The converters got the entity name with its surrounding whitespace, while @Table, the class name and the primary-key
+    // lookup used it without: a converter keyed on the table name did not recognize " padded_table ".
+    @Test
+    void convertersReceiveEntityNameWithoutSurroundingWhitespace() {
+        final List<String> namesSeen = new java.util.ArrayList<>();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().fieldNameConverter((tableName, columnName) -> {
+            namesSeen.add(tableName);
+            return com.landawn.abacus.util.Strings.toCamelCase(columnName);
+        }).fieldTypeConverter((tableName, fieldName, columnName, className) -> {
+            namesSeen.add(tableName);
+            return className;
+        }).build();
+
+        final String code = JdbcCodeGenerationUtil.generateEntityClass(" padded_table ", resultSet, config);
+
+        assertTrue(code.contains("@Table(name = \"padded_table\")"), code);
+        assertEquals(6, namesSeen.size(), namesSeen.toString());
+        assertTrue(namesSeen.stream().allMatch("padded_table"::equals), namesSeen.toString());
     }
 
     // Test generateEntityClass(Connection, tableName) overload
@@ -413,6 +452,21 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
         assertFalse(result.contains("import com.landawn.abacus.annotation.Table;"));
         assertFalse(result.contains("import com.landawn.abacus.annotation.Column;"));
         assertFalse(result.contains("import com.landawn.abacus.annotation.Id;"));
+    }
+
+    // The lambda of a constant compiles to a private static synthetic method of the annotation interface; it is not an
+    // element, but was rejected as a "required member" because it has no default value.
+    @Test
+    public void testGenerateEntityClass_IgnoresNonElementMethodsOfCustomAnnotationClass() throws SQLException {
+        assertTrue(Arrays.stream(LambdaConstantTable.class.getDeclaredMethods()).anyMatch(java.lang.reflect.Method::isSynthetic));
+        setupFullGenerateEntityClassMock();
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .tableAnnotationClass(LambdaConstantTable.class)
+                .build();
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
+
+        assertTrue(result.contains("@" + LambdaConstantTable.class.getCanonicalName() + "(name = \"order_history\")"), result);
     }
 
     // nonUpdatableFields marks a field @NonUpdatable (L661)
@@ -1687,6 +1741,102 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
         assertFalse(code.contains("import java.util.Deque;"), code);
     }
 
+    // Block comments in an additional field declaration were parsed as code: one after the variable name was rejected as a
+    // malformed declaration ("Cannot parse field declaration"), one before "final" gave the final field a copy() assignment
+    // (uncompilable), a ',' inside one split off a declarator that copy() assigned although no such field exists, and a
+    // declaration after one was not recognized. Comment markers inside literals are not comments.
+    @Test
+    public void testGenerateEntityClass_BlockCommentsInAdditionalFieldDeclarationsAreIgnored() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .build();
+
+        config.setAdditionalClassBodySource("    private int count /* items */;");
+        String code = assertDoesNotThrow(() -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config));
+        assertTrue(code.contains("copy.count = this.count;"), code);
+
+        config.setAdditionalClassBodySource("    private /* constant */ final String label = \"/* kept */ // kept\";");
+        code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        assertFalse(code.contains("copy.label"), code);
+        assertTrue(code.contains("\"/* kept */ // kept\""), code);
+
+        config.setAdditionalClassBodySource("    private int width = 1 /*, ghost = 2 */, height = 3;");
+        code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        assertTrue(code.contains("copy.width = this.width;"), code);
+        assertTrue(code.contains("copy.height = this.height;"), code);
+        assertFalse(code.contains("copy.ghost"), code);
+
+        config.setAdditionalClassBodySource("    private int first; /* note */ private List<String> tags; private String url = \"http://x/*y\";");
+        code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        assertTrue(code.contains("copy.first = this.first;"), code);
+        assertTrue(code.contains("copy.tags = this.tags;"), code);
+        assertTrue(code.contains("import java.util.List;"), code);
+        assertTrue(code.contains("copy.url = this.url;"), code);
+
+        // Adjacent tokens stay apart once the comment is removed ("private inta;" is malformed).
+        config.setAdditionalClassBodySource("    private int/*x*/a;");
+        code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        assertTrue(code.contains("copy.a = this.a;"), code);
+
+        // A javadoc comment on the declaration's line.
+        config.setAdditionalClassBodySource("    /** doc */ private Set<String> s;");
+        code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        assertTrue(code.contains("copy.s = this.s;"), code);
+        assertTrue(code.contains("import java.util.Set;"), code);
+
+        // Char literals hold no comment marker or brace: '{' does not open a body (which would keep the next field out of
+        // copy()), and '/' is kept.
+        config.setAdditionalClassBodySource("    private char open = '{', slash = '/';\n    private List<String> tags; // note");
+        code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        assertTrue(code.contains("'{'") && code.contains("'/'"), code);
+        assertTrue(code.contains("copy.open = this.open;"), code);
+        assertTrue(code.contains("copy.slash = this.slash;"), code);
+        assertTrue(code.contains("copy.tags = this.tags;"), code);
+
+        // Still a malformed declaration once the comment is ignored.
+        config.setAdditionalClassBodySource("    private int /* count */;");
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config));
+        assertTrue(ex.getMessage().contains("Cannot parse field declaration"), ex.getMessage());
+    }
+
+    // A line that began inside a block comment was dropped entirely, also the code after the comment's end: the declaration
+    // there was not recognized (no java.util import, so the generated source did not compile; no copy() assignment). A
+    // declaration line that opens a block comment at its end is still recognized, and the comment's content is not.
+    @Test
+    public void testGenerateEntityClass_CodeAfterMultiLineBlockCommentIsRecognized() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .build();
+
+        config.setAdditionalClassBodySource("/* header\n */ private List<String> tags;");
+        String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        assertTrue(code.contains("import java.util.List;"), code);
+        assertTrue(code.contains("copy.tags = this.tags;"), code);
+
+        config.setAdditionalClassBodySource(String.join("\r\n", //
+                "    private List<String> a; /* starts", //
+                "    private Deque<String> ghost;", //
+                "    */ private Set<String> b; /* another", //
+                "    */", //
+                "    public static class Inner {", //
+                "        /* nested", //
+                "        */ private Map<String, String> inner;", //
+                "    }"));
+        code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        assertTrue(code.contains("copy.a = this.a;"), code);
+        assertTrue(code.contains("copy.b = this.b;"), code);
+        assertTrue(code.contains("import java.util.List;"), code);
+        assertTrue(code.contains("import java.util.Set;"), code);
+        assertFalse(code.contains("import java.util.Deque;"), code);
+        assertFalse(code.contains("copy.ghost"), code);
+        // A field of a nested type gets its import, but no copy() assignment.
+        assertTrue(code.contains("import java.util.Map;"), code);
+        assertFalse(code.contains("copy.inner"), code);
+    }
+
     // Test generateEntityClass DataSource wraps SQL exceptions for entity overload
     @Test
     public void testGenerateEntityClass_DataSource_WrapsSQLException() throws SQLException {
@@ -1909,6 +2059,17 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
 
     @Target(ElementType.FIELD)
     public @interface CustomId {
+    }
+
+    @Target(ElementType.TYPE)
+    public @interface LambdaConstantTable {
+        java.util.function.Supplier<String> DEFAULT_NAME = () -> "order_history";
+
+        String name();
+    }
+
+    public interface NotAnAnnotationTable extends Annotation {
+        String name();
     }
 
     @Target(ElementType.TYPE)

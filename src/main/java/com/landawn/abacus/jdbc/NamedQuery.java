@@ -289,7 +289,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         assertNotClosed();
         try {
             return JdbcUtil.bufferForRepeatedBinding(value, length);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR
+            // Throwable: the caller's stream or reader can throw a checked exception it does not declare (Kotlin, a sneaky
+            // throw), which skipped the cleanup and left a data-source query holding its connection.
             closeSuppressingFailure(e);
             throw e;
         }
@@ -361,7 +363,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param propInfos receives, per placeholder, the property whose value and type are bound (the leaf of a nested
      *        path), or {@code null} for a reserved system date/time name without a matching property
      * @return per placeholder, the nested property path to read (see {@link JdbcUtil#getNestedParameterPropPath}); or
-     *         {@code null} if every name is a property of the bean itself
+     *         {@code null} if no name resolves to a nested property path
      * @throws IllegalArgumentException if a name other than a reserved system date/time name resolves to neither a property
      *         nor a nested property path of the bean
      */
@@ -1112,7 +1114,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         } else {
             try {
                 setLong(parameterName, value.longValueExact());
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { // NOSONAR - also close on an undeclared checked exception (Kotlin, sneaky throw)
                 // Close on any failure, as the positional AbstractQuery and the CallableQuery overloads do.
                 closeSuppressingFailure(e);
                 throw e;
@@ -4339,7 +4341,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     repeatedValues = setParameter(i + 1, paramName, value, value == null ? null : Type.of(value.getClass()), repeatedValues);
                 }
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR
+            // Throwable: user code run here (a custom Map, a custom Type, the caller's stream or reader) written in Kotlin or
+            // using a sneaky throw can throw a checked exception it does not declare, which skipped the close and left the
+            // statement (and a data-source query's connection) open.
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4374,7 +4379,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     repeatedValues = setParameter(i + 1, paramName, value, value == null ? null : Type.of(value.getClass()), repeatedValues);
                 }
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(Map)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4420,7 +4425,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param parameters an object containing the parameters (bean, map, collection, reference array, or single value)
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code parameters} is {@code null}; if it is a bean that lacks a property (or nested property path)
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}; if its class looks like a bean but has invalid property metadata;
+     *         if it is a bean that lacks a property (or nested property path)
      *         matching one of the named parameters in the SQL (except the reserved system date/time parameter names {@code now}, {@code sysTime} and {@code
      *         sysDate}, which are skipped when no matching property exists, so they keep any value already bound to them or otherwise stay
      *         unbound — bind them separately); or if it is none of a bean,
@@ -4435,8 +4441,18 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         checkArgNotNull(parameters, cs.parameters);
 
         final Class<?> cls = parameters.getClass();
+        final boolean isBean;
 
-        if (isBeanParameters(parameters)) {
+        try {
+            // With one placeholder, classifying a class that its registered Type binds as one value resolves its bean
+            // metadata, which fails for invalid property metadata (e.g. a blank-padded @Column name): close the query too.
+            isBean = isBeanParameters(parameters);
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(Map)
+            closeSuppressingFailure(e);
+            throw e;
+        }
+
+        if (isBean) {
             final PropInfo[] propInfos = new PropInfo[parameterCount];
 
             try {
@@ -4444,7 +4460,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 final int[] firstIndexes = firstIndexesOfRepeatedNames();
 
                 setBeanParameters(parameters, propInfos, propPaths, firstIndexes, firstIndexes == null ? null : new Object[parameterCount]);
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { // NOSONAR - as in setParameters(Map): also a custom Type of a property
                 closeSuppressingFailure(e);
                 throw e;
             }
@@ -4453,14 +4469,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         } else if (parameters instanceof Collection) {
             try {
                 return setParameters((Collection) parameters);
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { // NOSONAR - as in setParameters(Map): also a custom Collection
                 closeSuppressingFailure(e);
                 throw e;
             }
         } else if (parameters instanceof Object[]) {
             try {
                 return setParameters((Object[]) parameters);
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { // NOSONAR - as in setParameters(Map)
                 closeSuppressingFailure(e);
                 throw e;
             }
@@ -4469,7 +4485,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         } else if (parameterCount == 1) {
             try {
                 setObject(1, parameters);
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { // NOSONAR - as in setParameters(Map)
                 closeSuppressingFailure(e);
                 throw e;
             }
@@ -4514,7 +4530,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param entity the bean or record whose properties supply the parameter values
      * @param parameterNamesToSet the names of the parameters (and matching property names) to bind
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code entity} is {@code null} or is not a bean/record class, if {@code parameterNamesToSet} is {@code
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, is not a bean/record class or its class has invalid property metadata,
+     *         if {@code parameterNamesToSet} is {@code
      *         null} or contains a {@code null} element, if a listed property (or nested property path) does not exist on the {@code entity}, or if a listed name is not a
      *         parameter in the SQL query; all listed names are checked before any property value is read or bound
      * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
@@ -4536,12 +4553,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             initParamNameIndexMap();
         }
 
-        final List<String> names = new ArrayList<>(parameterNamesToSet);
-        final PropInfo[] propInfos = new PropInfo[names.size()];
-        final IntList[] parameterIndexes = new IntList[names.size()];
-        List<PropInfo>[] propPaths = null;
-
         try {
+            // Inside the try: copying a custom Collection runs its code (toArray), which may fail, and must close the query too.
+            final List<String> names = new ArrayList<>(parameterNamesToSet);
+            final PropInfo[] propInfos = new PropInfo[names.size()];
+            final IntList[] parameterIndexes = new IntList[names.size()];
+            List<PropInfo>[] propPaths = null;
+
             // Inside the try: invalid bean metadata (e.g. a blank-padded @Column name) fails here and must close the query too.
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
@@ -4610,7 +4628,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     }
                 }
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(Map): also a custom Type of a property
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4657,7 +4675,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         try {
             parametersSetter.accept(namedSql, this, parameters);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(Map): the setter may throw an undeclared checked exception
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4717,7 +4735,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code batchParameters} is {@code null}; if a row is {@code null}, or
      *         the first row is none of a bean, {@code Map}, {@code Collection}, reference array or
-     *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
+     *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; if the class of the first row, or, when the first
+     *         row is {@code null}, of any later non-null row (each bound through {@link #setParameters(Object)}), looks like a bean but has
+     *         invalid property metadata; or if a bean row
      *         lacks a property (or nested property path) matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
      * @throws SQLException if buffering a repeated stream or reader, clearing or binding parameters on the underlying
@@ -4738,11 +4758,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         checkArgNotNull(batchParameters, cs.batchParameters);
 
-        if (N.isEmpty(batchParameters)) {
+        final Iterator<?> iter = batchIteratorOrClose(batchParameters, true);
+
+        if (iter == null) {
             return this;
         }
 
-        return addBatchParameters(batchParameters.iterator());
+        return addBatchParameters(iter);
     }
 
     /**
@@ -4810,7 +4832,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code batchParameters} is {@code null}; if a row is {@code null}, or
      *         the first row is none of a bean, {@code Map}, {@code Collection}, reference array or
-     *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
+     *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; if the class of the first row, or, when the first
+     *         row is {@code null}, of any later non-null row (each bound through {@link #setParameters(Object)}), looks like a bean but has
+     *         invalid property metadata; or if a bean row
      *         lacks a property (or nested property path) matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
      * @throws SQLException if buffering a repeated stream or reader, clearing or binding parameters on the underlying
@@ -4974,7 +4998,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 }
             }
 
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(Map): also the caller's iterator
             closeSuppressingFailure(e);
             throw e;
         }

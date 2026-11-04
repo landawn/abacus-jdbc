@@ -131,8 +131,8 @@ import com.landawn.abacus.util.stream.Stream;
  * methods that check whether it is closed (such as {@code setFetchSize}, {@code configureStatement},
  * {@code addBatchParameters} and {@code onClose}), throw {@link IllegalStateException} when called on another thread, or
  * once the transaction has completed and released its connection (for a transaction participating in a Spring-managed
- * one, whose connection Spring keeps: once its required tracker reports completion), closing it in that
- * case unless {@code closeAfterExecution(false)} is set; {@code callAsync}/{@code runAsync} reject it, whatever the
+ * one, whose connection Spring keeps: once its required tracker reports that the Spring-managed transaction has begun to
+ * commit or roll back), closing it in that case unless {@code closeAfterExecution(false)} is set; {@code callAsync}/{@code runAsync} reject it, whatever the
  * executor. The deferred execution of a stream it returned is
  * checked only for the transaction's completion, so that a parallel stream's worker threads can run it while the owner
  * thread waits for the stream: don't hand such a stream to another thread.</p>
@@ -174,9 +174,9 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * JdbcUtil.prepareQuery(connection, "SELECT * FROM users WHERE age > ?")
- *     .setInt(1, 18)
- *     .list(User.class);
+ * try (PreparedQuery query = JdbcUtil.prepareQuery(connection, "SELECT * FROM users WHERE age > ?")) {
+ *     List<User> users = query.setInt(1, 18).list(User.class);
+ * }
  * }</pre>
  *
  * @param <Stmt> the type of PreparedStatement (PreparedStatement or CallableStatement)
@@ -399,7 +399,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         // monitor: close handlers are user code and may call lifecycle methods from another
         // thread, which would otherwise deadlock waiting for this method's monitor.
         // Repeat assertNotClosed() inside the synchronized block so registration cannot race
-        // past close() (see AbstractQueryTest#testOnCloseRegistrationCannotRacePastClose).
+        // past close() (see AbstractQueryLifecycleTest#testOnCloseRegistrationCannotRacePastClose).
         checkArgNotNull(closeHandler, cs.closeHandler);
 
         synchronized (this) {
@@ -1022,7 +1022,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } else {
             try {
                 stmt.setLong(parameterIndex, value.longValueExact());
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { // NOSONAR - also close on an undeclared checked exception (Kotlin, sneaky throw)
                 closeSuppressingFailure(e);
                 throw e;
             }
@@ -2295,7 +2295,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * URL website = new URL("https://example.com");
+     * URL website = URI.create("https://example.com").toURL();
      * query.setURL(1, website);
      * }</pre>
      *
@@ -3189,7 +3189,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             parametersSetter.accept(stmt);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR
+            // Throwable: a setter written in Kotlin (or using a sneaky throw) can throw a checked exception it does not
+            // declare, which skipped the close and left the statement (and a data-source query's connection) open.
             closeSuppressingFailure(e);
             throw e;
         }
@@ -3226,7 +3228,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             parametersSetter.accept(stmt, parameters);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(ParametersSetter)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -3484,7 +3486,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             parametersSetter.accept((This) this);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(ParametersSetter)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -3529,7 +3531,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             parametersSetter.accept((This) this, parameters);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(ParametersSetter)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -3933,7 +3935,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final Supplier<Object> copies;
                 try {
                     copies = JdbcUtil.bufferForRepeatedBinding(value, Long.MAX_VALUE);
-                } catch (final SQLException | RuntimeException | Error e) {
+                } catch (final Throwable e) { // NOSONAR - the caller's stream or reader may throw an undeclared checked exception
                     closeSuppressingFailure(e);
                     throw e;
                 }
@@ -4054,11 +4056,33 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         checkArgNotNull(batchParameters, cs.batchParameters);
 
-        if (N.isEmpty(batchParameters)) {
+        final Iterator<?> iter = batchIteratorOrClose(batchParameters, true);
+
+        if (iter == null) {
             return (This) this;
         }
 
-        return addBatchParameters(batchParameters.iterator());
+        return addBatchParameters(iter);
+    }
+
+    /**
+     * Returns the iterator of the batch parameters passed to an {@code addBatchParameters(Collection, ...)} overload,
+     * closing this query if the collection fails.
+     *
+     * @param <E> the element type
+     * @param batchParameters the batch parameters, not {@code null}
+     * @param nullIfEmpty whether to return {@code null} for an empty collection instead of its iterator
+     * @return the iterator of {@code batchParameters}, or {@code null} if it is empty and {@code nullIfEmpty} is {@code true}
+     */
+    final <E> Iterator<E> batchIteratorOrClose(final Collection<E> batchParameters, final boolean nullIfEmpty) {
+        try {
+            return nullIfEmpty && batchParameters.isEmpty() ? null : batchParameters.iterator();
+        } catch (final Throwable e) { // NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            // A custom (or Kotlin) Collection runs its own code in isEmpty()/iterator(), before the iterator overload's
+            // cleanup applies: a failure there left the query (and a data-source query's connection) open.
+            closeSuppressingFailure(e);
+            throw e;
+        }
     }
 
     /**
@@ -4090,11 +4114,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(batchParameters, cs.batchParameters);
         checkArgNotNull(type, cs.type);
 
-        if (N.isEmpty(batchParameters)) {
+        final Iterator<? extends T> iter = batchIteratorOrClose(batchParameters, true);
+
+        if (iter == null) {
             return (This) this;
         }
 
-        return addBatchParameters(batchParameters.iterator(), type);
+        return addBatchParameters(iter, type);
     }
 
     /**
@@ -4174,7 +4200,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 }
             }
 
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - the iterator or a custom Type may throw an undeclared checked exception
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4219,7 +4245,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 addBatch();
             }
 
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - the iterator or a custom Type may throw an undeclared checked exception
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4304,7 +4330,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(batchParameters, cs.batchParameters);
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
-        return addBatchParameters(batchParameters.iterator(), parametersSetter);
+        return addBatchParameters(batchIteratorOrClose(batchParameters, false), parametersSetter);
     }
 
     /**
@@ -4348,7 +4374,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 addBatch();
             }
 
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - the iterator or setter may throw an undeclared checked exception
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4440,7 +4466,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(batchParameters, cs.batchParameters);
         checkArgNotNull(parametersSetter, cs.parametersSetter);
 
-        return addBatchParameters(batchParameters.iterator(), parametersSetter);
+        return addBatchParameters(batchIteratorOrClose(batchParameters, false), parametersSetter);
     }
 
     /**
@@ -4496,7 +4522,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 addBatch();
             }
 
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - the iterator or setter may throw an undeclared checked exception
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4928,7 +4954,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             stmtSetter.accept(stmt);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(ParametersSetter)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -4968,7 +4994,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             stmtSetter.accept((This) this, stmt);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in setParameters(ParametersSetter)
             closeSuppressingFailure(e);
             throw e;
         }
@@ -5968,8 +5994,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class type to map the row to
      * @return the extracted entity instance
      * @throws SQLException if reading the column labels from the result set metadata or a column value of the current row fails
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}, a bean column cannot be mapped,
-     *         or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null} or a bean class with invalid property metadata, a bean
+     *         column cannot be mapped, or a scalar target has other than one column
      */
     private static <T> T getRow(final ResultSet rs, final Class<? extends T> targetType) throws SQLException, IllegalArgumentException {
         final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
@@ -6196,7 +6222,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return Tuple.of(result1, result2);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -6277,7 +6303,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return Tuple.of(result1, result2, result3);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -6359,7 +6385,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -6416,7 +6442,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -7858,8 +7884,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @return A list of lists, where each inner list represents one ResultSet
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} is null; also, once a result set is processed, if {@code targetType} is a bean
-     *         class with invalid property metadata, a returned row has an unmapped bean column, or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is null or a bean class with invalid property metadata (this query is then
+     *         closed); also if a returned row has an unmapped bean column or a scalar target has other than one column
      * @throws SQLException if executing the statement, retrieving any of its result sets, or reading their column labels or row values fails,
      *         or draining the remaining results fails
      * @see #listAllResultSets(Jdbc.RowMapper)
@@ -7867,6 +7893,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <T> List<List<T>> listAllResultSets(final Class<? extends T> targetType) throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
+        // WHY: the extractor below resolves bean metadata lazily, per result set; validate it now, as list(Class) does, so an
+        // invalid bean class fails before the statement runs (its writes are not committed first) and also with no result set.
+        rowMapperOrClose(targetType);
 
         ObjIteratorEx<ResultSet> iter = null;
         Throwable primaryFailure = null;
@@ -7884,7 +7913,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -7944,7 +7973,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -8004,7 +8033,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -8066,7 +8095,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -8133,7 +8162,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             }
 
             return result;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - keep any failure primary over cleanup, also an undeclared checked one (Kotlin, sneaky throw)
             primaryFailure = e;
             throw e;
         } finally {
@@ -8898,6 +8927,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * before rethrowing a traversal failure prevents a terminal operation's cleanup from replacing
      * that failure. Operations subsequently attached by the caller retain their normal stream behavior.
      *
+     * <p>A checked exception thrown without being declared (by a Kotlin or sneaky-throwing row mapper, extractor or
+     * driver, or by a close handler) is handled as any other failure: it used to bypass this cleanup, so a failing
+     * close of the source replaced the traversal failure.</p>
+     *
      * @param <T> the stream element type
      * @param source the freshly constructed query stream whose cleanup is transferred to the result
      * @return a lazy stream that suppresses cleanup failures on a query traversal failure
@@ -8911,7 +8944,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             public boolean hasNext() {
                 try {
                     return iterator.hasNext();
-                } catch (final RuntimeException | Error primaryFailure) {
+                } catch (final Throwable primaryFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                     closeAfterFailure(primaryFailure);
                     throw primaryFailure;
                 }
@@ -8922,7 +8955,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             public T next() {
                 try {
                     return iterator.next();
-                } catch (final RuntimeException | Error primaryFailure) {
+                } catch (final Throwable primaryFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                     closeAfterFailure(primaryFailure);
                     throw primaryFailure;
                 }
@@ -8936,7 +8969,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             private void closeAfterFailure(final Throwable primaryFailure) {
                 try {
                     source.close();
-                } catch (final RuntimeException | Error closeFailure) {
+                } catch (final Throwable closeFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                     if (closeFailure != primaryFailure) {
                         primaryFailure.addSuppressed(closeFailure);
                     }
@@ -8963,7 +8996,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final UncheckedSQLException primaryFailure = new UncheckedSQLException(e);
                 closeAfterExecutionIfAllowed(primaryFailure);
                 throw primaryFailure;
-            } catch (final RuntimeException | Error primaryFailure) {
+            } catch (final Throwable primaryFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw): it
+                // skipped this close, so a failing close handler of the stream's close replaced it.
                 closeAfterExecutionIfAllowed(primaryFailure);
                 throw primaryFailure;
             }
@@ -8988,7 +9022,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 final UncheckedSQLException primaryFailure = new UncheckedSQLException(e);
                 closeAfterExecutionIfAllowed(primaryFailure);
                 throw primaryFailure;
-            } catch (final RuntimeException | Error primaryFailure) {
+            } catch (final Throwable primaryFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw): it
+                // skipped this close, so a failing close handler of the stream's close replaced it.
                 closeAfterExecutionIfAllowed(primaryFailure);
                 throw primaryFailure;
             }
@@ -9003,8 +9038,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param iter the iterator over the query's result sets, or {@code null} if iteration never started
      * @param primaryFailure the failure that must remain primary, or {@code null} if there is none
-     * @throws SQLException if draining the statement's remaining results fails and there is no primary failure
-     *         to attach it to
+     * @throws SQLException if reading the remaining MySQL Connector/J streaming results while closing {@code iter}, or draining the
+     *         statement's remaining results, fails and there is no primary failure to attach it to
      */
     final void closeAllResultsAndQueryIfAllowed(final ObjIteratorEx<ResultSet> iter, final Throwable primaryFailure) throws SQLException {
         Throwable cleanupPrimary = primaryFailure;
@@ -9025,7 +9060,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (readFailure != cleanupPrimary) {
                 cleanupPrimary.addSuppressed(readFailure);
             }
-        } catch (final RuntimeException | Error cleanupFailure) {
+        } catch (final Throwable cleanupFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             if (cleanupPrimary == null) {
                 cleanupPrimary = cleanupFailure;
                 throw cleanupFailure;
@@ -9037,7 +9072,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } finally {
             try {
                 discardRemainingResultsIfStatementWillBeReused(cleanupPrimary);
-            } catch (final SQLException | RuntimeException | Error cleanupFailure) {
+            } catch (final Throwable cleanupFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                 cleanupPrimary = cleanupFailure;
                 throw cleanupFailure;
             } finally {
@@ -9064,7 +9099,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 while (stmt.getMoreResults() || stmt.getUpdateCount() != -1) {
                     // Drain all trailing results so the statement can be executed again safely.
                 }
-            } catch (final SQLException | RuntimeException | Error cleanupFailure) {
+            } catch (final Throwable cleanupFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                 if (primaryFailure == null) {
                     throw cleanupFailure;
                 }
@@ -10149,7 +10184,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param rowConsumer the consumer to apply to each row's DisposableObjArray. Must not be {@code null}.
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code entityClass} or {@code rowConsumer} is {@code null}, or if the query returns at least one row and
-     *         {@code entityClass} is not a bean class (it has no property getter/setter method or public field)
+     *         {@code entityClass} is not a bean class (it has no property getter/setter method or public field) or is a bean class with
+     *         invalid property metadata
      * @throws SQLException if executing the query or reading the result set fails; also if closing a consumed result set fails
      * @see RowConsumer#forDisposableObjArray(Class, Consumer)
      * @see #foreach(Consumer)
@@ -11372,7 +11408,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             return submitAsyncTask(() -> sqlAction.apply(q), JdbcUtil.asyncExecutor.getExecutor());
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - also an undeclared checked exception from the executor (see submitAsyncTask)
             closeAfterFailedAsyncSubmission(e);
             throw e;
         }
@@ -11448,7 +11484,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             return submitAsyncTask(() -> sqlAction.apply(q), executor);
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - also an undeclared checked exception from the executor (see submitAsyncTask)
             closeAfterFailedAsyncSubmission(e);
             throw e;
         }
@@ -11521,7 +11557,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 sqlAction.accept(q);
                 return null;
             }, JdbcUtil.asyncExecutor.getExecutor());
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - also an undeclared checked exception from the executor (see submitAsyncTask)
             closeAfterFailedAsyncSubmission(e);
             throw e;
         }
@@ -11600,7 +11636,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
                 sqlAction.accept(q);
                 return null;
             }, executor);
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - also an undeclared checked exception from the executor (see submitAsyncTask)
             closeAfterFailedAsyncSubmission(e);
             throw e;
         }
@@ -11625,9 +11661,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         try {
             return new FutureTaskAsyncExecutor(executor).executeTask(futureTask);
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR
             // A rejecting executor may retain the submitted Runnable. The caller performs
             // failure-preserving cleanup; detach the unstarted action so it cannot retain or use the query.
+            // Throwable: an executor can throw a checked exception undeclared (Kotlin, a sneaky throw), as a close handler can.
             taskAction.detach();
             throw e;
         }
@@ -11700,8 +11737,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (query != null) {
                 try {
                     query.closeAfterExecutionIfAllowed();
-                } catch (final RuntimeException | Error e) {
-                    // cancel() has no failure channel for cleanup. Preserve its normal return contract.
+                } catch (final Throwable e) { // NOSONAR
+                    // cancel() has no failure channel for cleanup. Preserve its normal return contract. Throwable: close()
+                    // rethrows a checked exception that a close handler threw undeclared (see CloseHandlers.run), which
+                    // escaped cancel() too.
                     logger.error(e, "Failed to close Query after asynchronous task cancellation");
                 }
             }
@@ -11792,10 +11831,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * plain parameter setters such as {@code setInt} leave the closed-statement check to the JDBC
      * driver, which typically throws {@code SQLException}. Calling {@code close()} again is a no-op.</p>
      *
-     * <p>SQL and runtime exceptions raised by the driver while restoring properties or closing the
-     * statement are logged rather than thrown. If statement cleanup still fails (for example with an
-     * {@link Error}) and a close handler also throws, the statement cleanup failure is propagated with
-     * the handler failure suppressed.</p>
+     * <p>Exceptions raised by the driver while restoring properties or closing the statement, including
+     * checked exceptions it throws without declaring them, are logged rather than thrown. The close handler
+     * runs even if statement cleanup still fails (for example with an {@link Error}); that failure is then
+     * propagated, with a failure of the close handler suppressed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11836,7 +11875,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         } else {
             try {
                 closeStatement();
-            } catch (final RuntimeException | Error primaryFailure) {
+            } catch (final Throwable primaryFailure) { // NOSONAR
+                // Throwable: an overriding closeStatement() can throw an undeclared checked exception (Kotlin, sneaky throw),
+                // which skipped the close handler that releases a data-source query's connection.
                 try {
                     localCloseHandler.run();
                 } catch (final Throwable handlerFailure) { // NOSONAR
@@ -11872,11 +11913,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * </ul>
      *
      * <p>The {@link #addBatchAction} is also reset to the default to avoid retaining a
-     * reference (helpful when the underlying statement is pooled). Any
-     * {@link SQLException} or {@link RuntimeException} raised while resetting a property is logged
-     * and swallowed, so the remaining properties are still reset and the statement is still closed.
-     * The actual close is performed via {@link JdbcUtil#closeQuietly(java.sql.Statement)}, which
-     * suppresses SQL and runtime exceptions from closing; an {@link Error} still propagates.</p>
+     * reference (helpful when the underlying statement is pooled). Any exception raised while
+     * resetting a property ({@link SQLException}, {@link RuntimeException}, or a checked exception the
+     * driver throws without declaring it) is logged and swallowed, so the remaining properties are still
+     * reset and the statement is still closed; an {@link Error} propagates, skipping the remaining resets,
+     * once the statement is closed. The actual close is performed via
+     * {@link JdbcUtil#closeQuietly(java.sql.Statement)}, which logs any exception from closing; an
+     * {@link Error} still propagates.</p>
      *
      * @see #close()
      */
@@ -11887,58 +11930,79 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             // Reset batch action to default to prevent memory leaks
             addBatchAction = defaultAddBatchAction;
 
-            // Each reset is best-effort: a SQLException or a RuntimeException from a broken driver is logged, so it
-            // neither escapes close() (e.g., out of a try-with-resources block) nor skips the remaining resets.
+            // Each reset is best-effort: any exception from a broken driver is logged, so it neither escapes close() (e.g.,
+            // out of a try-with-resources block) nor skips the remaining resets. An undeclared checked one (Kotlin, sneaky
+            // throw) used to escape the SQLException | RuntimeException catch, skipping the remaining resets and, from
+            // close(), the close handler that releases a data-source query's connection.
             if (defaultFetchDirection >= 0) {
                 try {
                     stmt.setFetchDirection(defaultFetchDirection);
-                } catch (final SQLException | RuntimeException e) {
-                    logger.warn(e, "Failed to reset fetch direction");
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    logResetFailure(e, "Failed to reset fetch direction");
                 }
             }
 
             if (isFetchSizeCaptured) {
                 try {
                     stmt.setFetchSize(defaultFetchSize);
-                } catch (final SQLException | RuntimeException e) {
-                    logger.warn(e, "Failed to reset fetch size");
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    logResetFailure(e, "Failed to reset fetch size");
                 }
             }
 
             if (defaultMaxFieldSize >= 0) {
                 try {
                     stmt.setMaxFieldSize(defaultMaxFieldSize);
-                } catch (final SQLException | RuntimeException e) {
-                    logger.warn(e, "Failed to reset max field size");
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    logResetFailure(e, "Failed to reset max field size");
                 }
             }
 
             if (defaultQueryTimeout >= 0) {
                 try {
                     stmt.setQueryTimeout(defaultQueryTimeout);
-                } catch (final SQLException | RuntimeException e) {
-                    logger.warn(e, "Failed to reset query timeout");
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    logResetFailure(e, "Failed to reset query timeout");
                 }
             }
 
             if (defaultMaxRows >= 0) {
                 try {
                     stmt.setMaxRows(defaultMaxRows);
-                } catch (final SQLException | RuntimeException e) {
-                    logger.warn(e, "Failed to reset max rows");
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    logResetFailure(e, "Failed to reset max rows");
                 }
             }
 
             if (defaultLargeMaxRows >= 0) {
                 try {
                     stmt.setLargeMaxRows(defaultLargeMaxRows);
-                } catch (final SQLException | RuntimeException e) {
-                    logger.warn(e, "Failed to reset large max rows");
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    logResetFailure(e, "Failed to reset large max rows");
                 }
             }
         } finally {
             JdbcUtil.closeQuietly(stmt);
         }
+    }
+
+    /**
+     * Logs a failure of the statement cleanup in {@link #closeStatement()} so the cleanup can go on. An {@link Error} is
+     * rethrown instead; an {@link InterruptedException} is logged with the thread's interrupt status restored.
+     *
+     * @param failure the exception thrown while resetting a statement property or clearing its parameters
+     * @param message the warning to log
+     */
+    static void logResetFailure(final Throwable failure, final String message) {
+        if (failure instanceof Error) {
+            throw (Error) failure;
+        }
+
+        if (failure instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+        }
+
+        logger.warn(failure, message);
     }
 
     /**

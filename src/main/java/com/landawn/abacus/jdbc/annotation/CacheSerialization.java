@@ -21,8 +21,8 @@ package com.landawn.abacus.jdbc.annotation;
  * <p>The copying strategies bypass serialization for top-level values implementing
  * {@link com.landawn.abacus.util.Immutable}, except collections, maps and populated optional/nullable
  * wrappers whose contents may need copying. Other {@code Immutable} values are shared as-is; their contents
- * must be deeply immutable to avoid sharing mutable state. Values without this marker are copied even if
- * their Java types are immutable, except that {@link #JSON} shares {@code java.time} values as-is.</p>
+ * must be deeply immutable to avoid sharing mutable state. Values without this marker are copied even if their
+ * Java types are immutable, except that {@link #JSON} shares {@code java.time} values and enum constants as-is.</p>
  *
  * @see CacheResult#serialization()
  */
@@ -72,6 +72,17 @@ public enum CacheSerialization {
      * wrapper uses its runtime class, and collection elements and map keys/values use their common runtime class
      * when all non-null values have the same class. Otherwise the unresolved types fall back to the serializer's
      * defaults; nested generic type arguments cannot be recovered from runtime classes alone.</p>
+     *
+     * <p>A top-level collection or map whose runtime class is not public and cannot be constructed by the JSON
+     * parser (such as the class of {@code List.of(...)}, of a JDK stream's {@code toList()}, of
+     * {@code Arrays.asList(...)} or of a {@code Collections.unmodifiable*} view) is rebuilt instead as the default
+     * container of its kind, if the method's return type accepts that container: an {@code ArrayList},
+     * {@code LinkedHashSet} or {@code LinkedHashMap}, iterating like the source, or, for a sorted one, a
+     * {@code TreeSet} or {@code TreeMap} with the source's ordering (its comparator, see below). If the return type
+     * does not accept that container (for example a declared {@code Queue} returning
+     * {@code Collections.asLifoQueue(...)}), the copy fails. Such a container held by an optional/nullable wrapper
+     * whose declared value type is not resolved beyond {@code Object} is rebuilt the same way. An {@code EnumSet},
+     * as the result or as a wrapper's value, is copied as an {@code EnumSet} holding the same enum constants.</p>
      *
      * <p>A {@code Dataset} is copied together with its column types (the common class of each column's non-null
      * values). Other values typed only as {@code Object}, such as the values of a {@code Map<String, Object>} row,

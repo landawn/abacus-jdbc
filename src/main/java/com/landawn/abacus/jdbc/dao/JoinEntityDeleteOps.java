@@ -73,10 +73,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null},
      *                                  or if no join property of the specified type is found in the entity class,
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one join property opens a transaction scope), the ownership of the Spring connection holder bound to the data
+     *         source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it
+     *         can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
      *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
      *         {@code CannotGetJdbcConnectionException}
@@ -149,10 +150,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one entity or join property opens a transaction scope), the ownership of the Spring connection holder bound to
+     *         the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
      *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
      *         {@code CannotGetJdbcConnectionException}
@@ -302,10 +304,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one entity opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
      *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
      *         {@code CannotGetJdbcConnectionException}
@@ -332,10 +335,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one join property opens a transaction scope), the ownership of the Spring connection holder bound to the data
+     *         source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it
+     *         can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
      *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
      *         {@code CannotGetJdbcConnectionException}
@@ -407,10 +411,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one join property opens a transaction scope), the ownership of the Spring connection holder bound to the data
+     *         source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it
+     *         can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if {@code inParallel} is {@code false}, or the call runs inside a transaction (where the deletes run
@@ -419,6 +424,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a delete task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated when {@code inParallel} is {@code true}, outside a transaction the parallel deletes commit one by one, each on
      *             a connection of its own; prefer {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
@@ -460,18 +467,21 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any property name in
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership
-     *         of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its
-     *         connection through a handle of its own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}); inside a transaction on the DAO's data
-     *         source the deletes run as {@link #deleteJoinEntities(Object, Collection)} does, and outside a transaction each delete
-     *         task executes a single DELETE statement and starts no transaction
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one join property opens a transaction scope), the ownership of the Spring connection holder bound to the data
+     *         source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it
+     *         can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}); inside a transaction on the
+     *         DAO's data source the deletes run as {@link #deleteJoinEntities(Object, Collection)} does, and outside a transaction each delete task
+     *         executes a single DELETE statement and starts no transaction
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if, inside a transaction, beginning or completing the scope the deletes of several properties
      *         run in fails (see {@link #deleteJoinEntities(Object, Collection)})
      * @throws SQLException if acquiring a database connection, or preparing, binding, or executing a DELETE statement, fails in a
      *         delete task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated outside a transaction, the parallel deletes commit one by one, each on a connection of its own; prefer
      *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
@@ -517,16 +527,18 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses", "paymentMethods"));
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete join entities. If {@code null} or empty, 0 is returned
+     * @param entities the collection of entities for which to delete join entities. If {@code null} or empty, 0 is returned once
+     *                 {@code joinEntityPropNames} is checked
      * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @return the total number of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one entity or join property opens a transaction scope), the ownership of the Spring connection holder bound to
+     *         the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
      *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
      *         {@code CannotGetJdbcConnectionException}
@@ -535,7 +547,14 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      */
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, ArithmeticException {
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
+            return 0;
+        }
+
+        if (N.isEmpty(entities)) {
+            // The names are checked also with no entities, as the single-name overload does: an invalid one passed unchecked
+            // when there was nothing to delete.
+            JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
             return 0;
         }
 
@@ -588,17 +607,19 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * int deletedCount = userDao.deleteJoinEntities(users, Arrays.asList("orders", "addresses"), true);
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete join entities. If {@code null} or empty, 0 is returned
+     * @param entities the collection of entities for which to delete join entities. If {@code null} or empty, 0 is returned once
+     *                 {@code joinEntityPropNames} is checked
      * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one entity or join property opens a transaction scope), the ownership of the Spring connection holder bound to
+     *         the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if {@code inParallel} is {@code false}, or the call runs inside a transaction (where the deletes run
@@ -607,6 +628,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection or starting or completing an internally required transaction fails in a delete task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated when {@code inParallel} is {@code true}, outside a transaction the parallel deletes commit one by one, each on
      *             a connection of its own; prefer {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
@@ -641,7 +664,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * }
      * }</pre>
      *
-     * @param entities the collection of entities for which to delete join entities. If {@code null} or empty, 0 is returned
+     * @param entities the collection of entities for which to delete join entities. If {@code null} or empty, 0 is returned once
+     *                 {@code joinEntityPropNames} is checked
      * @param joinEntityPropNames the property names of the join entities to delete. If {@code null} or empty, 0 is returned
      * @param executor the executor to use for parallel deletion; not used inside a transaction on the DAO's data source, where the
      *        joins are deleted on the calling thread, in the transaction
@@ -650,16 +674,19 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one entity or join property opens a transaction scope), the ownership of the Spring connection holder bound to
+     *         the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if, inside a transaction, beginning or completing the scope the deletes of several properties
      *         run in fails (see {@link #deleteJoinEntities(Collection, Collection)})
      * @throws SQLException if acquiring a database connection, starting or completing an internally required transaction, or preparing,
      *         binding, or executing a DELETE statement fails in a delete task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated outside a transaction, the parallel deletes commit one by one, each on a connection of its own; prefer
      *             {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
@@ -671,7 +698,14 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
             SQLException, ArithmeticException {
         N.checkArgNotNull(executor, cs.executor);
 
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
+            return 0;
+        }
+
+        if (N.isEmpty(entities)) {
+            // The names are checked also with no entities, as the single-name overload does: an invalid one passed unchecked
+            // when there was nothing to delete.
+            JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
             return 0;
         }
 
@@ -711,10 +745,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one join property opens a transaction scope), the ownership of the Spring connection holder bound to the data
+     *         source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it
+     *         can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
      *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
      *         {@code CannotGetJdbcConnectionException}
@@ -746,10 +781,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one join property opens a transaction scope), the ownership of the Spring connection holder bound to the data
+     *         source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it
+     *         can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if {@code inParallel} is {@code false}, or the call runs inside a transaction (where the deletes run
@@ -758,6 +794,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a delete task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated outside a transaction, the parallel deletes commit one by one, each on a connection of its own; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
@@ -797,18 +835,21 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership
-     *         of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its
-     *         connection through a handle of its own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}); inside a transaction on the DAO's data
-     *         source the deletes run as {@link #deleteJoinEntities(Object, Collection)} does, and outside a transaction each delete
-     *         task executes a single DELETE statement and starts no transaction
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one join property opens a transaction scope), the ownership of the Spring connection holder bound to the data
+     *         source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it
+     *         can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}); inside a transaction on the
+     *         DAO's data source the deletes run as {@link #deleteJoinEntities(Object, Collection)} does, and outside a transaction each delete task
+     *         executes a single DELETE statement and starts no transaction
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if, inside a transaction, beginning or completing the scope the deletes of several properties
      *         run in fails (see {@link #deleteJoinEntities(Object, Collection)})
      * @throws SQLException if acquiring a database connection, or preparing, binding, or executing a DELETE statement, fails in a
      *         delete task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated outside a transaction, the parallel deletes commit one by one, each on a connection of its own; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
@@ -842,10 +883,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one entity or join property opens a transaction scope), the ownership of the Spring connection holder bound to
+     *         the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
      *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
      *         {@code CannotGetJdbcConnectionException}
@@ -879,10 +921,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one entity or join property opens a transaction scope), the ownership of the Spring connection holder bound to
+     *         the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if {@code inParallel} is {@code false}, or the call runs inside a transaction (where the deletes run
@@ -891,6 +934,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection or starting or completing an internally required transaction fails in a delete task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated outside a transaction, the parallel deletes commit one by one, each on a connection of its own; prefer
      *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
@@ -931,16 +976,19 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one entity or join property opens a transaction scope), the ownership of the Spring connection holder bound to
+     *         the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if, inside a transaction, beginning or completing the scope the deletes of several properties
      *         run in fails (see {@link #deleteJoinEntities(Collection, Collection)})
      * @throws SQLException if acquiring a database connection, starting or completing an internally required transaction, or preparing,
      *         binding, or executing a DELETE statement fails in a delete task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated outside a transaction, the parallel deletes commit one by one, each on a connection of its own; prefer
      *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior

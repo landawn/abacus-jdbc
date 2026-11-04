@@ -9,12 +9,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Throwables;
@@ -47,6 +51,91 @@ class AbstractQueryFailureTest extends AbstractQueryTestSupport {
             verify(preparedStatement, never()).close();
             assertSame(cleanup, assertThrows(IllegalStateException.class, query::close));
         }
+    }
+
+    // A driver, extractor or mapper can throw an undeclared checked exception (Kotlin, sneaky throw). The multiple-result
+    // methods took it for success, so the failing drain (closeAfterExecution(false)) or close handler replaced it.
+    @ParameterizedTest(name = "{0}, autoClose={2}")
+    @MethodSource("multipleResultOperations")
+    void multipleResults_undeclaredCheckedReadFailure_staysPrimaryOverCleanupFailures(final String operationName,
+            final Throwables.Consumer<TestQuery, SQLException> operation, final boolean autoClose) throws SQLException {
+        final IOException readFailure = new IOException("reading the result set failed");
+        final SQLException drainFailure = new SQLException("drain failed");
+        final IllegalStateException cleanup = new IllegalStateException("close handler failed");
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(1);
+        when(metadata.getColumnLabel(1)).thenReturn("c");
+        when(rs.next()).thenAnswer(invocation -> {
+            throw readFailure;
+        });
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs);
+        when(preparedStatement.getMoreResults()).thenThrow(drainFailure);
+        query.closeAfterExecution(autoClose).onClose(() -> {
+            throw cleanup;
+        });
+
+        final Throwable thrown = assertThrows(Throwable.class, () -> operation.accept(query));
+
+        assertSame(readFailure, thrown);
+        assertArrayEquals(new Throwable[] { autoClose ? cleanup : drainFailure }, thrown.getSuppressed());
+        assertEquals(autoClose, query.isClosed);
+        verify(rs).close();
+
+        if (!autoClose) {
+            assertSame(cleanup, assertThrows(IllegalStateException.class, query::close));
+        }
+    }
+
+    // BUG FIX: the drain of a statement kept open (closeAfterExecution(false)) and the result cleanup caught only SQL/runtime
+    // exceptions and errors: an undeclared checked drain failure escaped and replaced the read failure, also undeclared.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("multipleResultOperationsKeepingTheStatement")
+    void multipleResults_undeclaredCheckedDrainFailure_isSuppressedOnTheReadFailure(final String operationName,
+            final Throwables.Consumer<TestQuery, SQLException> operation, final boolean autoClose) throws SQLException {
+        final IOException readFailure = new IOException("reading the result set failed");
+        final IOException drainFailure = new IOException("drain failed, undeclared");
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(1);
+        when(metadata.getColumnLabel(1)).thenReturn("c");
+        when(rs.next()).thenAnswer(invocation -> {
+            throw readFailure;
+        });
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs);
+        when(preparedStatement.getMoreResults()).thenAnswer(invocation -> {
+            throw drainFailure;
+        });
+        query.closeAfterExecution(autoClose);
+
+        final Throwable thrown = assertThrows(Throwable.class, () -> operation.accept(query));
+
+        assertSame(readFailure, thrown);
+        assertArrayEquals(new Throwable[] { drainFailure }, thrown.getSuppressed());
+        verify(rs).close();
+    }
+
+    private static Stream<Arguments> multipleResultOperationsKeepingTheStatement() {
+        return multipleResultOperations().filter(arguments -> !(Boolean) arguments.get()[2]);
+    }
+
+    private static Stream<Arguments> multipleResultOperations() {
+        return Stream
+                .of(operation("query2ResultSets", q -> q.query2ResultSets((rs, labels) -> rs.next(), (rs, labels) -> rs.next())),
+                        operation("query3ResultSets", q -> q.query3ResultSets((rs, labels) -> rs.next(), (rs, labels) -> rs.next(), (rs, labels) -> rs.next())),
+                        operation("queryAllResultSets(resultExtractor)", q -> q.queryAllResultSets(rs -> rs.next())),
+                        operation("queryAllResultSets(biResultExtractor)", q -> q.queryAllResultSets((rs, labels) -> rs.next())),
+                        operation("listAllResultSets(class)", q -> q.listAllResultSets(String.class)),
+                        operation("listAllResultSets(rowMapper)", q -> q.listAllResultSets(rs -> rs.getString(1))),
+                        operation("listAllResultSets(rowFilter,rowMapper)", q -> q.listAllResultSets(rs -> true, rs -> rs.getString(1))),
+                        operation("listAllResultSets(biRowMapper)", q -> q.listAllResultSets((rs, labels) -> rs.getString(1))),
+                        operation("listAllResultSets(biRowFilter,biRowMapper)",
+                                q -> q.listAllResultSets((rs, labels) -> true, (rs, labels) -> rs.getString(1))))
+                .flatMap(test -> Stream.of(false, true).map(autoClose -> Arguments.of(test.name(), test.operation(), autoClose)));
     }
 
     private static Stream<Arguments> executionFailures() {

@@ -381,8 +381,11 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *         or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails, or looking up
      *         an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required for the transaction scope the lookup and the write run in there), the ownership of the Spring connection holder bound to the
+     *         data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      */
     @Override

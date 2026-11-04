@@ -56,6 +56,7 @@ import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
@@ -65,6 +66,7 @@ import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.JoinEntityHelper;
 import com.landawn.abacus.jdbc.dao.UncheckedDao;
 import com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.util.Throwables;
 
 /**
@@ -2533,6 +2535,108 @@ class SpringTransactionParticipationTest extends TestBase {
         assertEquals(0, count(keeperA, "SELECT COUNT(*) FROM spring_tag"));
     }
 
+    // Pins the documented IllegalStateException of the join and batch deletes: one that opens a transaction scope (several join
+    // properties, several entities, several IDs) can't participate in a Spring-managed transaction whose transaction manager has
+    // no SpringTransactionTracker, and fails before deleting anything; a delete that opens no scope runs in it as usual.
+    @SuppressWarnings("deprecation")
+    @Test
+    void scopeOpeningDeletes_inAnUntrackedSpringTransaction_failBeforeDeleting() throws SQLException {
+        try (Statement statement = keeperA.createStatement()) {
+            statement.executeUpdate("INSERT INTO spring_owner (id) VALUES (1)");
+            statement.executeUpdate("INSERT INTO spring_note (id, owner_id, pinned_owner_id) VALUES (10, 1, 1)");
+            statement.executeUpdate("INSERT INTO spring_tag (id, owner_id) VALUES (20, 1)");
+            statement.executeUpdate("INSERT INTO spring_item (id, name) VALUES (100, 'a'), (101, 'b')");
+        }
+
+        final Owner owner = new Owner();
+        owner.setId(1L);
+        final Owner other = new Owner();
+        other.setId(2L);
+
+        new TransactionTemplate(new DataSourceTransactionManager(dataSourceA)).executeWithoutResult(status -> {
+            for (final Throwables.Runnable<SQLException> scopeOpening : List.<Throwables.Runnable<SQLException>> of( //
+                    () -> ownerDao.deleteJoinEntities(owner, List.of("notes", "tags")), //
+                    () -> ownerDao.deleteJoinEntities(owner, List.of("notes", "tags"), Runnable::run), //
+                    () -> ownerDao.deleteJoinEntities(owner, Note.class), // notes and pinnedNotes
+                    () -> ownerDao.deleteJoinEntities(List.of(owner, other), "notes"), //
+                    () -> ownerDao.deleteJoinEntities(List.of(owner, other), List.of("notes", "tags")), //
+                    () -> ownerDao.deleteJoinEntities(List.of(owner, other), List.of("notes", "tags"), Runnable::run), //
+                    () -> ownerDao.deleteAllJoinEntities(owner), //
+                    () -> ownerDao.deleteAllJoinEntities(List.of(owner, other)), //
+                    () -> uncheckedOwnerDao.deleteJoinEntities(owner, List.of("notes", "tags")), //
+                    () -> itemDaoA.batchDeleteByIds(List.of(100L, 101L)))) {
+                assertTrue(assertThrows(IllegalStateException.class, scopeOpening::run).getMessage().contains("SpringTransactionTracker"));
+
+                // Counted in the Spring transaction (the rows it deleted would be gone there only): nothing was deleted.
+                assertEquals(1, countInSpringTransaction("SELECT COUNT(*) FROM spring_note"));
+                assertEquals(1, countInSpringTransaction("SELECT COUNT(*) FROM spring_tag"));
+                assertEquals(2, countInSpringTransaction("SELECT COUNT(*) FROM spring_item"));
+            }
+
+            try {
+                assertEquals(1, ownerDao.deleteJoinEntities(owner, "tags"), "one property of one entity opens no scope");
+            } catch (final SQLException e) {
+                throw new IllegalStateException(e);
+            }
+
+            status.setRollbackOnly();
+        });
+
+        assertEquals(1, count(keeperA, "SELECT COUNT(*) FROM spring_note"));
+        assertEquals(1, count(keeperA, "SELECT COUNT(*) FROM spring_tag"));
+        assertEquals(2, count(keeperA, "SELECT COUNT(*) FROM spring_item"));
+    }
+
+    // Pins the documented IllegalStateException of the scope-opening writes: the upserts (whose lookup and write run in one scope
+    // inside a transaction), and the batch writes of several entities (or of one entity whose generateId() returned a default
+    // ID), can't participate in a Spring-managed transaction whose transaction manager has no SpringTransactionTracker, and
+    // fail before writing anything.
+    @Test
+    void scopeOpeningWrites_inAnUntrackedSpringTransaction_failBeforeWriting() throws SQLException {
+        try (Statement statement = keeperA.createStatement()) {
+            statement.executeUpdate("INSERT INTO spring_owner (id) VALUES (1)");
+            statement.executeUpdate("INSERT INTO spring_item (id, name) VALUES (100, 'a'), (101, 'b')");
+        }
+
+        final DefaultIdItemDao defaultIdItemDao = JdbcUtil.createDao(DefaultIdItemDao.class, dataSourceA);
+
+        new TransactionTemplate(new DataSourceTransactionManager(dataSourceA)).executeWithoutResult(status -> {
+            for (final Throwables.Runnable<SQLException> scopeOpening : List.<Throwables.Runnable<SQLException>> of( //
+                    () -> ownerDao.upsert(owner(2), Filters.eq("id", 2L)), // Dao.upsert(entity, cond)
+                    () -> uncheckedOwnerDao.upsert(owner(2), Filters.eq("id", 2L)), // UncheckedDao.upsert(entity, cond)
+                    () -> itemDaoA.upsert(item(100L, "x")), // CrudDao.upsert(entity)
+                    () -> itemDaoA.upsert(item(102L, "x"), Filters.eq("id", 102L)), //
+                    () -> itemDaoA.batchUpsert(List.of(item(100L, "x"))), // one entity: a scope inside a transaction
+                    () -> itemDaoA.batchUpsert(List.of(item(100L, "x"), item(102L, "y"))), //
+                    () -> itemDaoA.batchDelete(List.of(item(100L, "a"), item(101L, "b"))), //
+                    () -> itemDaoA.batchInsert(List.of(item(null, "x"), item(null, "y")), List.of("name")), //
+                    () -> itemDaoA.batchInsert("INSERT INTO spring_item (name) VALUES (:name)", List.of(item(null, "x"), item(null, "y"))), //
+                    () -> defaultIdItemDao.batchInsert(List.of(item(null, "x"))))) { // generateId() returned a default ID
+                assertTrue(assertThrows(IllegalStateException.class, scopeOpening::run).getMessage().contains("SpringTransactionTracker"));
+
+                // Counted in the Spring transaction, which would see its own writes: nothing was written.
+                assertEquals(1, countInSpringTransaction("SELECT COUNT(*) FROM spring_owner"));
+                assertEquals(2, countInSpringTransaction("SELECT COUNT(*) FROM spring_item"));
+                assertEquals(1, countInSpringTransaction("SELECT COUNT(*) FROM spring_item WHERE id = 100 AND name = 'a'"));
+            }
+
+            status.setRollbackOnly();
+        });
+
+        assertEquals(1, count(keeperA, "SELECT COUNT(*) FROM spring_owner"));
+        assertEquals(List.of("a", "b"), itemNames());
+    }
+
+    private int countInSpringTransaction(final String sql) {
+        final Connection connection = DataSourceUtils.getConnection(dataSourceA);
+
+        try {
+            return count(connection, sql);
+        } finally {
+            DataSourceUtils.releaseConnection(connection, dataSourceA);
+        }
+    }
+
     private static Stream<Arguments> completionCallbacks() {
         return Stream.of(true, false).flatMap(afterCommit -> Stream.of(false, true).map(fails -> Arguments.of(afterCommit, fails)));
     }
@@ -4049,6 +4153,14 @@ class SpringTransactionParticipationTest extends TestBase {
     @SqlLogEnabled(value = true, maxSqlLogLength = 321)
     @PerfLog(sqlPerfLogThresholdMillis = 1234L)
     interface LoggingItemDao extends ItemDaoBase<LoggingItemDao> {
+    }
+
+    @DaoConfig(callGenerateIdForInsertIfIdNotSet = true)
+    interface DefaultIdItemDao extends CrudDao<Item, Long, DefaultIdItemDao> {
+        @Override
+        default Long generateId() {
+            return null; // a default ID: the insert then runs in a transaction scope
+        }
     }
 
     interface OwnerDao extends Dao<Owner, OwnerDao>, JoinEntityHelper<Owner, OwnerDao> {

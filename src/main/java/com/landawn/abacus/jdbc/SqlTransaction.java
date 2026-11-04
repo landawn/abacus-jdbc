@@ -185,8 +185,11 @@ import com.landawn.abacus.util.Throwables;
  * <p>A nested scope may request a different isolation level; it applies to the connection until the scope exits, when the
  * enclosing scope's level is restored. {@link IsolationLevel#DEFAULT} inherits the enclosing scope's level. Databases
  * differ in when a changed level takes effect inside a transaction: PostgreSQL rejects the change once the transaction has
- * run a statement (the nested begin then fails), and MySQL applies it only from the next transaction, so the nested scope's
- * statements still run at the enclosing level. Set the level on the outermost scope where it matters. When the cleanup
+ * run a statement (the nested begin then fails), MySQL applies it only from the next transaction, so the nested scope's
+ * statements still run at the enclosing level, and H2 commits the work done so far whenever the level changes: when the
+ * nested scope begins and again when its exit restores the enclosing level (also the exit of a nested scope that failed),
+ * so a later rollback of the transaction no longer undoes that work. Set the level on the outermost scope where it matters,
+ * and leave nested scopes at {@link IsolationLevel#DEFAULT}. When the cleanup
  * call of a nested scope cannot restore the enclosing scope's isolation level (some drivers, such as PostgreSQL's, reject
  * isolation changes once the transaction has started), the scope is exited anyway and the transaction is marked
  * rollback-only; the outermost completion rolls back, restores the connection's original isolation level and releases the
@@ -265,7 +268,7 @@ import com.landawn.abacus.util.Throwables;
  * If the Spring transaction cannot be marked rollback-only - it has completed, or it is suspended and exposes its connection
  * through a handle of its own (JPA), a JPA transaction that owns the connection refuses the mark or can no longer be
  * identified, or the mark throws - the rollback fails: it throws an {@link IllegalStateException} (or the mark's own
- * {@link RuntimeException} or {@link Error}), the status becomes {@link Status#FAILED_ROLLBACK}, the connection is still
+ * failure as it is: a {@link RuntimeException}, an {@link Error}, or a checked exception thrown without being declared), the status becomes {@link Status#FAILED_ROLLBACK}, the connection is still
  * released back to Spring, and the in-memory changes tied to the work (such as generated IDs written back to entities) are
  * not undone but left to the Spring transaction's outcome, as Spring may still commit the work (if the exception propagates
  * out of a Spring transaction's callback or {@code @Transactional} method, Spring usually rolls it back). A Spring transaction
@@ -893,19 +896,20 @@ public final class SqlTransaction implements AutoCloseable {
      * commits. If the transaction has been marked rollback-only (a nested scope rolled back, typically because its failure
      * was caught and the work went on), the outermost commit rolls back instead and throws {@link RollbackOnlyException}:
      * none of the transaction's work was committed. If the rollback fails, its failure is thrown instead (such as the
-     * {@link UncheckedSQLException} of the rollback), as is an unchecked failure of the connection cleanup after the
-     * rollback; the reason the commit failed is attached to it as a suppressed exception (a {@code RollbackOnlyException}
+     * {@link UncheckedSQLException} of the rollback), as is a failure of the connection cleanup after the rollback (see
+     * below: any failure other than an {@link SQLException} of restoring a setting, also a checked exception a driver throws
+     * without declaring it); the reason the commit failed is attached to it as a suppressed exception (a {@code RollbackOnlyException}
      * once the transaction has been rolled back, an {@code IllegalStateException} otherwise).</p>
      *
      * <p>Scopes opened inside this one that are still open when it commits were never completed (for example, a nested scope
      * whose code threw before its {@code commit()} and has no {@code finally} block): they are exited, the transaction is
      * marked rollback-only, and this method throws: an outermost scope rolls the transaction back and throws
      * {@link RollbackOnlyException} (or the failure of the rollback, as above), a nested scope throws
-     * {@link IllegalStateException}. If restoring an isolation level while exiting such a scope fails with an unchecked
-     * exception, that exception is thrown instead (by an outermost scope, after the same rollback).</p>
+     * {@link IllegalStateException}. If restoring an isolation level while exiting such a scope fails with a failure other
+     * than an {@link SQLException}, that failure is thrown instead (by an outermost scope, after the same rollback).</p>
      *
      * <p>If the driver fails to restore the enclosing scope's isolation level when this nested scope exits, the failure
-     * propagates (an SQL error as an {@link UncheckedSQLException}, a runtime exception or an error as it is) and this scope
+     * propagates (an SQL error as an {@link UncheckedSQLException}, any other failure as it is) and this scope
      * stays open, so its {@link #rollbackIfNotCommitted()} can complete it.</p>
      *
      * <p>When the outermost scope actually commits, the status becomes {@link Status#COMMITTED} on success. On failure the
@@ -923,7 +927,12 @@ public final class SqlTransaction implements AutoCloseable {
      *
      * <p>After a successful database commit, this library runs its actions registered to run after the commit (such as the
      * invalidation of DAO result caches). A failing one is logged; an {@link Error} thrown by one propagates from this method,
-     * once the connection has been cleaned up, although the work has been committed (the status is {@link Status#COMMITTED}).</p>
+     * once the connection has been cleaned up, although the work has been committed (the status is {@link Status#COMMITTED}).
+     * So does any other failure of that cleanup, also a checked exception that a driver throws without declaring it: of
+     * restoring the connection's auto-commit mode or isolation level (an {@link SQLException} there is only logged), or of
+     * releasing the connection (an {@link Error} from closing it; other close failures are logged, and so is every failure of
+     * releasing a connection acquired through Spring's {@code DataSourceUtils}, which Spring itself logs). Every step of the
+     * cleanup is attempted, the first failure propagating with the later ones attached to it as suppressed exceptions.</p>
      *
      * <p>A commit of a scope that has completed throws {@link IllegalStateException}. {@code commit()} may be called only once
      * per scope, as in Spring: a repeated commit after a successful one throws too (it used to be ignored, and for a nested
@@ -969,11 +978,16 @@ public final class SqlTransaction implements AutoCloseable {
      * connection's original state and releases it (after a failed rollback, aborts and releases it without restoring its
      * state). For a participating transaction, see {@link #rollbackIfNotCommitted()}.
      * The scope is always exited, as by {@link #rollbackIfNotCommitted()}: if the enclosing scope's isolation level cannot be
-     * restored, the transaction stays marked rollback-only; an {@link SQLException} from the connection is logged, while a
-     * {@link RuntimeException} or an {@link Error} is thrown after the scope has been exited (it used to leave a nested scope
-     * open, and the transaction {@link Status#ACTIVE}, after an explicit rollback). Scopes opened inside this one that are
-     * still open are exited first; an unchecked failure while exiting them is thrown after this scope has been rolled
-     * back.</p>
+     * restored, the transaction stays marked rollback-only; an {@link SQLException} from the connection is logged, while any
+     * other failure (a {@link RuntimeException}, an {@link Error}, or a checked exception the driver throws without declaring
+     * it) is thrown after the scope has been exited (it used to leave a nested scope open, and the transaction
+     * {@link Status#ACTIVE}, after an explicit rollback). Scopes opened inside this one that are still open are exited first;
+     * such a failure while exiting them is thrown after this scope has been rolled back. The connection cleanup after the
+     * outermost rollback behaves as after a commit (see {@link #commit()}): every step is attempted, and its first failure
+     * other than an {@link SQLException} of restoring the auto-commit mode or isolation level (which is logged), such as an
+     * {@link Error} from closing the connection or a checked exception the driver throws without declaring it, propagates,
+     * attached as a suppressed exception to the failure of the rollback, if any. A failure of the database {@code ROLLBACK}
+     * other than an {@link SQLException} propagates as it is (the status is then {@link Status#FAILED_ROLLBACK}).</p>
      *
      * <p>A rollback of a scope that has already completed (committed, rolled back, or exited by an enclosing scope) throws
      * {@link IllegalStateException}, as in Spring and as {@link #commit()} does (it used to be logged and ignored); the
@@ -1000,8 +1014,15 @@ public final class SqlTransaction implements AutoCloseable {
      * <p>A nested scope that is ended this way marks the transaction {@link Status#MARKED_ROLLBACK}; the database
      * {@code ROLLBACK} is issued when the outermost scope completes. The scope is always exited: if the enclosing scope's
      * isolation level cannot be restored on the connection, the transaction stays marked rollback-only; an
-     * {@link SQLException} from the connection is logged, while a {@link RuntimeException} or an {@link Error} is propagated
-     * after the scope has been exited. Scopes opened inside this one that are still open are exited first.</p>
+     * {@link SQLException} from the connection is logged, while any other failure (a {@link RuntimeException}, an
+     * {@link Error}, or a checked exception the driver throws without declaring it) is propagated after the scope has been
+     * exited (for the outermost scope, after the rollback). Scopes opened inside this one that are still open are exited
+     * first. The connection cleanup after the outermost rollback behaves as after a commit (see {@link #commit()}): every
+     * step is attempted, and its first failure other than an {@link SQLException} of restoring the auto-commit mode or
+     * isolation level (which is logged), such as an {@link Error} from closing the connection or a checked exception the
+     * driver throws without declaring it, propagates, attached as a suppressed exception to the failure of the rollback, if
+     * any. A failure of the database {@code ROLLBACK} other than an {@link SQLException} propagates as it is (the status is
+     * then {@link Status#FAILED_ROLLBACK}).</p>
      *
      * <p>For a transaction participating in a Spring-managed transaction, the outermost rollback issues no database
      * {@code ROLLBACK}; it marks the Spring transaction rollback-only and releases the connection to Spring. If the Spring

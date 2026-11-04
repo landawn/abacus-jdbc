@@ -401,6 +401,107 @@ class JdbcUtilResourceCleanupTest extends JdbcUtilTestSupport {
         verify(conn3).close();
     }
 
+    // BUG FIX: a driver or wrapper can throw a checked exception its close() does not declare (Kotlin, Lombok @SneakyThrows).
+    // Not caught, it escaped at once from the multi-resource close overloads, and the later resources were never closed.
+    // Every close is attempted now; such a failure is rethrown wrapped in IllegalStateException (its cause).
+    @Test
+    public void testCloseOverloads_UndeclaredCheckedCloseFailureStillClosesTheOtherResources() throws SQLException {
+        final Exception undeclared = new Exception("undeclared checked close failure");
+
+        final ResultSet rs = mock(ResultSet.class);
+        final Statement stmt = mock(Statement.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw undeclared;
+        }).when(rs).close();
+        assertSame(undeclared, assertThrows(IllegalStateException.class, () -> JdbcUtil.close(rs, stmt)).getCause());
+        verify(stmt).close();
+
+        final Statement stmt2 = mock(Statement.class);
+        final Connection conn2 = mock(Connection.class);
+        final SQLException connFailure = new SQLException("conn close failure");
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw undeclared;
+        }).when(stmt2).close();
+        doThrow(connFailure).when(conn2).close();
+        final IllegalStateException thrown2 = assertThrows(IllegalStateException.class, () -> JdbcUtil.close(stmt2, conn2));
+        assertSame(undeclared, thrown2.getCause());
+        verify(conn2).close();
+
+        final ResultSet rs3 = mock(ResultSet.class);
+        final Statement stmt3 = mock(Statement.class);
+        final Connection conn3 = mock(Connection.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw undeclared;
+        }).when(rs3).close();
+        assertSame(undeclared, assertThrows(IllegalStateException.class, () -> JdbcUtil.close(rs3, stmt3, conn3)).getCause());
+        verify(stmt3).close();
+        verify(conn3).close();
+
+        // A later undeclared failure is suppressed on the first one, as any other close failure.
+        final ResultSet rs4 = mock(ResultSet.class);
+        final Statement stmt4 = mock(Statement.class);
+        final SQLException rsFailure = new SQLException("rs close failure");
+        doThrow(rsFailure).when(rs4).close();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw undeclared;
+        }).when(stmt4).close();
+        assertSame(rsFailure, assertThrows(UncheckedSQLException.class, () -> JdbcUtil.close(rs4, stmt4)).getCause());
+        assertArrayEquals(new Throwable[] { undeclared }, rsFailure.getSuppressed());
+    }
+
+    // BUG FIX: close(ResultSet, true, true) let an undeclared checked exception from rs.getStatement() escape before any close,
+    // so the result set itself was never closed.
+    @Test
+    public void testClose_ResultSetBooleanFlags_UndeclaredCheckedLookupFailureStillClosesResultSet() throws SQLException {
+        final Exception undeclared = new Exception("undeclared checked lookup failure");
+        final ResultSet rs = mock(ResultSet.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw undeclared;
+        }).when(rs).getStatement();
+
+        assertSame(undeclared, assertThrows(IllegalStateException.class, () -> JdbcUtil.close(rs, true, true)).getCause());
+        verify(rs).close();
+
+        // The statement located before a failing getConnection() is closed too.
+        final ResultSet rs2 = mock(ResultSet.class);
+        final Statement stmt2 = mock(Statement.class);
+        when(rs2.getStatement()).thenReturn(stmt2);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw undeclared;
+        }).when(stmt2).getConnection();
+
+        assertSame(undeclared, assertThrows(IllegalStateException.class, () -> JdbcUtil.close(rs2, true, true)).getCause());
+        verify(rs2).close();
+        verify(stmt2).close();
+    }
+
+    // BUG FIX: closeQuietly(ResultSet, true, true) closed the resources in a finally block, so an Error from closing the
+    // result set replaced an Error thrown while locating its statement. The lookup Error is primary now, the close Error
+    // suppressed on it.
+    @Test
+    public void testCloseQuietly_ResultSetFlags_LookupErrorStaysPrimaryWhenCloseAlsoThrowsError() throws SQLException {
+        final LinkageError lookupError = new LinkageError("getStatement");
+        final AssertionError closeError = new AssertionError("rs close");
+        final ResultSet rs = mock(ResultSet.class);
+        doThrow(lookupError).when(rs).getStatement();
+        doThrow(closeError).when(rs).close();
+
+        assertSame(lookupError, assertThrows(LinkageError.class, () -> JdbcUtil.closeQuietly(rs, true, true)));
+        assertArrayEquals(new Throwable[] { closeError }, lookupError.getSuppressed());
+        verify(rs).close();
+
+        // An Error from getConnection(): the statement located before it is closed too.
+        final LinkageError connLookupError = new LinkageError("getConnection");
+        final ResultSet rs2 = mock(ResultSet.class);
+        final Statement stmt2 = mock(Statement.class);
+        when(rs2.getStatement()).thenReturn(stmt2);
+        doThrow(connLookupError).when(stmt2).getConnection();
+
+        assertSame(connLookupError, assertThrows(LinkageError.class, () -> JdbcUtil.closeQuietly(rs2, true, true)));
+        verify(rs2).close();
+        verify(stmt2).close();
+    }
+
     @Test
     public void testCloseQuietly_InvalidFlags() {
         assertThrows(IllegalArgumentException.class, () -> JdbcUtil.closeQuietly(mockResultSet, false, true));
@@ -446,6 +547,62 @@ class JdbcUtilResourceCleanupTest extends JdbcUtilTestSupport {
         verify(mockResultSet).close();
         verify(mockStatement).close();
         verify(mockConnection).close();
+    }
+
+    // BUG FIX: an Error from an earlier close (e.g. a driver's LinkageError) escaped at once, so the statement and the
+    // connection were never closed. Every close is attempted now; the first Error is rethrown, later ones suppressed.
+    @Test
+    public void testCloseQuietlyAll_ErrorStillClosesRemainingResources() throws SQLException {
+        final LinkageError rsFailure = new LinkageError("rs");
+        final AssertionError connFailure = new AssertionError("conn");
+        doThrow(rsFailure).when(mockResultSet).close();
+        doThrow(new SQLException("stmt")).when(mockStatement).close();
+        doThrow(connFailure).when(mockConnection).close();
+
+        final LinkageError thrown = assertThrows(LinkageError.class, () -> JdbcUtil.closeQuietly(mockResultSet, mockStatement, mockConnection));
+
+        assertSame(rsFailure, thrown);
+        assertArrayEquals(new Throwable[] { connFailure }, thrown.getSuppressed());
+        verify(mockResultSet).close();
+        verify(mockStatement).close();
+        verify(mockConnection).close();
+
+        // closeQuietly(Statement, Connection) delegates: the connection is closed after a statement Error too.
+        final Statement stmt = mock(Statement.class);
+        final Connection conn = mock(Connection.class);
+        final LinkageError stmtFailure = new LinkageError("stmt");
+        doThrow(stmtFailure).when(stmt).close();
+
+        assertSame(stmtFailure, assertThrows(LinkageError.class, () -> JdbcUtil.closeQuietly(stmt, conn)));
+        verify(conn).close();
+    }
+
+    // BUG FIX: a sneaky-thrown Throwable that is neither an Exception nor an Error escaped the quiet closes. From getStatement()
+    // it skipped every close (closeQuietly(ResultSet, boolean, boolean) no longer closed in a finally block), and from an
+    // earlier close() the later ones. It is logged as the other close failures are.
+    @Test
+    public void testCloseQuietly_RawThrowableStillClosesEveryResource() throws SQLException {
+        final Throwable raw = new Throwable("raw throwable");
+
+        final ResultSet rs = mock(ResultSet.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw raw;
+        }).when(rs).getStatement();
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(rs, true, true));
+        verify(rs).close();
+
+        final ResultSet rs2 = mock(ResultSet.class);
+        final Statement stmt2 = mock(Statement.class);
+        final Connection conn2 = mock(Connection.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw raw;
+        }).when(rs2).close();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw raw;
+        }).when(stmt2).close();
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(rs2, stmt2, conn2));
+        verify(stmt2).close();
+        verify(conn2).close();
     }
 
     // closeQuietly(ResultSet, boolean, boolean) validates flags and discovers statement/connection handles.

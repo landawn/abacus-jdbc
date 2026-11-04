@@ -206,6 +206,93 @@ class JdbcUtilResultAdvanceTest {
         org.junit.jupiter.api.Assertions.assertArrayEquals(new Throwable[] { signal }, thrown.getSuppressed());
     }
 
+    // An extractor can throw a checked exception it does not declare (Kotlin, a sneaky throw). It was taken for a success,
+    // so the failure of the streaming read on close replaced it.
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void connectorJStreamingExtractionKeepsUndeclaredCheckedExtractorFailurePrimary(final boolean biExtractor) throws Exception {
+        final SQLException signal = new SQLException("procedure failed", "45000");
+        final Exception extractorFailure = new Exception("undeclared checked extractor failure");
+        final ResultSet rs = ResultSetProxy.wrap(delegateFailingAfterOneRow(signal), true);
+
+        final Exception thrown = assertThrows(Exception.class, () -> {
+            if (biExtractor) {
+                JdbcUtil.extractAndCloseResultSet(rs, (Jdbc.BiResultExtractor<Object>) (r, labels) -> {
+                    r.next();
+                    throw JdbcUtilResultAdvanceTest.<RuntimeException> sneakyThrow(extractorFailure);
+                });
+            } else {
+                JdbcUtil.extractAndCloseResultSet(rs, (Jdbc.ResultExtractor<Object>) r -> {
+                    r.next();
+                    throw JdbcUtilResultAdvanceTest.<RuntimeException> sneakyThrow(extractorFailure);
+                });
+            }
+        });
+
+        assertSame(extractorFailure, thrown);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new Throwable[] { signal }, thrown.getSuppressed());
+    }
+
+    // BUG FIX: closing the streaming wrapper caught only SQL/runtime exceptions and errors, so an undeclared checked failure
+    // of the close-time read (a Kotlin or sneaky-throwing driver or wrapper) escaped it and replaced the extractor's failure.
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void connectorJStreamingExtractionSuppressesUndeclaredCheckedCloseFailure(final boolean biExtractor) throws Exception {
+        final java.io.IOException readOnClose = new java.io.IOException("undeclared checked read failure on close");
+        final Exception extractorFailure = new Exception("undeclared checked extractor failure");
+        final ResultSet delegate = resultWithoutColumns();
+        when(delegate.next()).thenReturn(true).thenAnswer(invocation -> {
+            throw readOnClose;
+        });
+        final ResultSet rs = ResultSetProxy.wrap(delegate, true);
+
+        final Exception thrown = assertThrows(Exception.class, () -> {
+            if (biExtractor) {
+                JdbcUtil.extractAndCloseResultSet(rs, (Jdbc.BiResultExtractor<Object>) (r, labels) -> {
+                    r.next();
+                    throw JdbcUtilResultAdvanceTest.<RuntimeException> sneakyThrow(extractorFailure);
+                });
+            } else {
+                JdbcUtil.extractAndCloseResultSet(rs, (Jdbc.ResultExtractor<Object>) r -> {
+                    r.next();
+                    throw JdbcUtilResultAdvanceTest.<RuntimeException> sneakyThrow(extractorFailure);
+                });
+            }
+        });
+
+        assertSame(extractorFailure, thrown);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new Throwable[] { readOnClose }, thrown.getSuppressed());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> E sneakyThrow(final Throwable e) throws E {
+        throw (E) e;
+    }
+
+    // BUG FIX: closing an ordinary result set quietly still rethrows an Error (a driver's LinkageError), which replaced the
+    // extractor's failure; that failure stays primary now and carries the Error as suppressed, as on the streaming path.
+    @Test
+    void ordinaryExtractionKeepsExtractorFailurePrimaryOverCloseError() throws Exception {
+        final LinkageError closeError = new LinkageError("close failed");
+        final SQLException extractorFailure = new SQLException("extraction failed");
+        final ResultSet rs = mock(ResultSet.class);
+        org.mockito.Mockito.doThrow(closeError).when(rs).close();
+
+        final SQLException thrown = assertThrows(SQLException.class, () -> JdbcUtil.extractAndCloseResultSet(rs, (Jdbc.ResultExtractor<Object>) r -> {
+            throw extractorFailure;
+        }));
+
+        assertSame(extractorFailure, thrown);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new Throwable[] { closeError }, thrown.getSuppressed());
+        verify(rs).close();
+
+        // Without an extraction failure, the Error propagates.
+        final LinkageError closeError2 = new LinkageError("close failed");
+        final ResultSet rs2 = mock(ResultSet.class);
+        org.mockito.Mockito.doThrow(closeError2).when(rs2).close();
+        assertSame(closeError2, assertThrows(LinkageError.class, () -> JdbcUtil.extractAndCloseResultSet(rs2, (Jdbc.ResultExtractor<Object>) r -> "x")));
+    }
+
     // Closing an ordinary result set after extraction stays quiet: its failure says nothing about the statement's outcome.
     @Test
     void ordinaryExtractionStillClosesQuietly() throws Exception {

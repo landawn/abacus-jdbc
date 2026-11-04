@@ -71,7 +71,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
-     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty or has a
+     *         {@code null} or blank element
      * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
      *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
@@ -115,10 +116,11 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
      *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
@@ -149,10 +151,11 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
      *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
@@ -167,13 +170,15 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param entities the collection of entities to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
-     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty,
+     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty or has a
+     *         {@code null} or blank element (also when {@code entities} is {@code null} or empty),
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
      *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
@@ -193,13 +198,15 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      *                     With more than one element, all of them run in one transaction, even if they fit in one batch.
-     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive,
+     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty or has a
+     *         {@code null} or blank element (also when {@code entities} is {@code null} or empty), or if {@code batchSize} is not positive,
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
      *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
@@ -222,10 +229,11 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if this is a non-update DAO (such as a {@link NonUpdateDao}) and {@code namedInsertSql}
      *         is not a {@code SELECT} or {@code INSERT} statement
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
      *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
@@ -254,10 +262,11 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if this is a non-update DAO (such as a {@link NonUpdateDao}) and {@code namedInsertSql}
      *         is not a {@code SELECT} or {@code INSERT} statement
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
      *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails

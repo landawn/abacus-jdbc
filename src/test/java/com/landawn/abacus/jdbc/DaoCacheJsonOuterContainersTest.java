@@ -223,6 +223,124 @@ class DaoCacheJsonOuterContainersTest {
         default List<Object> getUntypedList(final String key) {
             return (List<Object>) results.get(key);
         }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default Status getStatus(final String key) {
+            return (Status) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default Object getAny(final String key) {
+            return results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default List<Value> getValues(final String key) {
+            return (List<Value>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default Set<Long> getLongSet(final String key) {
+            return (Set<Long>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default Map<String, Long> getCounts(final String key) {
+            return (Map<String, Long>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default SortedMap<Long, Value> getSortedValues(final String key) {
+            return (SortedMap<Long, Value>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default List<java.sql.Timestamp> getTimestamps(final String key) {
+            return (List<java.sql.Timestamp>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default java.util.EnumSet<Status> getStatusSet(final String key) {
+            return (java.util.EnumSet<Status>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default SortedSet<Long> getSortedLongs(final String key) {
+            return (SortedSet<Long>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default Map<String, Long> getEmptyCounts(final String key) {
+            return (Map<String, Long>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default Op getOp(final String key) {
+            return (Op) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default java.util.Queue<String> getQueue(final String key) {
+            return (java.util.Queue<String>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default com.landawn.abacus.util.u.Optional<Object> getHeldOptional(final String key) {
+            return com.landawn.abacus.util.u.Optional.ofNullable(results.get(key));
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default com.landawn.abacus.util.u.Nullable<Object> getHeldNullable(final String key) {
+            return com.landawn.abacus.util.u.Nullable.of(results.get(key));
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default java.util.Optional<java.util.EnumSet<Status>> getHeldStatusSet(final String key) {
+            return java.util.Optional.ofNullable((java.util.EnumSet<Status>) results.get(key));
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default <T> java.util.Optional<T> getHeldJdkOptional(final String key) {
+            return java.util.Optional.ofNullable((T) results.get(key));
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default Map<Status, Long> getStatusCounts(final String key) {
+            return (Map<Status, Long>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default java.util.EnumMap<Status, List<Value>> getStatusValues(final String key) {
+            return (java.util.EnumMap<Status, List<Value>>) results.get(key);
+        }
+    }
+
+    public enum Status {
+        ACTIVE, INACTIVE
+    }
+
+    public enum Op {
+        PLUS {
+            @Override
+            long apply(final long a, final long b) {
+                return a + b;
+            }
+        };
+
+        abstract long apply(long a, long b);
+    }
+
+    public enum Kind {
+        PLAIN, SPECIAL {
+            @Override
+            int weight() {
+                return 2;
+            }
+        };
+
+        int weight() {
+            return 1;
+        }
     }
 
     @TestFactory
@@ -348,6 +466,358 @@ class DaoCacheJsonOuterContainersTest {
         results.put("anonymousLists", new ArrayList<>(List.of(anonymousList(), anonymousList())));
         assertEquals(List.of(List.of(1L), List.of(1L)), dao.getUntypedList("anonymousLists"));
         assertEquals(List.of(List.of(1), List.of(1)), dao.getUntypedList("anonymousLists"));
+    }
+
+    @Test
+    void rootEnumIsServedFromTheCache() {
+        // The parser writes a root enum quoted but read it back with its quotes ("No enum constant ...\"ACTIVE\""), which
+        // failed every call of the method after it had returned its result.
+        results.put("status", Status.ACTIVE);
+        assertSame(Status.ACTIVE, dao.getStatus("status"));
+        results.put("status", null);
+        assertSame(Status.ACTIVE, dao.getStatus("status"), "served from the cache");
+
+        results.put("anyStatus", Status.INACTIVE);
+        assertSame(Status.INACTIVE, dao.getAny("anyStatus"));
+        results.put("anyStatus", null);
+        assertSame(Status.INACTIVE, dao.getAny("anyStatus"), "served from the cache");
+    }
+
+    @Test
+    void rootsTheParserCannotConstructAreRebuiltAsDefaultContainersOfTheirKind() {
+        // List.of, Stream.toList(), Arrays.asList, Collections.unmodifiable* and EnumSet classes have no constructor the parser can
+        // call: naming them as the class of the copy failed every call of the method after it had returned its result.
+        final List<Supplier<List<Value>>> lists = List.of(() -> List.of(new Value(1, "a"), new Value(2, "b")),
+                () -> java.util.stream.Stream.of(new Value(1, "a"), new Value(2, "b")).toList(),
+                () -> java.util.Arrays.asList(new Value(1, "a"), new Value(2, "b")),
+                () -> java.util.Collections.unmodifiableList(new ArrayList<>(List.of(new Value(1, "a"), new Value(2, "b")))));
+
+        for (int i = 0; i < lists.size(); i++) {
+            final String key = "list" + i;
+            final List<Value> source = lists.get(i).get();
+            results.put(key, source);
+            assertSame(source, dao.getValues(key));
+            results.put(key, null);
+            final List<Value> copy = dao.getValues(key);
+            assertSame(ArrayList.class, copy.getClass(), key);
+            assertEquals(List.of(1L, 2L), copy.stream().map(Value::getId).toList(), key);
+            assertEquals("b", copy.get(1).getName(), key);
+        }
+
+        results.put("set", java.util.Collections.unmodifiableSet(new LinkedHashSet<>(List.of(3L, 1L, 2L))));
+        dao.getLongSet("set");
+        results.put("set", null);
+        final Set<Long> setCopy = dao.getLongSet("set");
+        assertSame(LinkedHashSet.class, setCopy.getClass());
+        assertEquals(List.of(3L, 1L, 2L), new ArrayList<>(setCopy), "keeps the source's iteration order");
+
+        results.put("enumSet", java.util.EnumSet.of(Status.INACTIVE));
+        dao.getAny("enumSet");
+        results.put("enumSet", null);
+        assertEquals(new LinkedHashSet<>(List.of(Status.INACTIVE)), dao.getAny("enumSet"));
+
+        final Map<String, Long> counts = new LinkedHashMap<>();
+        counts.put("z", 1L);
+        counts.put("a", 2L);
+        results.put("map", java.util.Collections.unmodifiableMap(counts));
+        dao.getCounts("map");
+        results.put("map", null);
+        final Map<String, Long> mapCopy = dao.getCounts("map");
+        assertSame(LinkedHashMap.class, mapCopy.getClass());
+        assertEquals(List.of("z", "a"), new ArrayList<>(mapCopy.keySet()));
+        assertEquals(2L, mapCopy.get("a"));
+
+        results.put("mapOf", Map.of("k", 5L));
+        dao.getCounts("mapOf");
+        results.put("mapOf", null);
+        assertEquals(Map.of("k", 5L), dao.getCounts("mapOf"));
+
+        // Copied as a tree (a comparator, a Timestamp): the root container class is chosen the same way.
+        final java.util.TreeMap<Long, Value> reversed = new java.util.TreeMap<>(Comparator.reverseOrder());
+        reversed.put(1L, new Value(1, "a"));
+        reversed.put(2L, new Value(2, "b"));
+        results.put("sorted", java.util.Collections.unmodifiableSortedMap(reversed));
+        dao.getSortedValues("sorted");
+        results.put("sorted", null);
+        final SortedMap<Long, Value> sortedCopy = dao.getSortedValues("sorted");
+        assertSame(java.util.TreeMap.class, sortedCopy.getClass());
+        assertSame(reversed.comparator(), sortedCopy.comparator());
+        assertEquals(List.of(2L, 1L), new ArrayList<>(sortedCopy.keySet()));
+        assertEquals("b", sortedCopy.get(2L).getName());
+
+        final java.sql.Timestamp timestamp = new java.sql.Timestamp(123456789000L);
+        timestamp.setNanos(123456789);
+        results.put("timestamps", List.of(timestamp));
+        dao.getTimestamps("timestamps");
+        results.put("timestamps", null);
+        final List<java.sql.Timestamp> timestampsCopy = dao.getTimestamps("timestamps");
+        assertSame(ArrayList.class, timestampsCopy.getClass());
+        assertEquals(List.of(timestamp), timestampsCopy);
+        assertNotSame(timestamp, timestampsCopy.get(0));
+
+        // An EnumSet is copied as an EnumSet (its elements are constants): rebuilt through JSON, a declared EnumSet failed
+        // every call of the method, as no default container fits it and its runtime class has no constructor to call.
+        final java.util.EnumSet<Status> statusSet = java.util.EnumSet.of(Status.ACTIVE);
+        results.put("statusSet", statusSet);
+        assertSame(statusSet, dao.getStatusSet("statusSet"));
+        results.put("statusSet", null);
+        final java.util.EnumSet<Status> statusSetCopy = dao.getStatusSet("statusSet");
+        assertNotSame(statusSet, statusSetCopy);
+        assertEquals(java.util.EnumSet.of(Status.ACTIVE), statusSetCopy);
+        statusSetCopy.add(Status.INACTIVE);
+        statusSet.clear();
+        assertEquals(java.util.EnumSet.of(Status.ACTIVE), dao.getStatusSet("statusSet"), "the cached copy is isolated");
+
+        final java.util.EnumSet<Status> heldStatusSet = java.util.EnumSet.of(Status.INACTIVE);
+        results.put("heldStatusSet", heldStatusSet);
+        dao.getHeldStatusSet("heldStatusSet");
+        results.put("heldStatusSet", null);
+        final java.util.EnumSet<Status> heldStatusSetCopy = dao.getHeldStatusSet("heldStatusSet").get();
+        assertNotSame(heldStatusSet, heldStatusSetCopy);
+        assertEquals(java.util.EnumSet.of(Status.INACTIVE), heldStatusSetCopy);
+        heldStatusSetCopy.clear();
+        assertEquals(java.util.EnumSet.of(Status.INACTIVE), dao.getHeldStatusSet("heldStatusSet").get(), "the cached copy is isolated");
+
+        // A return type that does not accept the default container of the result's kind still fails: the parser names the class.
+        results.put("lifoQueue", java.util.Collections.asLifoQueue(new java.util.ArrayDeque<>(List.of("a"))));
+        assertThrows(IllegalArgumentException.class, () -> dao.getQueue("lifoQueue"));
+    }
+
+    @Test
+    void nonPublicSortedSetRootsAreRebuiltAsTreeSetsKeepingTheirOrdering() {
+        final java.util.TreeSet<Long> natural = new java.util.TreeSet<>(List.of(3L, 1L, 2L));
+        final java.util.TreeSet<Long> reversed = new java.util.TreeSet<>(Comparator.reverseOrder());
+        reversed.addAll(List.of(3L, 1L, 2L));
+        final java.util.TreeMap<Long, String> map = new java.util.TreeMap<>();
+        map.put(2L, "b");
+        map.put(1L, "a");
+        final Map<String, SortedSet<Long>> views = new LinkedHashMap<>();
+        views.put("unmodifiableNatural", java.util.Collections.unmodifiableSortedSet(natural));
+        views.put("unmodifiableReversed", java.util.Collections.unmodifiableSortedSet(reversed));
+        views.put("keySet", (SortedSet<Long>) map.keySet());
+        views.put("descendingKeySet", map.descendingKeySet());
+        views.put("navigableKeySetDescending", map.navigableKeySet().descendingSet());
+
+        for (final Map.Entry<String, SortedSet<Long>> e : views.entrySet()) {
+            final String key = "sortedRoot." + e.getKey();
+            final SortedSet<Long> source = e.getValue();
+            final List<Long> expectedOrder = new ArrayList<>(source);
+            results.put(key, source);
+            assertSame(source, dao.getSortedLongs(key), key);
+            results.put(key, null);
+            final SortedSet<Long> copy = dao.getSortedLongs(key);
+            assertSame(java.util.TreeSet.class, copy.getClass(), key);
+            assertEquals(expectedOrder, new ArrayList<>(copy), key);
+            if (source.comparator() == null) {
+                assertEquals(null, copy.comparator(), key);
+            }
+            copy.add(99L);
+            assertEquals(expectedOrder, new ArrayList<>(dao.getSortedLongs(key)), key + ": the cached copy is isolated");
+        }
+    }
+
+    @Test
+    void factoryAndEmptyRootsAreRebuiltAsDefaultContainers() {
+        final Set<Long> setOf = Set.of(5L, 6L, 7L);
+        results.put("setOf", setOf);
+        dao.getLongSet("setOf");
+        results.put("setOf", null);
+        final Set<Long> setOfCopy = dao.getLongSet("setOf");
+        assertSame(LinkedHashSet.class, setOfCopy.getClass());
+        assertEquals(new ArrayList<>(setOf), new ArrayList<>(setOfCopy), "keeps the source's iteration order");
+
+        results.put("emptyList", java.util.Collections.emptyList());
+        dao.getValues("emptyList");
+        results.put("emptyList", null);
+        final List<Value> emptyListCopy = dao.getValues("emptyList");
+        assertEquals(List.of(), emptyListCopy);
+        emptyListCopy.add(new Value(1, "added"));
+        assertEquals(List.of(), dao.getValues("emptyList"));
+
+        results.put("emptyMap", java.util.Collections.emptyMap());
+        dao.getEmptyCounts("emptyMap");
+        results.put("emptyMap", null);
+        final Map<String, Long> emptyMapCopy = dao.getEmptyCounts("emptyMap");
+        assertEquals(Map.of(), emptyMapCopy);
+        emptyMapCopy.put("added", 1L);
+        assertEquals(Map.of(), dao.getEmptyCounts("emptyMap"));
+    }
+
+    @Test
+    void rootEnumConstantWithABodyIsServedFromTheCache() {
+        // The constant's class is an anonymous subclass of the enum.
+        results.put("op", Op.PLUS);
+        assertSame(Op.PLUS, dao.getOp("op"));
+        results.put("op", null);
+        assertSame(Op.PLUS, dao.getOp("op"), "served from the cache");
+        assertEquals(3L, dao.getOp("op").apply(1, 2));
+
+        results.put("anyOp", Op.PLUS);
+        assertSame(Op.PLUS, dao.getAny("anyOp"));
+        results.put("anyOp", null);
+        assertSame(Op.PLUS, dao.getAny("anyOp"), "served from the cache");
+    }
+
+    // The class of a constant with a body is an anonymous subclass of its enum: an untyped container holding it and another
+    // constant of the enum had no common element class, so the cached copy read the constants back as Strings. (For an enum
+    // the library's class loader cannot see, see DaoCacheJsonChildLoaderEnumTest.)
+    @Test
+    void enumConstantsWithABodyInUnresolvedPositionsAreServedFromTheCache() {
+        final Map<String, java.util.function.Function<String, Object>> getters = new LinkedHashMap<>();
+        getters.put("u.Optional", k -> dao.getHeldOptional(k).get());
+        getters.put("u.Nullable", k -> dao.getHeldNullable(k).get());
+        getters.put("java.util.Optional", k -> dao.getHeldJdkOptional(k).get());
+
+        for (final Map.Entry<String, java.util.function.Function<String, Object>> getter : getters.entrySet()) {
+            final String key = "heldOp." + getter.getKey();
+            results.put(key, Op.PLUS);
+            assertSame(Op.PLUS, getter.getValue().apply(key), key);
+            results.put(key, null);
+            assertSame(Op.PLUS, getter.getValue().apply(key), key + ": served from the cache");
+        }
+
+        results.put("opList", new ArrayList<>(List.of(Op.PLUS, Op.PLUS)));
+        dao.getUntypedList("opList");
+        results.put("opList", null);
+        assertEquals(List.of(Op.PLUS, Op.PLUS), dao.getUntypedList("opList"));
+
+        final LinkedHashMap<Op, Op> ops = new LinkedHashMap<>();
+        ops.put(Op.PLUS, Op.PLUS);
+        results.put("opMap", ops);
+        dao.getAny("opMap");
+        results.put("opMap", null);
+        final Map<?, ?> opMapCopy = (Map<?, ?>) dao.getAny("opMap");
+        assertNotSame(ops, opMapCopy);
+        assertSame(Op.PLUS, opMapCopy.keySet().iterator().next());
+        assertSame(Op.PLUS, opMapCopy.get(Op.PLUS));
+
+        // Mixed with a constant without a body of the same enum: the elements still share the enum's type.
+        results.put("mixedEnumList", new ArrayList<>(List.of(Kind.SPECIAL, Kind.PLAIN)));
+        dao.getUntypedList("mixedEnumList");
+        results.put("mixedEnumList", null);
+        assertEquals(List.of(Kind.SPECIAL, Kind.PLAIN), dao.getUntypedList("mixedEnumList"));
+    }
+
+    // EnumMap is public but has no no-argument constructor: naming it as the class of the copy failed every call of a method
+    // returning one. It is copied as an EnumMap with deep-copied values.
+    @Test
+    void enumMapsAreCopiedAsEnumMapsWithDeepCopiedValues() {
+        final java.util.EnumMap<Status, Long> counts = new java.util.EnumMap<>(Status.class);
+        counts.put(Status.INACTIVE, 2L);
+        counts.put(Status.ACTIVE, 1L);
+        results.put("enumMap", counts);
+        assertSame(counts, dao.getStatusCounts("enumMap"));
+        results.put("enumMap", null);
+        final Map<Status, Long> copy = dao.getStatusCounts("enumMap");
+        assertSame(java.util.EnumMap.class, copy.getClass());
+        assertNotSame(counts, copy);
+        assertEquals(counts, copy);
+        assertSame(Long.class, copy.get(Status.ACTIVE).getClass());
+        copy.clear();
+        assertEquals(counts, dao.getStatusCounts("enumMap"), "the cached copy is isolated");
+
+        final java.util.EnumMap<Status, List<Value>> values = new java.util.EnumMap<>(Status.class);
+        values.put(Status.ACTIVE, new ArrayList<>(List.of(new Value(1, "a"))));
+        results.put("enumMapValues", values);
+        dao.getStatusValues("enumMapValues");
+        results.put("enumMapValues", null);
+        final java.util.EnumMap<Status, List<Value>> valuesCopy = dao.getStatusValues("enumMapValues");
+        assertNotSame(values.get(Status.ACTIVE), valuesCopy.get(Status.ACTIVE));
+        assertNotSame(values.get(Status.ACTIVE).get(0), valuesCopy.get(Status.ACTIVE).get(0));
+        assertEquals(1L, valuesCopy.get(Status.ACTIVE).get(0).getId());
+        assertEquals("a", valuesCopy.get(Status.ACTIVE).get(0).getName());
+        valuesCopy.get(Status.ACTIVE).get(0).setName("changed");
+        valuesCopy.get(Status.ACTIVE).add(new Value(2, "added"));
+        final List<Value> cachedValues = dao.getStatusValues("enumMapValues").get(Status.ACTIVE);
+        assertEquals(1, cachedValues.size(), "the cached copy is isolated");
+        assertEquals("a", cachedValues.get(0).getName(), "the cached copy is isolated");
+
+        // An empty EnumMap keeps its key type.
+        results.put("emptyEnumMap", new java.util.EnumMap<Status, Long>(Status.class));
+        dao.getStatusCounts("emptyEnumMap");
+        results.put("emptyEnumMap", null);
+        final Map<Status, Long> emptyCopy = dao.getStatusCounts("emptyEnumMap");
+        assertSame(java.util.EnumMap.class, emptyCopy.getClass());
+        emptyCopy.put(Status.ACTIVE, 1L);
+        assertEquals(Map.of(), dao.getStatusCounts("emptyEnumMap"), "the cached copy is isolated");
+
+        // Untyped (Object) and held by a holder of an unresolved type: the values are typed by their runtime class.
+        final java.util.EnumMap<Status, Long> held = new java.util.EnumMap<>(counts);
+        results.put("anyEnumMap", held);
+        dao.getAny("anyEnumMap");
+        results.put("anyEnumMap", null);
+        final Object anyCopy = dao.getAny("anyEnumMap");
+        assertSame(java.util.EnumMap.class, anyCopy.getClass());
+        assertEquals(held, anyCopy);
+
+        results.put("heldEnumMap", held);
+        dao.getHeldOptional("heldEnumMap");
+        results.put("heldEnumMap", null);
+        final Object heldCopy = dao.getHeldOptional("heldEnumMap").get();
+        assertSame(java.util.EnumMap.class, heldCopy.getClass());
+        assertNotSame(held, heldCopy);
+        assertEquals(held, heldCopy);
+    }
+
+    // A public container class without a no-argument constructor (ConcurrentHashMap.KeySetView) was named as the class of the
+    // copy, which failed every call: it is rebuilt as the default container of its kind, as a non-public one is.
+    @Test
+    void publicRootsWithoutANoArgumentConstructorAreRebuiltAsDefaultContainers() {
+        final Set<Long> keySet = java.util.concurrent.ConcurrentHashMap.newKeySet();
+        keySet.add(7L);
+        results.put("keySetView", keySet);
+        assertSame(keySet, dao.getLongSet("keySetView"));
+        results.put("keySetView", null);
+        final Set<Long> copy = dao.getLongSet("keySetView");
+        assertSame(LinkedHashSet.class, copy.getClass());
+        assertEquals(Set.of(7L), copy);
+    }
+
+    @Test
+    void heldNonPublicContainersOfAnUnresolvedTypeAreRebuiltAsDefaultContainers() {
+        final java.util.TreeSet<Long> reversed = new java.util.TreeSet<>(Comparator.reverseOrder());
+        reversed.addAll(List.of(1L, 2L));
+        final Map<String, Object> held = new LinkedHashMap<>();
+        held.put("listOf", List.of(1, 2));
+        held.put("arraysAsList", java.util.Arrays.asList(1, 2));
+        held.put("unmodifiableList", java.util.Collections.unmodifiableList(new ArrayList<>(List.of(1, 2))));
+        held.put("setOf", Set.of(1));
+        held.put("unmodifiableSortedSet", java.util.Collections.unmodifiableSortedSet(reversed));
+        held.put("mapOf", Map.of("k", 1));
+        held.put("unmodifiableMap", java.util.Collections.unmodifiableMap(new LinkedHashMap<>(Map.of("k", 1))));
+        final Map<String, java.util.function.Function<String, Object>> getters = new LinkedHashMap<>();
+        getters.put("u.Optional", k -> dao.getHeldOptional(k).get());
+        getters.put("u.Nullable", k -> dao.getHeldNullable(k).get());
+        getters.put("java.util.Optional", k -> dao.getHeldJdkOptional(k).get());
+
+        for (final Map.Entry<String, java.util.function.Function<String, Object>> getter : getters.entrySet()) {
+            for (final Map.Entry<String, Object> e : held.entrySet()) {
+                final String key = "held." + getter.getKey() + "." + e.getKey();
+                final Object source = e.getValue();
+                results.put(key, source);
+                // The first call caches the result: its copy is returned only on a later call.
+                getter.getValue().apply(key);
+                final Object copy = getter.getValue().apply(key);
+                assertNotSame(source, copy, key);
+                assertEquals(source, copy, key);
+
+                if (source instanceof SortedSet<?> sortedSet) {
+                    assertSame(java.util.TreeSet.class, copy.getClass(), key);
+                    assertEquals(new ArrayList<>(sortedSet), new ArrayList<>((Set<?>) copy), key);
+                } else {
+                    assertSame(source instanceof List ? ArrayList.class : source instanceof Set ? LinkedHashSet.class : LinkedHashMap.class, copy.getClass(),
+                            key);
+                }
+
+                if (copy instanceof Map<?, ?> map) {
+                    map.clear();
+                } else {
+                    ((Collection<?>) copy).clear();
+                }
+
+                assertEquals(source, getter.getValue().apply(key), key + ": the cached copy is isolated");
+            }
+        }
     }
 
     @SuppressWarnings("serial")

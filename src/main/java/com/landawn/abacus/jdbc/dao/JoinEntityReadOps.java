@@ -50,12 +50,16 @@ import com.landawn.abacus.util.u.Optional;
  * <p>This interface contains no operation that modifies the database, so it can be mixed into
  * read-only DAOs (see {@link ReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
  *
- * <p>A {@code null} or empty source-property selection loads all default source properties. Properties used as
- * source join keys are selected automatically and may therefore be populated even when omitted from a
- * selective read. Streams are caller-owned and must be closed. Parallel loaders may partially populate entities before a
- * task fails. Inside a transaction on the DAO's data source, their tasks run on the calling thread, in the transaction (on
- * other threads they would run outside it, each on a connection of its own, and miss its uncommitted writes); outside one,
- * on the executor.</p>
+ * <p>A {@code null} or empty source-property selection loads all default source properties. Properties used as source
+ * join keys are selected automatically and may therefore be populated even when omitted from a selective read. Streams
+ * are caller-owned and must be closed. The overloads taking several property names check all of them, by the rules of
+ * the single-name overload, before loading the join of any. The names are checked also with no entities to load (a
+ * {@code null} or empty collection): the {@code loadJoinEntities} overloads reject a name that is not a {@code @JoinedBy}
+ * property, and the {@code loadJoinEntitiesIfAbsent} overloads, for which no property is then {@code null} on an entity, a
+ * {@code null} or empty name or one that names no property of the DAO's entity class. Parallel loaders may partially
+ * populate entities before a task fails. Inside a transaction on the DAO's data source, their tasks run on the calling
+ * thread, in the transaction (on other threads they would run outside it, each on a connection of its own, and miss its
+ * uncommitted writes); outside one, on the executor.</p>
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
@@ -970,9 +974,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails
+     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails outside Spring
+     *         or through an unchecked DAO that translates SQL causes; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1012,6 +1020,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws SQLException if acquiring a database connection, or selecting or reading the requested joined rows, fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1047,7 +1057,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities.
-     *                 If {@code null} or empty, this method returns immediately
+     *                 If {@code null} or empty, this method returns after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load.
      *                            If {@code null} or empty, this method returns immediately
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
@@ -1060,12 +1070,17 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
             throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException {
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
-        // Every name is checked first: an invalid one failed once the joins of the names before it had been loaded.
+        // Every name is checked first: an invalid one failed once the joins of the names before it had been loaded. Also with
+        // no entities, as the single-name overload does: an invalid name passed unchecked when there was nothing to load.
         JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
+
+        if (N.isEmpty(entities)) {
+            return;
+        }
 
         for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName);
@@ -1085,16 +1100,20 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities.
-     *                 If {@code null} or empty, this method returns immediately
+     *                 If {@code null} or empty, this method returns after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails
+     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails outside Spring
+     *         or through an unchecked DAO that translates SQL causes; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1127,7 +1146,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities.
-     *                 If {@code null} or empty, this method returns immediately
+     *                 If {@code null} or empty, this method returns after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
      *        are loaded on the calling thread, in the transaction
@@ -1137,6 +1156,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws SQLException if acquiring a database connection, or selecting or reading the requested joined rows, fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1145,13 +1166,17 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
             throws IllegalArgumentException, RejectedExecutionException, SQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(executor, cs.executor);
 
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
         // Every name is checked before any task runs: an invalid one failed in its own task, after the tasks of the names before
-        // it had run (and filled in their joins).
+        // it had run (and filled in their joins). Also with no entities, as the single-name overload does.
         JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
+
+        if (N.isEmpty(entities)) {
+            return;
+        }
 
         final Executor taskExecutor = JoinEntityReadOps.joinTaskExecutor(this, executor);
         final List<ContinuableFuture<Void>> futures = submitJoinTasks(joinEntityPropNames,
@@ -1203,9 +1228,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails
+     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails outside Spring
+     *         or through an unchecked DAO that translates SQL causes; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1243,6 +1272,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws SQLException if acquiring a database connection, or selecting or reading the requested joined rows, fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1305,9 +1336,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails
+     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails outside Spring
+     *         or through an unchecked DAO that translates SQL causes; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1347,6 +1382,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws SQLException if acquiring a database connection, or selecting or reading the requested joined rows, fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1590,8 +1627,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                 If {@code null} or empty, this method returns after validating {@code joinEntityPropName}
      * @param joinEntityPropName the property name of the join entities to load
      * @throws IllegalArgumentException if {@code entities} contains {@code null},
-     *                                  if {@code joinEntityPropName} is {@code null} or empty, or if {@code entities} is not empty
-     *                                  and its entity class has no property named {@code joinEntityPropName},
+     *                                  if {@code joinEntityPropName} is {@code null} or empty, or if the entity class (the DAO's entity
+     *                                  class if {@code entities} is {@code null} or empty) has no property named {@code joinEntityPropName},
      *                                  or that property is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
@@ -1621,8 +1658,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinSelectPropNames the properties (columns) to be selected from the join entities.
      *                       If {@code null}, all properties of the join entities are selected
      * @throws IllegalArgumentException if {@code entities} contains {@code null},
-     *                                  if {@code joinEntityPropName} is {@code null} or empty, or if {@code entities} is not empty
-     *                                  and its entity class has no property named {@code joinEntityPropName},
+     *                                  if {@code joinEntityPropName} is {@code null} or empty, or if the entity class (the DAO's entity
+     *                                  class if {@code entities} is {@code null} or empty) has no property named {@code joinEntityPropName},
      *                                  or that property is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
@@ -1644,6 +1681,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
         N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
 
         if (N.isEmpty(entities)) {
+            // The name must still name a property of the entity class: with no entities, a misspelled name passed unchecked.
+            JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, entities, List.of(joinEntityPropName));
             return;
         }
 
@@ -1718,9 +1757,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  that is currently {@code null} and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails
+     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails outside Spring
+     *         or through an unchecked DAO that translates SQL causes; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1765,6 +1808,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws SQLException if acquiring a database connection, or selecting or reading the requested joined rows, fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1804,10 +1849,11 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities.
-     *                 If {@code null} or empty, this method returns immediately
+     *                 If {@code null} or empty, this method returns after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load.
      *                            If {@code null} or empty, this method returns immediately
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist,
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} is {@code null} or empty or does not exist (in the DAO's
+     *                                  entity class if {@code entities} is {@code null} or empty),
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
@@ -1818,12 +1864,12 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames)
             throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException {
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
-        // Every name is checked first (see checkJoinEntityPropNamesIfAbsent): an invalid one failed once the joins of the names
-        // before it had been loaded.
+        // Every name is checked first (see checkJoinEntityPropNamesIfAbsent), also with no entities: an invalid one failed once
+        // the joins of the names before it had been loaded, or passed unchecked when there was nothing to load.
         for (final String joinEntityPropName : JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, entities, joinEntityPropNames)) {
             loadJoinEntitiesIfAbsent(entities, joinEntityPropName);
         }
@@ -1841,17 +1887,22 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities.
-     *                 If {@code null} or empty, this method returns immediately
+     *                 If {@code null} or empty, this method returns after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist,
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} is {@code null} or empty or does not exist (in the DAO's
+     *                                  entity class if {@code entities} is {@code null} or empty),
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails
+     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails outside Spring
+     *         or through an unchecked DAO that translates SQL causes; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1884,17 +1935,20 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities.
-     *                 If {@code null} or empty, this method returns immediately
+     *                 If {@code null} or empty, this method returns after checking {@code joinEntityPropNames}
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
      *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
-     *                                  {@code joinEntityPropNames} does not exist,
+     *                                  {@code joinEntityPropNames} is {@code null} or empty or does not exist (in the DAO's entity class
+     *                                  if {@code entities} is {@code null} or empty),
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws SQLException if acquiring a database connection, or selecting or reading the requested joined rows, fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -1903,12 +1957,16 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
             throws IllegalArgumentException, RejectedExecutionException, SQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(executor, cs.executor);
 
-        if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
+        if (N.isEmpty(joinEntityPropNames)) {
             return;
         }
 
-        // Checked before any task runs, as the sequential overload does (see checkJoinEntityPropNamesIfAbsent).
+        // Checked before any task runs, also with no entities, as the sequential overload does (see checkJoinEntityPropNamesIfAbsent).
         final List<String> absentJoinEntityPropNames = JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, entities, joinEntityPropNames);
+
+        if (absentJoinEntityPropNames.isEmpty()) {
+            return;
+        }
 
         final Executor taskExecutor = JoinEntityReadOps.joinTaskExecutor(this, executor);
         final List<ContinuableFuture<Void>> futures = submitJoinTasks(absentJoinEntityPropNames,
@@ -1960,9 +2018,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails
+     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails outside Spring
+     *         or through an unchecked DAO that translates SQL causes; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -2000,6 +2062,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws SQLException if acquiring a database connection, or selecting or reading the requested joined rows, fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -2060,9 +2124,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails
+     * @throws UncheckedSQLException if {@code inParallel} is {@code false} and acquiring a required database connection fails outside Spring
+     *         or through an unchecked DAO that translates SQL causes; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -2102,6 +2170,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws SQLException if acquiring a database connection, or selecting or reading the requested joined rows, fails in a join task
+     *         (a task's Spring {@code CannotGetJdbcConnectionException} is reported as its {@code SQLException} cause; one with
+     *         another cause propagates unconverted)
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
      */
@@ -2193,9 +2263,11 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * {@code entities} may be {@code null}, every name must be non-empty and name a property of the entity class (the class of
      * the first element), and one that is {@code null} on at least one entity must be a join entity property. WHY name by
      * name: checking that every name exists first reported another name, with another message, than the sequential overload.
+     * With no entities ({@code null} or empty), no property is {@code null} on an entity: every name must be non-empty and name
+     * a property of the DAO's entity class, and none is to load. WHY: with no entities, the names went unchecked.
      *
      * @param dao the DAO the joins are loaded through
-     * @param entities the entities, not empty
+     * @param entities the entities; may be {@code null} or empty
      * @param joinEntityPropNames the property names
      * @return the names whose property is {@code null} on at least one entity, in order: the ones to load
      * @throws IllegalArgumentException if an element of {@code entities} is {@code null}, or a name breaks these rules
@@ -2203,6 +2275,22 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
     @SuppressWarnings("deprecation")
     static List<String> checkJoinEntityPropNamesIfAbsent(final JoinEntityBase<?, ?> dao, final Collection<?> entities,
             final Collection<String> joinEntityPropNames) throws IllegalArgumentException {
+        if (N.isEmpty(entities)) {
+            final Class<?> entityClass = dao.targetEntityClass();
+            final ParserUtil.BeanInfo entityBeanInfo = ParserUtil.getBeanInfo(entityClass);
+
+            for (final String joinEntityPropName : joinEntityPropNames) {
+                N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
+
+                if (entityBeanInfo.getPropInfo(joinEntityPropName) == null) {
+                    throw new IllegalArgumentException(
+                            "No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(entityClass));
+                }
+            }
+
+            return new ArrayList<>(0);
+        }
+
         // The messages of loadJoinEntitiesIfAbsent(Collection, String, Collection).
         N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
 

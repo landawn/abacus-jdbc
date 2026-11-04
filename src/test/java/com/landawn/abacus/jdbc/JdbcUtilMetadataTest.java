@@ -393,6 +393,77 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
         verify(mockConnection).setSavepoint();
     }
 
+    // Only an SQLException of the probe rolled back to the savepoint: a RuntimeException, Error or undeclared checked
+    // exception (Kotlin, sneaky throw) skipped the rollback and the release, leaving the caller's PostgreSQL transaction aborted.
+    @ParameterizedTest(name = "failure={0}")
+    @ValueSource(ints = { 0, 1, 2 })
+    void columnNameProbeOnPostgreSqlRollsBackToSavepointWhenItFailsWithANonSqlException(final int failureKind) throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        final Throwable failure = switch (failureKind) {
+            case 0 -> new IllegalStateException("driver bug");
+            case 1 -> new AssertionError("driver bug");
+            default -> new java.io.IOException("undeclared");
+        };
+        final SQLException rollbackFailure = new SQLException("rollback failed");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockConnection.prepareStatement("SELECT * FROM missing_tbl WHERE 1 > 2")).thenAnswer(invocation -> {
+            throw failure;
+        });
+        doThrow(rollbackFailure).when(mockConnection).rollback(savepoint);
+
+        assertSame(failure, assertThrows(failure.getClass(), () -> JdbcUtil.getColumnNames(mockConnection, "missing_tbl")));
+
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+        assertArrayEquals(new Throwable[] { rollbackFailure }, failure.getSuppressed());
+    }
+
+    // closeQuietlyAfter keeps the probe's SQLException primary when closing its statement throws an Error, so the probe
+    // failure still reaches the savepoint rollback.
+    @Test
+    void columnNameProbeOnPostgreSqlRollsBackToSavepointWhenStatementCloseThrowsAnErrorAfterTheProbeFailed() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        final SQLException probeFailure = new SQLException("relation \"missing_tbl\" does not exist", "42P01");
+        final LinkageError closeError = new LinkageError("close failed");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockPreparedStatement.executeQuery()).thenThrow(probeFailure);
+        doThrow(closeError).when(mockPreparedStatement).close();
+
+        assertSame(probeFailure, assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "missing_tbl")));
+
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+        assertArrayEquals(new Throwable[] { closeError }, probeFailure.getSuppressed());
+    }
+
+    // The same in tableExists: a non-SQL failure of the probe left the PostgreSQL transaction aborted.
+    @ParameterizedTest(name = "failure={0}")
+    @ValueSource(ints = { 0, 1, 2 })
+    void tableExistsProbeOnPostgreSqlRollsBackToSavepointWhenItFailsWithANonSqlException(final int failureKind) throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        final Throwable failure = switch (failureKind) {
+            case 0 -> new IllegalStateException("driver bug");
+            case 1 -> new AssertionError("driver bug");
+            default -> new java.io.IOException("undeclared");
+        };
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockPreparedStatement.execute()).thenAnswer(invocation -> {
+            throw failure;
+        });
+
+        assertSame(failure, assertThrows(failure.getClass(), () -> JdbcUtil.tableExists(mockConnection, "users")));
+
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+        verify(mockPreparedStatement).close();
+    }
+
     // getColumnLabels
     @Test
     public void testGetColumnLabels() throws SQLException {
@@ -493,6 +564,32 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
 
         assertFalse(JdbcUtil.tableExists(mockConnection, "users"));
 
+        verify(mockPreparedStatement).close();
+    }
+
+    // SQLite reports a missing table only in its message, with no SQLState and the generic SQLITE_ERROR code 1
+    // (sqlite-jdbc): unmatched, tableExists threw UncheckedSQLException for a table that does not exist.
+    @Test
+    void tableExists_sqliteNoSuchTableDiagnostic_returnsFalse() throws SQLException {
+        when(mockPreparedStatement.execute()).thenThrow(new SQLException("[SQLITE_ERROR] SQL error or missing database (no such table: t)", null, 1));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "t"));
+
+        verify(mockPreparedStatement).close();
+    }
+
+    // The concurrent-drop path of dropTableIfExists uses the same check: a table that exists when checked but is gone when
+    // the DROP runs is reported as not dropped (false), also with SQLite's message-only diagnostic.
+    @Test
+    void dropTableIfExists_sqliteNoSuchTableAfterConcurrentDrop_returnsFalse() throws SQLException {
+        final ResultSet tables = mock(ResultSet.class);
+        when(mockDatabaseMetaData.getTables(null, null, "t", null)).thenReturn(tables);
+        when(tables.next()).thenReturn(true);
+        when(mockPreparedStatement.execute()).thenThrow(new SQLException("[SQLITE_ERROR] SQL error or missing database (no such table: t)", null, 1));
+
+        assertFalse(JdbcUtil.dropTableIfExists(mockConnection, "t"));
+
+        verify(mockConnection).prepareStatement("DROP TABLE t");
         verify(mockPreparedStatement).close();
     }
 

@@ -1236,7 +1236,10 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
 
     /**
      * Returns a list of values from a single property/column.
-     * The property type is automatically detected and used for mapping.
+     * The property type is automatically detected and used for mapping: when {@code singleSelectPropName} names a property
+     * of the entity class (or its column), each value is read with that property's type, so a SQL {@code NULL} of a
+     * primitive property is read as its default (e.g. {@code 0}); any other name, such as an expression, is read with
+     * {@link com.landawn.abacus.jdbc.JdbcUtil#getColumnValue(java.sql.ResultSet, int)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1490,7 +1493,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
 
     /**
      * Returns a lazy Stream of values from a single property.
-     * The property type is automatically detected for mapping.
+     * The property type is automatically detected for mapping, as by {@link #list(String, Condition)}.
      * This stream has the same lazy, close, and SQLException wrapping contract as {@link #stream(Collection, Condition)}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1888,7 +1891,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
 
     /**
      * Iterates over results using a disposable object array consumer.
-     * The array is reused for each row to minimize object allocation.
+     * The array is reused for each row to minimize object allocation. A column whose label names a property of the
+     * entity class (or its column) is read with that property's type, any other column with
+     * {@link com.landawn.abacus.jdbc.JdbcUtil#getColumnValue(java.sql.ResultSet, int)}.
      *
      * <p><b>WARNING:</b> Do not store or cache the array parameter as it is reused for every row.</p>
      *
@@ -1929,7 +1934,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
 
     /**
      * Iterates over all results using a disposable object array consumer.
-     * Convenience method that selects all properties.
+     * Convenience method that selects all properties; the values are read as by
+     * {@link #foreach(Collection, Condition, Consumer)}.
      *
      * <p><b>WARNING:</b> Do not store or cache the array parameter as it is reused for every row.</p>
      *

@@ -154,7 +154,8 @@ final class RollbackActionLog {
 
     /**
      * Runs the actions newest first and empties the log, so that each action runs at most once. A failing action does not
-     * stop the remaining ones: its failure is passed to {@code failureHandler}.
+     * stop the remaining ones: its failure (any {@code Throwable}, also a checked exception thrown without being declared)
+     * is passed to {@code failureHandler}, after re-setting the thread's interrupt flag for an {@link InterruptedException}.
      *
      * @param failureHandler receives the failure of each action that throws
      */
@@ -283,10 +284,33 @@ final class RollbackActionLog {
         for (int i = toRun.length - 1; i >= 0; i--) {
             try {
                 toRun[i].action().run();
-            } catch (final RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                // WHY: an ID setter (e.g. a Kotlin one, through @AccessFieldByMethod) can throw a checked exception it does not
+                // declare; escaping here, it skipped the remaining actions and, from a rollback's finally block, the connection
+                // cleanup. Every handler logs it (or attaches it to a failure), so an interrupt is not lost.
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+
                 failureHandler.accept(e);
             }
         }
+    }
+
+    /**
+     * Throws {@code failure} as it is: a runtime exception or an error, or a checked exception that an accessor threw without
+     * declaring it (Kotlin, a sneaky throw), rethrown undeclared rather than cast (the cast failed with a
+     * {@link ClassCastException} that replaced it).
+     *
+     * @param failure the failure to throw, never {@code null}
+     */
+    private static void throwUnchecked(final Throwable failure) {
+        RollbackActionLog.<RuntimeException> throwUndeclared(failure);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwUndeclared(final Throwable failure) throws E {
+        throw (E) failure;
     }
 
     /** A registered action and its tag. */
@@ -419,7 +443,7 @@ final class RollbackActionLog {
          * those the application had set since.
          *
          * @throws RuntimeException the first failure to read an entity's ID values (later ones attached to it), once every
-         *         entity has been recorded
+         *         entity has been recorded; also a checked exception a getter throws without declaring it, rethrown as it is
          * @throws Error the first such {@code Error}, likewise
          */
         void recordWrittenValues() {
@@ -438,24 +462,19 @@ final class RollbackActionLog {
                         }
 
                         written[i] = values;
-                    } catch (final RuntimeException | Error e) {
+                    } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                        // WHY Throwable: an undeclared checked exception of a getter escaped at once, leaving nothing recorded,
+                        // so a rollback put back the captured IDs of every entity, also those the application had set since.
                         written[i] = UNKNOWN;
-
-                        if (firstFailure == null) {
-                            firstFailure = e;
-                        } else if (firstFailure != e) {
-                            firstFailure.addSuppressed(e);
-                        }
+                        firstFailure = accumulateFailure(firstFailure, e);
                     }
                 }
             }
 
             writtenValues = written;
 
-            if (firstFailure instanceof final Error error) {
-                throw error;
-            } else if (firstFailure != null) {
-                throw (RuntimeException) firstFailure;
+            if (firstFailure != null) {
+                throwUnchecked(firstFailure);
             }
         }
 
@@ -464,8 +483,9 @@ final class RollbackActionLog {
          * immutable entity whose ID was not changed does not fail. Once the written values are recorded, an entity whose ID
          * values no longer equal them is left alone, so restoring the captured ID does not overwrite a later application edit.
          * An entity whose written values could not be read is also left alone (see {@link #recordWrittenValues()}).
-         * A failing accessor does not prevent restoring other eligible properties or entities. The first failure is
-         * rethrown after the remaining restorations have been attempted, with later failures suppressed.
+         * A failing accessor does not prevent restoring other eligible properties or entities, also one throwing a checked
+         * exception it does not declare (Kotlin, a sneaky throw). The first failure is rethrown as it is after the remaining
+         * restorations have been attempted, with later failures suppressed.
          */
         @Override
         public void run() {
@@ -482,7 +502,7 @@ final class RollbackActionLog {
                     if (writtenValues != null && writtenValues[i] != null && (writtenValues[i] == UNKNOWN || !holdsValues(entity, writtenValues[i]))) {
                         continue;
                     }
-                } catch (final RuntimeException | Error e) {
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                     // Without a readable current ID, this entity cannot safely be distinguished from an application edit.
                     firstFailure = accumulateFailure(firstFailure, e);
                     continue;
@@ -495,17 +515,16 @@ final class RollbackActionLog {
                         if (!N.equals(idPropInfos[j].getPropValue(entity), values[j])) {
                             idPropInfos[j].setPropValue(entity, values[j]);
                         }
-                    } catch (final RuntimeException | Error e) {
-                        // One batch snapshot covers many IDs; a broken accessor must not leave all later IDs assigned.
+                    } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                        // One batch snapshot covers many IDs; a broken accessor must not leave all later IDs assigned. WHY
+                        // Throwable: an undeclared checked exception of an accessor skipped the remaining IDs and entities.
                         firstFailure = accumulateFailure(firstFailure, e);
                     }
                 }
             }
 
-            if (firstFailure instanceof final Error error) {
-                throw error;
-            } else if (firstFailure != null) {
-                throw (RuntimeException) firstFailure;
+            if (firstFailure != null) {
+                throwUnchecked(firstFailure);
             }
         }
 
@@ -515,6 +534,11 @@ final class RollbackActionLog {
             }
 
             if (first != next) {
+                // Attached, not thrown: the interrupt it reported would otherwise be lost.
+                if (next instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+
                 first.addSuppressed(next);
             }
 

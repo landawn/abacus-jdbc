@@ -183,6 +183,40 @@ public class NamedQueryRepeatedStreamTest extends TestBase {
         verify(statement).close();
     }
 
+    // A stream or reader written in Kotlin (or using a sneaky throw) can throw a checked exception it does not declare. The
+    // query must still be closed (a data-source query returns its connection on close), with the failure rethrown unchanged.
+    @Test
+    void bufferingFailureWithAnUndeclaredCheckedExceptionClosesTheQuery() throws Exception {
+        for (boolean characters : new boolean[] { false, true }) {
+            final PreparedStatement statement = mock(PreparedStatement.class);
+            final Exception failure = new Exception("undeclared checked failure");
+            final InputStream input = new InputStream() {
+                @Override
+                public int read() {
+                    throw NamedQueryRepeatedStreamTest.<RuntimeException> undeclared(failure);
+                }
+            };
+            final Reader reader = new Reader() {
+                @Override
+                public int read(final char[] chars, final int offset, final int length) {
+                    throw NamedQueryRepeatedStreamTest.<RuntimeException> undeclared(failure);
+                }
+
+                @Override
+                public void close() {
+                }
+            };
+            final NamedQuery query = new NamedQuery(statement, ParsedSql.parse(repeatedSelect(2)));
+
+            final Throwable thrown = assertThrows(Throwable.class, () -> bindBytesOrCharacters(query, characters, input, reader));
+
+            assertSame(failure, thrown);
+            verify(statement, never()).setBinaryStream(anyInt(), any(InputStream.class), anyLong());
+            verify(statement, never()).setCharacterStream(anyInt(), any(Reader.class), anyLong());
+            verify(statement).close();
+        }
+    }
+
     @Test
     void invalidNamesAndLengthsAreRejectedBeforeReadingStreams() throws Exception {
         for (boolean invalidName : new boolean[] { false, true }) {
@@ -310,6 +344,20 @@ public class NamedQueryRepeatedStreamTest extends TestBase {
             case 6 -> query.setNClob("payload", reader);
             default -> query.setNClob("payload", reader, length);
         }
+    }
+
+    private static void bindBytesOrCharacters(final NamedQuery query, final boolean characters, final InputStream input, final Reader reader)
+            throws SQLException {
+        if (characters) {
+            query.setCharacterStream("payload", reader, 3);
+        } else {
+            query.setBinaryStream("payload", input, 3);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> E undeclared(final Throwable failure) throws E {
+        throw (E) failure;
     }
 
     private static String readString(final Reader reader) throws IOException {

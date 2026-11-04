@@ -89,11 +89,13 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities to delete
-     * @return the total number of rows deleted; 0, without executing any statement, if {@code entities} is {@code null} or empty
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @return the total number of rows deleted (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO}
+     *         contribute 0); 0, without executing any statement, if {@code entities} is {@code null} or empty
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails. With more than one element, the transaction is begun first and a Spring acquisition
      *         failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
@@ -122,14 +124,16 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      *                     With more than one element, all of them run in one transaction, even if they fit in one batch.
-     * @return the total number of rows deleted; 0, without executing any statement, if {@code entities} is {@code null} or empty
+     * @return the total number of rows deleted (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO}
+     *         contribute 0); 0, without executing any statement, if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
      *         if a {@code null} entity is encountered while reading or binding its ID properties,
      *         or an entity lacks a property required by the generated DELETE statement
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails. With more than one element, the transaction is begun first and a Spring acquisition
      *         failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
@@ -151,11 +155,13 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param ids the collection of IDs to delete
-     * @return the total number of rows deleted; 0, without executing any statement, if {@code ids} is {@code null} or empty
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @return the total number of rows deleted (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO}
+     *         contribute 0); 0, without executing any statement, if {@code ids} is {@code null} or empty
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails. With more than one element, the transaction is begun first and a Spring acquisition
      *         failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
@@ -170,12 +176,12 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
 
     /**
      * Deletes multiple entities by their IDs with a specified batch size.
-     * Large ID collections will be processed in batches to avoid database query size limits.
+     * Each ID is deleted by its own by-ID DELETE statement; the statements are sent in JDBC batches of {@code batchSize}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Set<Long> thousandsOfIds = getExpiredUserIds();
-     * // Delete in batches of 1000 to avoid query size limits
+     * // Send the DELETE statements in JDBC batches of 1000
      * int totalDeleted = userDao.batchDeleteByIds(thousandsOfIds, 1000);
      * }</pre>
      *
@@ -183,13 +189,15 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of IDs to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      *                     With more than one element, all of them run in one transaction, even if they fit in one batch.
-     * @return the total number of rows deleted; 0, without executing any statement, if {@code ids} is {@code null} or empty
+     * @return the total number of rows deleted (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO}
+     *         contribute 0); 0, without executing any statement, if {@code ids} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
      *         or if an ID is {@code null} and the entity uses a composite ID whose properties must be read
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails. With more than one element, the transaction is begun first and a Spring acquisition
      *         failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})

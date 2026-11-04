@@ -65,10 +65,16 @@ import com.landawn.abacus.util.stream.Stream;
  * <p><b>{@code null} key values:</b> the by-id methods and the upsert methods treat a {@code null} key
  * value differently, because they ask different questions.</p>
  * <ul>
- *   <li>The by-id methods ({@code get}, {@code exists}, {@code deleteById}, {@code batchGet}, {@code count(ids)},
- *       {@code refresh}) look a row up by its identity, binding each id value into {@code key = ?}. A {@code NULL}
- *       never equals anything in SQL, so an id with a {@code null} component matches no row; {@code batchGet} and
- *       {@code count(ids)} skip such an id instead of querying for it, so they always agree with {@code get}.</li>
+ *   <li>The by-id methods ({@code get}, {@code exists}, {@code deleteById}, {@code batchDeleteByIds}, {@code batchGet},
+ *       {@code count(ids)}, {@code refresh}, {@code batchRefresh}) look a row up by its identity, binding each id value into
+ *       {@code key = ?}. A {@code NULL} never equals anything in SQL, so a composite id with a {@code null} component
+ *       matches no row; {@code batchGet} and {@code count(ids)} skip such an id instead of querying for it, so they agree
+ *       with {@code get}. A {@code null} single-property id is rejected by {@code get}, {@code exists},
+ *       {@code deleteById} and {@code refresh}, while {@code batchGet} and {@code count(ids)} match a {@code null}
+ *       element with {@code IS NULL}. {@code batchDeleteByIds} binds a {@code null} single-property id, or a
+ *       {@code null} component of a composite id, as {@code key = NULL}, deleting no row for it (a {@code null} composite
+ *       id is rejected), and {@code batchRefresh} leaves an entity whose id is {@code null}, or has a {@code null}
+ *       component, unrefreshed.</li>
  *   <li>The upsert methods ({@code upsert(entity)}, {@code upsert(entity, matchPropNames)}, {@code batchUpsert})
  *       ask whether a row with the entity's values already exists, so a {@code null} value is matched with
  *       {@code IS NULL}. This keeps an upsert repeatable: if a {@code null} matched nothing, every upsert of
@@ -78,7 +84,8 @@ import com.landawn.abacus.util.stream.Stream;
  * </ul>
  * <p>For {@code NOT NULL} key columns, such as primary-key components, the two rules behave the same: no row
  * matches. They differ only for nullable key columns, where a row whose key holds {@code NULL} can be found
- * and updated by an upsert but cannot be addressed by the by-id methods.</p>
+ * and updated by an upsert but cannot be addressed by the by-id methods (apart from a {@code null} element of
+ * {@code batchGet} or {@code count(ids)} for a single-property id).</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -192,8 +199,11 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required for the transaction scope the lookup and the write run in there), the ownership of the Spring connection holder bound to the
+     *         data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction
+     *         owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if no existing row is found,
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set
      *         and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
@@ -290,13 +300,16 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or an existing row is updated
      *                                  and an entity has a non-ID property the loaded entity does not
-     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
-     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an
+     *         internally required transaction, or (for a single entity) telling whether a transaction is active (from the auto-commit mode of a
+     *         Spring-bound connection), fails. Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
-     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *                              own while no JPA transaction owning it can be identified (see
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *                              {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that
+     *                              transaction began (required for the transaction scope its lookups and writes run in there), the ownership of the
+     *                              Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection
+     *                              through a handle of its own while no JPA transaction owning it can be identified (see
      *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
@@ -330,13 +343,16 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive,
      *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
-     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
-     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an
+     *         internally required transaction, or (for a single entity) telling whether a transaction is active (from the auto-commit mode of a
+     *         Spring-bound connection), fails. Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
-     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *                              own while no JPA transaction owning it can be identified (see
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *                              {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that
+     *                              transaction began (required for the transaction scope its lookups and writes run in there), the ownership of the
+     *                              Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection
+     *                              through a handle of its own while no JPA transaction owning it can be identified (see
      *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
@@ -388,13 +404,16 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
      *                                  and a name in {@code matchPropNames} is not a property of the entity class,
      *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
-     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
-     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an
+     *         internally required transaction, or (for a single entity) telling whether a transaction is active (from the auto-commit mode of a
+     *         Spring-bound connection), fails. Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
-     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *                              own while no JPA transaction owning it can be identified (see
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *                              {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that
+     *                              transaction began (required for the transaction scope its lookups and writes run in there), the ownership of the
+     *                              Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection
+     *                              through a handle of its own while no JPA transaction owning it can be identified (see
      *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
@@ -452,13 +471,16 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
      *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class,
      *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
-     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
-     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an
+     *         internally required transaction, or (for a single entity) telling whether a transaction is active (from the auto-commit mode of a
+     *         Spring-bound connection), fails. Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
-     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *                              own while no JPA transaction owning it can be identified (see
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *                              {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that
+     *                              transaction began (required for the transaction scope its lookups and writes run in there), the ownership of the
+     *                              Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection
+     *                              through a handle of its own while no JPA transaction owning it can be identified (see
      *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and

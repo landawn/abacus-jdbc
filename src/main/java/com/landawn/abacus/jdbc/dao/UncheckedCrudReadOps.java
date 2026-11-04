@@ -652,7 +652,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -680,7 +681,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -711,7 +713,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -749,7 +752,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -838,7 +842,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null}
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw)
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws ArithmeticException if the total count across all ID batches exceeds the range of an {@code int}

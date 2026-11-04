@@ -475,6 +475,107 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
         verify(preparedStatement).close();
     }
 
+    // The cancellation cleanup caught only RuntimeException | Error, so a close handler's undeclared checked exception (which
+    // close() rethrows unchanged) escaped Future.cancel(), which has no failure channel for cleanup.
+    @Test
+    void cancel_beforeExecution_handlerThrowsUndeclaredCheckedException_cancelStillReturnsNormally() throws Exception {
+        final AtomicReference<Runnable> scheduled = new AtomicReference<>();
+        final AtomicInteger callbackCalls = new AtomicInteger();
+        final AtomicInteger connectionReleases = new AtomicInteger();
+        query.onClose(connectionReleases::incrementAndGet).onClose(() -> throwUndeclared(new java.io.IOException("handler failed with a checked exception")));
+        final var future = query.runAsync(q -> callbackCalls.incrementAndGet(), scheduled::set);
+
+        assertTrue(future.cancel(false));
+        scheduled.get().run();
+
+        assertTrue(future.isCancelled());
+        assertTrue(query.isClosed);
+        assertEquals(1, connectionReleases.get());
+        assertEquals(0, callbackCalls.get());
+        verify(preparedStatement).close();
+    }
+
+    // An executor that throws a checked exception undeclared (Kotlin, a sneaky throw) bypassed the RuntimeException | Error
+    // catches of the submission: the query (and a data-source query's connection) was left open, and the retained task
+    // still ran the callback.
+    //
+    // Only the Executor overloads are exercised. The default-executor overloads callAsync(fn)/runAsync(consumer) submit to
+    // JdbcUtil.asyncExecutor, a static final AsyncExecutor shared by the whole JVM; it cannot be replaced from a test, and making
+    // its pool throw on submission (e.g. a throwing ThreadFactory or rejection handler) would change global state that other
+    // tests use, and only throws while the pool still creates core threads. Both overloads share submitAsyncTask and the same
+    // catch (Throwable) / closeAfterFailedAsyncSubmission code as the Executor overloads, which these tests pin.
+    @ParameterizedTest(name = "returnsValue={0}")
+    @ValueSource(booleans = { false, true })
+    void async_executorThrowsUndeclaredCheckedException_closesQueryAndDetachesTheTask(final boolean returnsValue) throws Exception {
+        final java.io.IOException submissionFailure = new java.io.IOException("executor failed with a checked exception");
+        final AtomicReference<Runnable> retained = new AtomicReference<>();
+        final AtomicInteger callbackCalls = new AtomicInteger();
+        final AtomicInteger connectionReleases = new AtomicInteger();
+        final java.util.concurrent.Executor executor = task -> {
+            retained.set(task);
+            throwUndeclared(submissionFailure);
+        };
+        query.onClose(connectionReleases::incrementAndGet);
+
+        final Throwable thrown = assertThrows(Throwable.class, () -> {
+            if (returnsValue) {
+                query.callAsync(q -> callbackCalls.incrementAndGet(), executor);
+            } else {
+                query.runAsync(q -> {
+                    callbackCalls.incrementAndGet();
+                }, executor);
+            }
+        });
+
+        assertSame(submissionFailure, thrown);
+        assertTrue(query.isClosed);
+        assertEquals(1, connectionReleases.get());
+        verify(preparedStatement).close();
+
+        retained.get().run();
+
+        assertEquals(0, callbackCalls.get());
+    }
+
+    // With closeAfterExecution(false) the caller keeps ownership of the query: a failed submission must leave it open (no
+    // close handler runs), keep the undeclared checked exception primary, and still detach the task the executor retained.
+    @ParameterizedTest(name = "returnsValue={0}")
+    @ValueSource(booleans = { false, true })
+    void async_executorThrowsUndeclaredCheckedException_withoutCloseAfterExecution_keepsQueryOpenAndDetachesTheTask(final boolean returnsValue)
+            throws Exception {
+        final java.io.IOException submissionFailure = new java.io.IOException("executor failed with a checked exception");
+        final AtomicReference<Runnable> retained = new AtomicReference<>();
+        final AtomicInteger callbackCalls = new AtomicInteger();
+        final AtomicInteger connectionReleases = new AtomicInteger();
+        final java.util.concurrent.Executor executor = task -> {
+            retained.set(task);
+            throwUndeclared(submissionFailure);
+        };
+        query.closeAfterExecution(false).onClose(connectionReleases::incrementAndGet);
+
+        final Throwable thrown = assertThrows(Throwable.class, () -> {
+            if (returnsValue) {
+                query.callAsync(q -> callbackCalls.incrementAndGet(), executor);
+            } else {
+                query.runAsync(q -> {
+                    callbackCalls.incrementAndGet();
+                }, executor);
+            }
+        });
+
+        assertSame(submissionFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+        assertFalse(query.isClosed);
+        assertEquals(0, connectionReleases.get());
+        verify(preparedStatement, never()).close();
+
+        retained.get().run();
+
+        assertEquals(0, callbackCalls.get());
+        assertFalse(query.isClosed);
+        assertEquals(0, connectionReleases.get());
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = { false, true })
     void cancel_runningCallbackDefersCloseUntilItExits(final boolean mayInterrupt) throws Exception {

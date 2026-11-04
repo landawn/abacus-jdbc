@@ -391,10 +391,13 @@ public class JoinEntityHelperTest extends TestBase {
 
     @Test
     public void testLoadJoinEntities_Entities_PropNames_EmptyEntitiesShortCircuits() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        // The names are checked also with no entities; this mocked DAO has no join metadata, so the check is stubbed out.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
-        dao.loadJoinEntities(List.<TestEntity> of(), List.of("orders"));
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
+            dao.loadJoinEntities(List.<TestEntity> of(), List.of("orders"));
+            Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
+        }
     }
 
     @Test
@@ -426,10 +429,13 @@ public class JoinEntityHelperTest extends TestBase {
 
     @Test
     public void testLoadJoinEntities_Entities_PropNames_WithExecutor_EmptyShortCircuits() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        // The names are checked also with no entities; this mocked DAO has no join metadata, so the check is stubbed out.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
-        dao.loadJoinEntities(List.<TestEntity> of(), List.of("orders"), Runnable::run);
-        Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
+            dao.loadJoinEntities(List.<TestEntity> of(), List.of("orders"), Runnable::run);
+            Mockito.verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.<List<TestEntity>> any(), ArgumentMatchers.anyString());
+        }
     }
 
     @Test
@@ -1460,6 +1466,8 @@ public class JoinEntityHelperTest extends TestBase {
     @Test
     public void testloadJoinEntitiesIfAbsent_CollectionEntity_PropName_SelectProps_EmptyEntities() throws SQLException {
         TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        // With no entities, the name must still name a property of the DAO's entity class.
+        Mockito.doReturn(TestEntity.class).when(dao).targetEntityClass();
 
         dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), "orders", null);
 
@@ -2044,11 +2052,14 @@ public class JoinEntityHelperTest extends TestBase {
     // deleteJoinEntities(Collection<T>, Collection<String>) - empty entities or propNames (lines 1862-1863)
     @Test
     public void testDeleteJoinEntities_Entities_PropNames_EmptyEntities_ReturnsZero() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        // The names are checked also with no entities; this mocked DAO has no join metadata, so the check is stubbed out.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
 
-        int result = dao.deleteJoinEntities(List.<TestEntity> of(), List.of("orders"));
+            int result = dao.deleteJoinEntities(List.<TestEntity> of(), List.of("orders"));
 
-        assertEquals(0, result);
+            assertEquals(0, result);
+        }
     }
 
     // deleteJoinEntities(Collection<T>, Collection<String>) - empty propNames
@@ -2229,7 +2240,10 @@ public class JoinEntityHelperTest extends TestBase {
                 assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "orders", null)).getMessage().contains("entities"));
         Mockito.verify(first, Mockito.never()).getOrders();
 
+        // With no entities, the name must still name a property of the DAO's entity class.
+        Mockito.doReturn(TestEntity.class).when(dao).targetEntityClass();
         dao.loadJoinEntitiesIfAbsent((Collection<TestEntity>) null, "orders", null);
+        assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), "missing", null));
         dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), "orders", null);
 
         Mockito.verify(dao, Mockito.never())

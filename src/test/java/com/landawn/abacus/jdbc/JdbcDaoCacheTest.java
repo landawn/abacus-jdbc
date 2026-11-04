@@ -618,6 +618,115 @@ class JdbcDaoCacheTest extends JdbcTestSupport {
         }
     }
 
+    // Review 2026-11-02: a built-in batch method returns the sum of the positive update counts, which is 0 when the driver
+    // reports Statement.SUCCESS_NO_INFO for its statements (Oracle before 12c) although rows were changed. Both built-in caches
+    // took that 0 for "no row changed" and skipped the invalidation. (DaoCacheTransactionTest covers it through a CRUD DAO in an
+    // openDaoCacheScope.)
+    @Test
+    public void testBuiltInCachesUpdate_BuiltInBatchMethodZeroResult_StillInvalidates() throws Exception {
+        final List<Method> batchMethods = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
+                .filter(m -> List.of("batchUpdate", "batchDelete", "batchDeleteByIds").contains(m.getName()) && m.getReturnType() == int.class)
+                .toList();
+        assertFalse(batchMethods.isEmpty());
+
+        for (final Method batchMethod : batchMethods) {
+            final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(batchMethod, ImmutableList.empty(), int.class);
+
+            try (Jdbc.DefaultDaoCache defaultCache = new Jdbc.DefaultDaoCache(10, 0)) {
+                for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), defaultCache)) {
+                    cache.put("method#users#params", "cached", null, null, methodSignature);
+
+                    cache.update("method#users#batch", 0, null, null, methodSignature);
+
+                    assertNull(cache.get("method#users#params", null, null, methodSignature), batchMethod + " " + cache.getClass().getSimpleName());
+                }
+            }
+        }
+    }
+
+    // A built-in batch method called with a null or empty collection runs no SQL (DaoImpl returns 0 at once): invalidating for
+    // it made a loop of empty batches scan and clear the table's entries every time. A non-empty batch's 0, and the update
+    // after a commit (no args), still invalidate.
+    @Test
+    public void testBuiltInCachesUpdate_BuiltInBatchMethodWithNoElement_DoesNotInvalidate() throws Exception {
+        final List<Method> batchMethods = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
+                .filter(m -> List.of("batchUpdate", "batchDelete", "batchDeleteByIds").contains(m.getName()) && m.getReturnType() == int.class)
+                .toList();
+        assertFalse(batchMethods.isEmpty());
+
+        for (final Method batchMethod : batchMethods) {
+            final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(batchMethod, ImmutableList.empty(), int.class);
+            final int paramCount = batchMethod.getParameterCount();
+            final Object[] emptyArgs = new Object[paramCount];
+            emptyArgs[0] = List.of();
+            final Object[] nullArgs = new Object[paramCount];
+            final Object[] nonEmptyArgs = new Object[paramCount];
+            nonEmptyArgs[0] = List.of(1L);
+
+            try (Jdbc.DefaultDaoCache defaultCache = new Jdbc.DefaultDaoCache(10, 0)) {
+                for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), defaultCache)) {
+                    final String label = batchMethod + " " + cache.getClass().getSimpleName();
+                    cache.put("method#users#params", "cached", null, null, methodSignature);
+
+                    cache.update("method#users#batch", 0, null, emptyArgs, methodSignature);
+                    cache.update("method#users#batch", 0, null, nullArgs, methodSignature);
+                    assertEquals("cached", cache.get("method#users#params", null, null, methodSignature), label);
+
+                    cache.update("method#users#batch", 0, null, nonEmptyArgs, methodSignature);
+                    assertNull(cache.get("method#users#params", null, null, methodSignature), label);
+
+                    cache.put("method#users#params", "cached", null, null, methodSignature);
+                    cache.update("#users#", null, null, null, methodSignature); // the update after a commit: no args, no result
+                    assertNull(cache.get("method#users#params", null, null, methodSignature), label);
+                }
+            }
+        }
+    }
+
+    // The same skip for the built-in batch writes that return no count (batchInsert's IDs, batchSave's void, batchUpsert's
+    // entities): an empty or null collection runs no SQL, also as the second argument of a named-SQL overload (after the SQL),
+    // while a non-empty one still invalidates.
+    @Test
+    public void testBuiltInCachesUpdate_BuiltInBatchInsertSaveUpsertWithNoElement_DoesNotInvalidate() throws Exception {
+        final List<Method> batchMethods = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.stream()
+                .filter(m -> List.of("batchInsert", "batchSave", "batchUpsert").contains(m.getName()))
+                .toList();
+        assertTrue(batchMethods.stream().map(Method::getName).distinct().count() == 3, batchMethods.toString());
+
+        for (final Method batchMethod : batchMethods) {
+            final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature = Tuple.of(batchMethod, ImmutableList.empty(), batchMethod.getReturnType());
+            final int paramCount = batchMethod.getParameterCount();
+            final boolean namedSql = batchMethod.getParameterTypes()[0] == String.class;
+            final Object emptyResult = batchMethod.getReturnType() == void.class ? null : List.of();
+            final int entitiesIndex = namedSql ? 1 : 0;
+            final String namedInsertSql = "INSERT INTO users (name) VALUES (:name)";
+            final Object[] emptyArgs = new Object[paramCount];
+            final Object[] nullArgs = new Object[paramCount];
+            final Object[] nonEmptyArgs = new Object[paramCount];
+            if (namedSql) {
+                emptyArgs[0] = namedInsertSql;
+                nullArgs[0] = namedInsertSql;
+                nonEmptyArgs[0] = namedInsertSql;
+            }
+            emptyArgs[entitiesIndex] = List.of();
+            nonEmptyArgs[entitiesIndex] = List.of(new Object());
+
+            try (Jdbc.DefaultDaoCache defaultCache = new Jdbc.DefaultDaoCache(10, 0)) {
+                for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), defaultCache)) {
+                    final String label = batchMethod + " " + cache.getClass().getSimpleName();
+                    cache.put("method#users#params", "cached", null, null, methodSignature);
+
+                    cache.update("method#users#batch", emptyResult, null, emptyArgs, methodSignature);
+                    cache.update("method#users#batch", emptyResult, null, nullArgs, methodSignature);
+                    assertEquals("cached", cache.get("method#users#params", null, null, methodSignature), label);
+
+                    cache.update("method#users#batch", emptyResult, null, nonEmptyArgs, methodSignature);
+                    assertNull(cache.get("method#users#params", null, null, methodSignature), label);
+                }
+            }
+        }
+    }
+
     // Declares its own close(), with a signature AutoCloseable does not allow: this compiles because DaoCache declares
     // no close(), and createDao never calls it.
     private static class LegacyCache implements Jdbc.DaoCache {

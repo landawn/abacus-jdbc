@@ -251,10 +251,11 @@ final class SqlIdentifierUtil {
     }
 
     /**
-     * Tests whether an identifier's first non-blank character opens a delimited identifier.
+     * Tests whether an identifier opens a delimited identifier once the outer text that the identifier parser skips
+     * (see {@code stripAsParsed}: also leading control characters such as U+0001, not only blanks) is removed.
      *
-     * @param identifier the raw, caller-supplied identifier text
-     * @return {@code true} if the text starts with {@code "}, {@code `} or {@code [}
+     * @param identifier the raw, caller-supplied identifier text; may be {@code null}
+     * @return {@code true} if the remaining text starts with {@code "}, {@code `} or {@code [}
      */
     static boolean startsWithIdentifierDelimiter(final String identifier) {
         final String trimmed = stripAsParsed(identifier);

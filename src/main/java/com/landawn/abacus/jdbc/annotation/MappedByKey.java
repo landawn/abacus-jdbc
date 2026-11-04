@@ -29,7 +29,7 @@ import java.util.Map;
  * or when you want to group results by a specific field value.
  *
  * <p>The annotation extracts the value of the specified key from each result row and
- * uses it as the map key. The key must be a property (getter) of the DAO's <i>target entity
+ * uses it as the map key. The key must be a property (a getter or a public field) of the DAO's <i>target entity
  * class</i> (for example, {@code id} or {@code email}); SQL column labels must map to that
  * property, and the map's value type must be the target entity type (or a supertype) — plain
  * row-map values such as {@code Map<String, Object>} are not supported. Rows sharing the same
@@ -67,7 +67,7 @@ import java.util.Map;
  *
  * <p>Important considerations:</p>
  * <ul>
- *   <li>The key must be a property (getter) of the DAO's target entity class</li>
+ *   <li>The key must be a property (a getter or a public field) of the DAO's target entity class</li>
  *   <li>The map's value type must be the target entity type or a supertype. Declare both type arguments
  *       as concrete types (for example {@code Map<Long, User>}): a wildcard such as
  *       {@code Map<Long, ? super User>} cannot be resolved and fails DAO initialization with

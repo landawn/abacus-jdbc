@@ -32,6 +32,8 @@ import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
+import com.landawn.abacus.jdbc.dao.Dao;
+import com.landawn.abacus.jdbc.dao.UncheckedCrudDao;
 import com.landawn.abacus.query.Filters;
 
 @Tag("integration")
@@ -100,6 +102,41 @@ public class DaoImplBatchOperationsIntegrationTest extends TestBase {
         assertEquals(List.of(), execute(operation, List.of(), false, 1));
         assertThrows(IllegalArgumentException.class, () -> execute(operation, records(false, false), false, 0));
         assertEquals(0, rowCount());
+    }
+
+    // Review 2026-11-03: the property names of a batch insert/save were checked for a null or blank element only by the INSERT
+    // builder, which runs after the return for empty entities: an empty batch accepted them, while insert(entity, props) and
+    // save(entity, props) reject them. Checked and unchecked DAOs, Dao and CrudDao, share the DaoImpl handlers.
+    @Test
+    void batchInsertOrSave_nullOrBlankPropertyName_rejectedAlsoForEmptyEntities() throws SQLException {
+        final PlainRecordDao plainDao = JdbcUtil.createDao(PlainRecordDao.class, dataSource);
+        final UncheckedRecordDao uncheckedDao = JdbcUtil.createDao(UncheckedRecordDao.class, dataSource);
+        final Record record = new Record(null, "single", 1);
+
+        for (final List<String> props : List.of(List.of(" "), List.of("name", ""), Arrays.asList("name", null))) {
+            for (final List<Record> entities : List.of(List.<Record> of(), List.of(record))) {
+                final String label = props + " " + entities.size();
+                assertThrows(IllegalArgumentException.class, () -> dao.batchInsert(entities, props), label);
+                assertThrows(IllegalArgumentException.class, () -> dao.batchInsert(entities, props, 10), label);
+                assertThrows(IllegalArgumentException.class, () -> dao.batchSave(entities, props), label);
+                assertThrows(IllegalArgumentException.class, () -> dao.batchSave(entities, props, 10), label);
+                assertThrows(IllegalArgumentException.class, () -> plainDao.batchSave(entities, props), label);
+                assertThrows(IllegalArgumentException.class, () -> plainDao.batchSave(entities, props, 10), label);
+                assertThrows(IllegalArgumentException.class, () -> uncheckedDao.batchInsert(entities, props), label);
+                assertThrows(IllegalArgumentException.class, () -> uncheckedDao.batchInsert(entities, props, 10), label);
+                assertThrows(IllegalArgumentException.class, () -> uncheckedDao.batchSave(entities, props), label);
+                assertThrows(IllegalArgumentException.class, () -> uncheckedDao.batchSave(entities, props, 10), label);
+            }
+
+            assertThrows(IllegalArgumentException.class, () -> dao.insert(record, props), props::toString);
+            assertThrows(IllegalArgumentException.class, () -> dao.save(record, props), props::toString);
+            assertThrows(IllegalArgumentException.class, () -> plainDao.save(record, props), props::toString);
+            assertThrows(IllegalArgumentException.class, () -> uncheckedDao.insert(record, props), props::toString);
+            assertThrows(IllegalArgumentException.class, () -> uncheckedDao.save(record, props), props::toString);
+        }
+
+        assertEquals(0, rowCount());
+        assertEquals(null, record.getId());
     }
 
     @ParameterizedTest(name = "{0}, explicitId={1}")
@@ -879,6 +916,12 @@ public class DaoImplBatchOperationsIntegrationTest extends TestBase {
 
         @Query(value = "UPDATE batch_record SET score = score + 1 WHERE id = ?", batch = true, collectionAsSingleParameter = true)
         long updateScalarLarge(List<Long> ids, int batchSize) throws SQLException;
+    }
+
+    public interface PlainRecordDao extends Dao<Record, PlainRecordDao> {
+    }
+
+    public interface UncheckedRecordDao extends UncheckedCrudDao<Record, Long, UncheckedRecordDao> {
     }
 
     @Table("batch_record")

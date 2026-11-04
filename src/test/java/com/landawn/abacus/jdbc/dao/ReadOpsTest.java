@@ -15,6 +15,9 @@ import static org.mockito.Mockito.when;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -24,7 +27,10 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.Jdbc;
+import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.stream.Stream;
@@ -127,6 +133,72 @@ public class ReadOpsTest extends TestBase {
         Mockito.doReturn(expected).when(dao).list(eq(List.of("name")), same(cond), same(rowFilter), same(rowMapper));
 
         assertSame(expected, dao.list("name", cond, rowFilter, rowMapper));
+    }
+
+    public static final class ReadOpsPerson {
+        @Id
+        private long id;
+        private int age;
+        private Integer score;
+
+        public long getId() {
+            return id;
+        }
+
+        public void setId(final long id) {
+            this.id = id;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(final int age) {
+            this.age = age;
+        }
+
+        public Integer getScore() {
+            return score;
+        }
+
+        public void setScore(final Integer score) {
+            this.score = score;
+        }
+    }
+
+    interface PersonDao extends Dao<ReadOpsPerson, PersonDao> {
+    }
+
+    interface UncheckedPersonDao extends UncheckedDao<ReadOpsPerson, UncheckedPersonDao> {
+    }
+
+    // Pins the documented value typing of the single-property list/stream and the foreach defaults on a real DAO: a
+    // property's column is read with the property's type (SQL NULL of a primitive property as its default), any other
+    // select item with JdbcUtil.getColumnValue.
+    @Test
+    public void testSingleProp_ListStreamAndForeach_ReadWithPropertyTypes() throws SQLException {
+        final org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:read_ops_property_types_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
+        JdbcUtil.executeUpdate(ds, "CREATE TABLE read_ops_person (id BIGINT PRIMARY KEY, age INT, score INT)");
+        JdbcUtil.executeUpdate(ds, "INSERT INTO read_ops_person (id, age, score) VALUES (1, NULL, NULL)");
+
+        final PersonDao dao = JdbcUtil.createDao(PersonDao.class, ds);
+        final UncheckedPersonDao uncheckedDao = JdbcUtil.createDao(UncheckedPersonDao.class, ds);
+        final Condition cond = Filters.eq("id", 1L);
+
+        assertEquals(List.of(0), dao.list("age", cond));
+        assertEquals(Collections.singletonList(null), dao.list("score", cond));
+        assertEquals(List.of(0), uncheckedDao.list("age", cond));
+        assertEquals(List.of(1L), dao.list("COUNT(*)", cond));
+
+        try (Stream<Object> ages = dao.stream("age", cond)) {
+            assertEquals(List.of(0), ages.toList());
+        }
+
+        final List<Object> values = new ArrayList<>();
+        dao.foreach(List.of("age", "score"), cond, row -> values.addAll(row.toList()));
+        uncheckedDao.foreach(List.of("age", "score"), cond, row -> values.addAll(row.toList()));
+        assertEquals(Arrays.asList(0, null, 0, null), values);
     }
 
     @Test

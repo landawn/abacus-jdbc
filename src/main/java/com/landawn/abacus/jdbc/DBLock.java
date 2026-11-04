@@ -89,9 +89,11 @@ import com.landawn.abacus.util.Strings;
  * than constructed directly. The {@link #close()} method should be called when the lock is no
  * longer needed to stop the background refresh task and release any locks still held.</p>
  *
- * <p><b>&#9888; Warning:</b> Lease timestamps are computed from each participating JVM's wall clock.
- * Hosts using the same lock table must keep their clocks synchronized; significant skew can make
- * one host consider another host's actively refreshed lease expired.</p>
+ * <p><b>&#9888; Warning:</b> Lease timestamps are computed from each participating JVM's wall clock
+ * and bound as {@link Timestamp}s, which the driver converts in the JVM's default time zone, while the
+ * lock table's {@code TIMESTAMP} columns hold no time zone on most databases. Hosts using the same lock
+ * table must keep their clocks synchronized and use the same default time zone; significant skew, or a
+ * different zone, can make one host consider another host's actively refreshed lease expired.</p>
  *
  * <p>A failed refresh, whether it throws an exception or an {@link Error}, is logged (an {@code Error}
  * at ERROR level) and retried on the next cycle; the background task keeps running.
@@ -771,11 +773,13 @@ public final class DBLock implements AutoCloseable {
         Connection conn = removeExpiredLock(target);
 
         try {
-            final Timestamp now = Dates.currentTimestamp();
-
             if (conn == null) {
                 conn = openLockConnection();
             }
+
+            // The lease starts once the connection is in hand: taken before a slow acquisition (a pool wait after a failed
+            // cleanup), the row was written with a lease shortened by the wait, already expired or stale if it was long.
+            final Timestamp now = Dates.currentTimestamp();
 
             return JdbcUtil.executeUpdate(conn, lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0;
         } finally {
@@ -834,7 +838,10 @@ public final class DBLock implements AutoCloseable {
      * the database table. If the lock does not exist, or if the provided code does not
      * match the stored code, the operation returns {@code false}. When {@code code} matches
      * a lock acquired by this instance, its local refresh entry is removed even if the row
-     * is already absent, because this instance no longer owns a database lock to refresh.</p>
+     * is already absent, because this instance no longer owns a database lock to refresh, and
+     * also if the deletion fails: this instance stops refreshing the released lock, so a row
+     * left behind expires after its live time, or is reclaimed once it has not been refreshed
+     * for a minute, unless a retried {@code unlock} deletes it first.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -883,10 +890,12 @@ public final class DBLock implements AutoCloseable {
         } catch (final SQLException e) {
             logger.warn(e, "Failed to release DB lock(target={})", target);
             throw new UncheckedSQLException(e);
-        }
-
-        if (shouldRemoveFromLocal) {
-            targetCodePool.remove(target, lockInfo);
+        } finally {
+            // Also when the deletion failed: its holder has released the lock, and the refresh task kept a row left by the
+            // failure alive, so the target stayed locked for every other caller until close(). Unrefreshed, it expires.
+            if (shouldRemoveFromLocal) {
+                targetCodePool.remove(target, lockInfo);
+            }
         }
 
         if (unlocked) {

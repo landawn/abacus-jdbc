@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc.dao;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -677,6 +678,59 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         }
 
         assertEquals(2, orderCountForUser(seeded.getId()));
+    }
+
+    // Validation before the early return for no entities: the overloads of several names returned for a null or empty
+    // collection of entities without checking the names, and the single-name loadJoinEntitiesIfAbsent checked only that the
+    // name is not empty, while the single-name loadJoinEntities rejected a name that is not a join entity property. An
+    // invalid name is rejected now whatever the entities; with no entities, loadJoinEntitiesIfAbsent (for which no property
+    // is then null on an entity) requires a property of the entity class, as with entities whose property is set.
+    @Test
+    public void testJoinOperations_WithNoEntities_StillCheckTheNames() {
+        final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
+        final List<String> names = List.of("orders", "noSuchJoinProp");
+
+        for (final List<JoinUser> none : java.util.Arrays.asList(List.<JoinUser> of(), (List<JoinUser>) null)) {
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntities(none, names));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntities(none, names, false));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntities(none, names, DIRECT_EXECUTOR));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntitiesIfAbsent(none, names));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntitiesIfAbsent(none, names, false));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntitiesIfAbsent(none, names, DIRECT_EXECUTOR));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntitiesIfAbsent(none, "noSuchJoinProp"));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntitiesIfAbsent(none, "noSuchJoinProp", List.of("id")));
+            assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(none, names));
+            assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(none, names, DIRECT_EXECUTOR));
+
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntities(none, names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntities(none, names, false));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntities(none, names, DIRECT_EXECUTOR));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntitiesIfAbsent(none, names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntitiesIfAbsent(none, names, false));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntitiesIfAbsent(none, names, DIRECT_EXECUTOR));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntitiesIfAbsent(none, "noSuchJoinProp"));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntitiesIfAbsent(none, "noSuchJoinProp", List.of("id")));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(none, names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(none, names, false));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(none, names, DIRECT_EXECUTOR));
+
+            // The same message as the single-name loadJoinEntities, which checked the name with no entities already.
+            assertEquals(assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntities(none, "noSuchJoinProp")).getMessage(),
+                    assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntities(none, names)).getMessage());
+
+            // Valid names, and with no entities a property that is not a join entity property for the IfAbsent overloads (no
+            // property is null on an entity), still do nothing.
+            assertDoesNotThrow(() -> {
+                userDao.loadJoinEntities(none, List.of("orders", "backupOrders"));
+                userDao.loadJoinEntities(none, List.of("orders", "backupOrders"), DIRECT_EXECUTOR);
+                userDao.loadJoinEntitiesIfAbsent(none, List.of("orders", "name"));
+                userDao.loadJoinEntitiesIfAbsent(none, List.of("orders", "name"), DIRECT_EXECUTOR);
+                userDao.loadJoinEntitiesIfAbsent(none, "name");
+                checkedDao.loadJoinEntitiesIfAbsent(none, "name", null);
+                assertEquals(0, userDao.deleteJoinEntities(none, List.of("orders", "backupOrders")));
+                assertEquals(0, checkedDao.deleteJoinEntities(none, List.of("orders", "backupOrders"), DIRECT_EXECUTOR));
+            });
+        }
     }
 
     // Round 17 review: the parallel loadJoinEntitiesIfAbsent checked that every name exists before it checked the join

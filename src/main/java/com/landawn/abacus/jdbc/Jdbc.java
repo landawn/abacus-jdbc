@@ -2379,7 +2379,7 @@ public final class Jdbc {
                  * {@inheritDoc}
                  *
                  * @throws SQLException if reading result-set metadata or a requested column value fails.
-                 * @throws IllegalArgumentException if the configured entity class has no bean properties or has conflicting or invalid property metadata.
+                 * @throws IllegalArgumentException if the configured entity class is not a bean class or has conflicting or invalid property metadata.
                  */
                 @Override
                 public DisposableObjArray apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
@@ -2489,6 +2489,11 @@ public final class Jdbc {
          * <p>Every mapper built here resolves the snapshotted getters against the {@code ResultSet}'s column count
          * on the first row of each result set with a new layout, so the mapper's {@code apply} method throws an
          * {@link IllegalArgumentException} if a configured column index exceeds that count.</p>
+         *
+         * <p>The primitive getters ({@code getBoolean}, {@code getByte}, {@code getShort}, {@code getInt}, {@code getLong},
+         * {@code getFloat}, {@code getDouble}) read through the matching {@code ResultSet.getXxx} method, so SQL {@code NULL}
+         * becomes {@code false}/{@code 0}. To keep {@code null}, leave the column unconfigured in a builder from
+         * {@link RowMapper#builder()}, or use {@link #getObject(int, Class)} with the wrapper class.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -3420,8 +3425,11 @@ public final class Jdbc {
          * </p>
          *
          * <p>For a reference-array target such as {@code String[]}, each included column is read through
-         * the {@link ColumnGetter} for the array's component type. This performs the same JDBC-to-Java
-         * conversion used for scalar targets and preserves SQL {@code NULL} for wrapper components.</p>
+         * the {@link ColumnGetter} for the array's component type ({@link ColumnGetter#forType(Class)}). This performs the
+         * same JDBC-to-Java conversion used for scalar targets and preserves SQL {@code NULL} for wrapper components, except
+         * for {@code Object[]}: its columns are read with {@link ColumnGetter#GET_OBJECT}, which materializes {@code Blob} and
+         * {@code Clob} values and normalizes database-specific date/time values, while a scalar {@code Object} target returns
+         * the value of {@code ResultSet.getObject} as is.</p>
          *
          * @param <T> target type
          * @param targetClass the class to map rows to
@@ -6354,6 +6362,11 @@ public final class Jdbc {
          * <p>{@link #build()} snapshots the configured getters, so later builder changes do not alter an
          * extractor that has already been built.</p>
          *
+         * <p>The primitive getters ({@code getBoolean}, {@code getByte}, {@code getShort}, {@code getInt}, {@code getLong},
+         * {@code getFloat}, {@code getDouble}) read through the matching {@code ResultSet.getXxx} method, so SQL {@code NULL}
+         * is extracted as {@code false}/{@code 0}. To keep {@code null}, leave the column unconfigured in a builder from
+         * {@link RowExtractor#builder()}, or use {@link #getObject(int, Class)} with the wrapper class.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowExtractor extractor = RowExtractor.builder()
@@ -8481,8 +8494,13 @@ public final class Jdbc {
          * Updates the cache after a data modification. If the table name can be determined from the cache key,
          * it removes all cache entries whose key references that table (matched case-insensitively).
          * Otherwise, it clears the entire cache.
-         * No action is taken for built-in update operations that report zero affected rows (an
-         * {@code int}/{@code long} result of {@code 0}). The {@code daoProxy} and {@code args} arguments are unused.
+         * No action is taken for a built-in non-batch update or delete that reports zero affected rows (an
+         * {@code int}/{@code long} result of {@code 0}), nor for a built-in batch method ({@code batchInsert}, {@code batchSave},
+         * {@code batchUpsert}, {@code batchUpdate}, {@code batchDelete}, {@code batchDeleteByIds}) whose first argument, the
+         * entities or IDs, is a {@code null} or empty collection, which runs no SQL; any other {@code 0} of a built-in batch
+         * method still invalidates, as its count leaves out the statements a driver
+         * reports as {@link java.sql.Statement#SUCCESS_NO_INFO}. The {@code daoProxy} argument is unused, and {@code args} is
+         * read only to recognize such an empty batch.
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -8495,13 +8513,14 @@ public final class Jdbc {
          * }</pre>
          *
          * @param defaultCacheKey the cache key from the modification method (used to extract the affected table name).
-         * @param result the result of the modification operation; a zero row count for a built-in update is treated as a no-op.
+         * @param result the result of the modification operation; a zero row count for a built-in non-batch update or delete is treated as a no-op.
          * @param daoProxy the DAO proxy instance (unused).
-         * @param args the method arguments (unused).
+         * @param args the method arguments; for a built-in batch method, a {@code null} or empty collection as the first one marks a
+         *        call that ran no SQL and is treated as a no-op. May be {@code null}.
          * @param methodSignature a tuple containing method metadata; its method and return type decide the zero-row-count short-circuit.
          * @throws IllegalArgumentException if {@code defaultCacheKey} or {@code methodSignature} is {@code null}, or the return type
          *         in {@code methodSignature} is {@code null} for a built-in update method.
-         * @throws ClassCastException if a built-in numeric update method supplies a non-null result that is not a {@code Number}.
+         * @throws ClassCastException if a built-in numeric non-batch update or delete method supplies a non-null result that is not a {@code Number}.
          * @throws IllegalStateException if invalidation is required and the backing pool has been closed.
          */
         @Override
@@ -8512,14 +8531,8 @@ public final class Jdbc {
             N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
             N.checkArgNotNull(methodSignature, cs.methodSignature);
 
-            final Method method = methodSignature._1;
-
-            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
-                N.checkArgNotNull(methodSignature._3, "methodSignature must specify the return type of a built-in update method");
-
-                if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
-                    return;
-                }
+            if (isBuiltInUpdateOfNoRow(result, args, methodSignature)) {
+                return;
             }
 
             final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SEPARATOR);
@@ -8664,12 +8677,15 @@ public final class Jdbc {
          * Updates the cache after a data modification. If the table name can be determined from the cache key,
          * it removes all cache entries whose key references that table (matched case-insensitively).
          * Otherwise, it clears the entire cache.
-         * No action is taken for built-in update operations that report zero affected rows (an
-         * {@code int}/{@code long} result of {@code 0}).
+         * No action is taken for a built-in non-batch update or delete that reports zero affected rows (an
+         * {@code int}/{@code long} result of {@code 0}), nor for a built-in batch method ({@code batchInsert}, {@code batchSave},
+         * {@code batchUpsert}, {@code batchUpdate}, {@code batchDelete}, {@code batchDeleteByIds}) whose first argument, the
+         * entities or IDs (the first of {@code args}), is a {@code null} or empty collection, which runs no SQL; any other {@code 0} of a built-in batch method still invalidates, as its count
+         * leaves out the statements a driver reports as {@link java.sql.Statement#SUCCESS_NO_INFO}.
          *
          * @throws IllegalArgumentException if {@code defaultCacheKey} or {@code methodSignature} is {@code null}, or the return type
          *         in {@code methodSignature} is {@code null} for a built-in update method.
-         * @throws ClassCastException if a built-in numeric update method supplies a non-null result that is not a {@code Number}.
+         * @throws ClassCastException if a built-in numeric non-batch update or delete method supplies a non-null result that is not a {@code Number}.
          * @throws UnsupportedOperationException if invalidation is required and the backing map does not support removal.
          */
         @Override
@@ -8680,14 +8696,8 @@ public final class Jdbc {
             N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
             N.checkArgNotNull(methodSignature, cs.methodSignature);
 
-            final Method method = methodSignature._1;
-
-            if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
-                N.checkArgNotNull(methodSignature._3, "methodSignature must specify the return type of a built-in update method");
-
-                if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
-                    return;
-                }
+            if (isBuiltInUpdateOfNoRow(result, args, methodSignature)) {
+                return;
             }
 
             final String updatedTableName = Strings.substringBetween(defaultCacheKey, JdbcUtil.CACHE_KEY_SEPARATOR);
@@ -8709,6 +8719,50 @@ public final class Jdbc {
             cache.clear();
         }
 
+    }
+
+    /**
+     * Checks whether a built-in DAO cache may skip the invalidation for a write: a built-in non-batch update or delete method
+     * (one whose count comes from {@code executeUpdate}) with an {@code int}/{@code long} return type that reports zero affected
+     * rows, or a built-in batch method called with a {@code null} or empty collection, which runs no SQL.
+     *
+     * @param result the write's result
+     * @param args the write's arguments, or {@code null} if unknown (then a batch method is never skipped)
+     * @param methodSignature the write's method signature
+     * @return {@code true} if the write changed no row and the invalidation can be skipped
+     * @throws IllegalArgumentException if the return type in {@code methodSignature} is {@code null} for a built-in update method
+     * @throws ClassCastException if a built-in numeric non-batch update or delete method supplies a non-null result that is not a {@code Number}
+     */
+    private static boolean isBuiltInUpdateOfNoRow(final Object result, final Object[] args,
+            final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, ClassCastException {
+        final Method method = methodSignature._1;
+
+        if (!JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+            return false;
+        }
+
+        N.checkArgNotNull(methodSignature._3, "methodSignature must specify the return type of a built-in update method");
+
+        // A built-in batch method (batchUpdate, batchDelete, batchDeleteByIds) returns the sum of the positive update counts of
+        // its batches: a driver that reports Statement.SUCCESS_NO_INFO for them (Oracle before 12c, for every statement of a
+        // prepared batch) makes it 0 although rows were changed, and skipping the invalidation kept their old values cached.
+        // Only a call of a batch method (also batchInsert, batchSave, batchUpsert) with a null or empty collection of entities or
+        // IDs is known to have run no SQL: invalidating for it made a loop of empty batches scan and clear the table's entries every
+        // time. The collection is the first argument, or the second after the SQL of a named-SQL overload (batchInsert/batchSave
+        // (namedInsertSql, entities[, batchSize])). Without args (an invalidation after a commit, standing for every write of the
+        // transaction), never skipped.
+        if (method.getName().startsWith("batch")) {
+            if (args == null || args.length == 0) {
+                return false;
+            }
+
+            final int collectionIndex = args[0] instanceof String && args.length > 1 ? 1 : 0;
+            final Object batch = args[collectionIndex];
+
+            return batch == null || (batch instanceof final Collection<?> c && c.isEmpty());
+        }
+
+        return (methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && result != null && ((Number) result).longValue() == 0;
     }
 
     /**

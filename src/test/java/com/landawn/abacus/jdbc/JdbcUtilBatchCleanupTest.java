@@ -4,11 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -67,6 +70,33 @@ class JdbcUtilBatchCleanupTest extends JdbcUtilBatchCleanupTestSupport {
                 assertSame(largeBatch ? largeCounts : counts, executeBatch(stmt, largeBatch));
                 verify(stmt).clearBatch();
             }
+        });
+    }
+
+    // A checked exception the driver throws without declaring it (Kotlin, sneaky throw) is handled as an SQLException is:
+    // logged after a successful batch, attached to the batch failure otherwise.
+    @Test
+    void undeclaredCheckedCleanupFailureKeepsBatchOutcome() throws Exception {
+        forEachBatchMode(largeBatch -> {
+            final IOException cleanup = new IOException("clear failed");
+            final Statement stmt = mock(Statement.class);
+            final int[] counts = { 1, 2 };
+            final long[] largeCounts = { 1L, 2L };
+            when(stmt.executeBatch()).thenReturn(counts);
+            when(stmt.executeLargeBatch()).thenReturn(largeCounts);
+            doAnswer(invocation -> {
+                throw cleanup;
+            }).when(stmt).clearBatch();
+
+            assertSame(largeBatch ? largeCounts : counts, executeBatch(stmt, largeBatch));
+
+            final SQLException primary = new SQLException("batch failed");
+            doThrow(primary).when(stmt).executeBatch();
+            doThrow(primary).when(stmt).executeLargeBatch();
+
+            assertSame(primary, assertThrows(SQLException.class, () -> executeBatch(stmt, largeBatch)));
+            assertArrayEquals(new Throwable[] { cleanup }, primary.getSuppressed());
+            verify(stmt, times(2)).clearBatch();
         });
     }
 

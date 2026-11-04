@@ -174,6 +174,29 @@ class AbstractQueryParameterBindingTest extends AbstractQueryTestSupport {
         assertSame(closeFailure, thrown.getSuppressed()[0]);
     }
 
+    // A driver (or a proxy written in Kotlin, a sneaky throw) can throw a checked exception setLong does not declare. It
+    // escaped the SQLException | RuntimeException | Error cleanup of setLong(int, BigInteger), leaving the statement (and a
+    // data-source query's connection, released by a close handler) open. It must close the query and stay primary.
+    @Test
+    public void testSetLongBigInteger_DriverThrowsUndeclaredCheckedException_ClosesQueryAndPropagatesIt() throws SQLException {
+        final Exception checkedFailure = new Exception("undeclared checked failure");
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw checkedFailure;
+        }).when(preparedStatement).setLong(anyInt(), anyLong());
+        query.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final Throwable thrown = assertThrows(Throwable.class, () -> query.setLong(1, BigInteger.valueOf(42L)));
+
+        assertSame(checkedFailure, thrown);
+        assertTrue(query.isClosed);
+        verify(preparedStatement).close();
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
+    }
+
     // Tests for setFloat with null wrapper
     @Test
     public void testSetFloat_Wrapper_Null() throws SQLException {
@@ -560,6 +583,142 @@ class AbstractQueryParameterBindingTest extends AbstractQueryTestSupport {
         assertThrows(SQLException.class, () -> query.settParameters("params", (Jdbc.BiParametersSetter<TestQuery, String>) (q, s) -> {
             throw new SQLException("bi-settParameters failed");
         }));
+    }
+
+    // A setter, iterator or stream written in Kotlin (or using a sneaky throw) can throw a checked exception it does not
+    // declare. It escaped the SQLException | RuntimeException | Error cleanup, leaving the statement (and a data-source
+    // query's connection, released by a close handler) open. It must close the query and propagate unchanged.
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.ValueSource(strings = { "setParameters", "setParametersWithArg", "settParameters", "settParametersWithArg",
+            "setObjectForIndicesStream", "setObjectForIndicesReader", "addBatchParametersRows", "addBatchParametersTyped", "addBatchParametersBiSetter",
+            "addBatchParametersTriSetter", "configureStatement", "configureStatementBi" })
+    void userCodeThrowsUndeclaredCheckedException_closesQueryAndPropagatesIt(final String operation) throws SQLException {
+        final Exception checkedFailure = new Exception("undeclared checked failure");
+        final java.util.concurrent.atomic.AtomicInteger connectionReleases = new java.util.concurrent.atomic.AtomicInteger();
+        query.onClose(connectionReleases::incrementAndGet);
+
+        final Throwable thrown = assertThrows(Throwable.class, undeclaredCheckedFailureCall(operation, checkedFailure));
+
+        assertSame(checkedFailure, thrown);
+        assertTrue(query.isClosed);
+        verify(preparedStatement).close();
+        assertEquals(1, connectionReleases.get());
+    }
+
+    // The same sites with a close handler that fails too: the undeclared checked exception stays primary and carries the
+    // handler failure as suppressed (closeSuppressingFailure), instead of the handler failure replacing it.
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.ValueSource(strings = { "setParameters", "setParametersWithArg", "settParameters", "settParametersWithArg",
+            "setObjectForIndicesStream", "setObjectForIndicesReader", "addBatchParametersRows", "addBatchParametersTyped", "addBatchParametersBiSetter",
+            "addBatchParametersTriSetter", "configureStatement", "configureStatementBi" })
+    void userCodeThrowsUndeclaredCheckedException_closeHandlerFailureIsSuppressed(final String operation) throws SQLException {
+        final Exception checkedFailure = new Exception("undeclared checked failure");
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        query.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final Throwable thrown = assertThrows(Throwable.class, undeclaredCheckedFailureCall(operation, checkedFailure));
+
+        assertSame(checkedFailure, thrown);
+        assertTrue(query.isClosed);
+        verify(preparedStatement).close();
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
+    }
+
+    private org.junit.jupiter.api.function.Executable undeclaredCheckedFailureCall(final String operation, final Exception checkedFailure) {
+        final java.util.Iterator<String> failingRows = new java.util.Iterator<>() {
+            @Override
+            public boolean hasNext() {
+                return true;
+            }
+
+            @Override
+            public String next() {
+                return throwUndeclaredChecked(checkedFailure);
+            }
+        };
+
+        return switch (operation) {
+            case "setParameters" -> () -> query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) stmt -> throwUndeclaredChecked(checkedFailure));
+            case "setParametersWithArg" -> () -> query.setParameters("x",
+                    (Jdbc.BiParametersSetter<PreparedStatement, String>) (stmt, v) -> throwUndeclaredChecked(checkedFailure));
+            case "settParameters" -> () -> query.settParameters((Jdbc.ParametersSetter<TestQuery>) q -> throwUndeclaredChecked(checkedFailure));
+            case "settParametersWithArg" -> () -> query.settParameters("x",
+                    (Jdbc.BiParametersSetter<TestQuery, String>) (q, v) -> throwUndeclaredChecked(checkedFailure));
+            case "setObjectForIndicesStream" -> () -> query.setObjectForIndices(new java.io.InputStream() {
+                @Override
+                public int read() {
+                    return throwUndeclaredChecked(checkedFailure);
+                }
+            }, 1, 2);
+            case "setObjectForIndicesReader" -> () -> query.setObjectForIndices(new java.io.Reader() {
+                @Override
+                public int read(final char[] buffer, final int offset, final int length) {
+                    return throwUndeclaredChecked(checkedFailure);
+                }
+
+                @Override
+                public void close() {
+                }
+            }, 1, 2);
+            case "addBatchParametersRows" -> () -> query.addBatchParameters(failingRows);
+            case "addBatchParametersTyped" -> () -> query.addBatchParameters(failingRows, String.class);
+            case "addBatchParametersBiSetter" -> () -> query.addBatchParameters(List.of("x").iterator(),
+                    (Jdbc.BiParametersSetter<TestQuery, String>) (q, v) -> throwUndeclaredChecked(checkedFailure));
+            case "addBatchParametersTriSetter" -> () -> query.addBatchParameters(List.of("x").iterator(),
+                    (com.landawn.abacus.util.Throwables.TriConsumer<TestQuery, PreparedStatement, String, SQLException>) (q, stmt,
+                            v) -> throwUndeclaredChecked(checkedFailure));
+            case "configureStatement" -> () -> query.configureStatement(
+                    (com.landawn.abacus.util.Throwables.Consumer<PreparedStatement, SQLException>) stmt -> throwUndeclaredChecked(checkedFailure));
+            case "configureStatementBi" -> () -> query
+                    .configureStatement((com.landawn.abacus.util.Throwables.BiConsumer<TestQuery, PreparedStatement, SQLException>) (q,
+                            stmt) -> throwUndeclaredChecked(checkedFailure));
+            default -> throw new IllegalArgumentException(operation);
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T, X extends Throwable> T throwUndeclaredChecked(final Throwable failure) throws X {
+        throw (X) failure;
+    }
+
+    // BUG FIX: a custom (or Kotlin) Collection runs its own code in isEmpty()/iterator(), which the
+    // addBatchParameters(Collection, ...) overloads called before the cleanup of the iterator overload they delegate to:
+    // a failure there, also an undeclared checked one, left the query (and a data-source query's connection) open.
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.ValueSource(strings = { "rows", "rowsIsEmpty", "typed", "biSetter", "triSetter" })
+    void customBatchCollectionFailure_closesQueryAndPropagatesIt(final String operation) throws SQLException {
+        final Exception checkedFailure = new Exception("undeclared checked failure");
+        final java.util.concurrent.atomic.AtomicInteger connectionReleases = new java.util.concurrent.atomic.AtomicInteger();
+        query.onClose(connectionReleases::incrementAndGet);
+
+        final java.util.Collection<String> failingRows = new java.util.AbstractCollection<>() {
+            @Override
+            public java.util.Iterator<String> iterator() {
+                return throwUndeclaredChecked(checkedFailure);
+            }
+
+            @Override
+            public int size() {
+                return "rowsIsEmpty".equals(operation) ? throwUndeclaredChecked(checkedFailure) : 1;
+            }
+        };
+
+        final org.junit.jupiter.api.function.Executable call = switch (operation) {
+            case "rows", "rowsIsEmpty" -> () -> query.addBatchParameters(failingRows);
+            case "typed" -> () -> query.addBatchParameters(failingRows, String.class);
+            case "biSetter" -> () -> query.addBatchParameters(failingRows, (Jdbc.BiParametersSetter<TestQuery, String>) (q, v) -> q.setString(1, v));
+            case "triSetter" -> () -> query.addBatchParameters(failingRows,
+                    (com.landawn.abacus.util.Throwables.TriConsumer<TestQuery, PreparedStatement, String, SQLException>) (q, stmt, v) -> q.setString(1, v));
+            default -> throw new IllegalArgumentException(operation);
+        };
+
+        assertSame(checkedFailure, assertThrows(Throwable.class, call));
+        assertTrue(query.isClosed);
+        verify(preparedStatement).close();
+        assertEquals(1, connectionReleases.get());
     }
 
     @Test

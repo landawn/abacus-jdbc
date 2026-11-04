@@ -72,6 +72,34 @@ public class DaoUtilTest extends TestBase {
         })));
     }
 
+    // BUG FIX: uncheckedSql shared the futures conversion, which no longer restores the interrupt status (a future's
+    // InterruptedException was raised on another thread), so an InterruptedException thrown on the calling thread by an
+    // Unchecked prepare* action (sneaky, or wrapped by a DAO proxy) lost the thread's interrupt status.
+    @Test
+    public void testUncheckedSql_RestoresInterruptStatusForInterruptedExceptionOnCallingThread() {
+        final InterruptedException direct = new InterruptedException("direct");
+        final java.lang.reflect.UndeclaredThrowableException wrapped = new java.lang.reflect.UndeclaredThrowableException(new InterruptedException("proxy"));
+
+        for (final Exception failure : List.of(direct, wrapped)) {
+            try {
+                final com.landawn.abacus.exception.UncheckedInterruptedException thrown = assertThrows(
+                        com.landawn.abacus.exception.UncheckedInterruptedException.class, () -> DaoUtil.uncheckedSql(() -> {
+                            throw DaoUtilTest.<RuntimeException> sneakyThrow(failure);
+                        }));
+
+                assertTrue(thrown.getCause() instanceof InterruptedException, String.valueOf(failure));
+                assertTrue(Thread.currentThread().isInterrupted(), "interrupt status lost for " + failure);
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> E sneakyThrow(final Throwable e) throws E {
+        throw (E) e;
+    }
+
     interface TestCrudJoinDao extends CrudDao<Object, Long, TestCrudJoinDao>, CrudJoinEntityHelper<Object, Long, TestCrudJoinDao> {
     }
 
@@ -898,6 +926,129 @@ public class DaoUtilTest extends TestBase {
             assertSame(firstSum, sumThrown);
             assertEquals(1, sumThrown.getSuppressed().length);
             assertSame(laterSum, sumThrown.getSuppressed()[0]);
+        }
+    }
+
+    // BUG FIX: the later failures are collected as suppressed exceptions on the first failure, which the conversion
+    // unwraps when it is a wrapper: for a task that threw an InvocationTargetException or UndeclaredThrowableException
+    // around an Error or a runtime exception, they were lost. (A plain runtime exception, an UncheckedSQLException and an
+    // Error keep them, as before: getAsResult() reports the first two unwrapped, and the Error branch moved them already.)
+    @Test
+    public void testCompletionMethodsKeepLaterFailuresWhenTheFirstTaskFailureIsUnwrapped() {
+        for (int firstKind = 0; firstKind < 4; firstKind++) {
+            for (int variant = 0; variant < 4; variant++) {
+                final int v = variant;
+                final LinkageError error = new LinkageError("first task");
+                final IllegalStateException wrappedRuntime = new IllegalStateException("first task, wrapped");
+                final SQLException sqlCause = new SQLException("first task");
+                final Exception first = switch (firstKind) {
+                    case 0 -> new java.lang.reflect.InvocationTargetException(error);
+                    case 1 -> new java.lang.reflect.UndeclaredThrowableException(wrappedRuntime);
+                    case 2 -> new IllegalStateException("first task");
+                    default -> new UncheckedSQLException(sqlCause);
+                };
+                final boolean checkedVariant = v == 0 || v == 2;
+                final Throwable expected = switch (firstKind) {
+                    case 0 -> error;
+                    case 1 -> wrappedRuntime;
+                    case 2 -> first;
+                    // The checked completion methods report the SQLException an UncheckedSQLException carries, as they did.
+                    default -> checkedVariant ? sqlCause : first;
+                };
+                final SQLException later = new SQLException("later task");
+                final List<ContinuableFuture<Void>> runs = List.of(ContinuableFuture.call(() -> {
+                    throw first;
+                }, Runnable::run), ContinuableFuture.run(() -> {
+                    throw later;
+                }, Runnable::run));
+                final List<ContinuableFuture<Integer>> calls = List.of(ContinuableFuture.call(() -> {
+                    throw first;
+                }, Runnable::run), ContinuableFuture.call(() -> {
+                    throw later;
+                }, Runnable::run));
+
+                final Throwable thrown = assertThrows(Throwable.class, () -> {
+                    switch (v) {
+                        case 0 -> DaoUtil.complete(runs);
+                        case 1 -> DaoUtil.uncheckedComplete(runs);
+                        case 2 -> DaoUtil.completeSum(calls);
+                        default -> DaoUtil.uncheckedCompleteSum(calls);
+                    }
+                });
+
+                final String context = "first kind " + firstKind + ", variant " + v;
+                assertSame(expected, thrown, context);
+                assertTrue(Arrays.asList(thrown.getSuppressed()).contains(later), context);
+            }
+        }
+    }
+
+    // BUG FIX: getAsResult() reports a task that itself failed with an InterruptedException unwrapped, and the conversion
+    // of the collected failure interrupted the calling thread for it, although nothing had interrupted that thread (a
+    // later blocking call of the caller then failed at once). Only an interrupt of the waiting thread is restored.
+    @Test
+    public void testCompletionMethodsDoNotInterruptCallerForTaskInterruptedException() {
+        for (int variant = 0; variant < 4; variant++) {
+            final int v = variant;
+            final InterruptedException taskFailure = new InterruptedException("task");
+            final List<ContinuableFuture<Void>> runs = List.of(ContinuableFuture.run(() -> {
+                throw taskFailure;
+            }, Runnable::run));
+            final List<ContinuableFuture<Integer>> calls = List.of(ContinuableFuture.call(() -> {
+                throw taskFailure;
+            }, Runnable::run));
+
+            try {
+                final com.landawn.abacus.exception.UncheckedInterruptedException thrown = assertThrows(
+                        com.landawn.abacus.exception.UncheckedInterruptedException.class, () -> {
+                            switch (v) {
+                                case 0 -> DaoUtil.complete(runs);
+                                case 1 -> DaoUtil.uncheckedComplete(runs);
+                                case 2 -> DaoUtil.completeSum(calls);
+                                default -> DaoUtil.uncheckedCompleteSum(calls);
+                            }
+                        });
+
+                assertSame(taskFailure, thrown.getCause(), "variant " + v);
+                assertFalse(Thread.currentThread().isInterrupted(), "variant " + v + " interrupted the calling thread");
+            } finally {
+                Thread.interrupted();
+            }
+        }
+    }
+
+    // BUG FIX: getAsResult() reports a task that threw an Error as the ExecutionException carrying it, which the completion
+    // methods turned into an UncheckedException wrapping the Error (and the later failures, collected on the carrier, were
+    // dropped). The parallel join loads/deletes now propagate the Error itself, as their sequential overloads do.
+    @Test
+    public void testCompletionMethodsPropagateTaskErrorWithLaterFailuresSuppressed() {
+        for (int variant = 0; variant < 4; variant++) {
+            final int v = variant;
+            final LinkageError first = new LinkageError("first task");
+            final SQLException later = new SQLException("later task");
+            final List<ContinuableFuture<Void>> runs = List.of(ContinuableFuture.run(() -> {
+                throw first;
+            }, Runnable::run), ContinuableFuture.run(() -> {
+                throw later;
+            }, Runnable::run));
+            final List<ContinuableFuture<Integer>> calls = List.of(ContinuableFuture.call(() -> {
+                throw first;
+            }, Runnable::run), ContinuableFuture.call(() -> {
+                throw later;
+            }, Runnable::run));
+
+            final LinkageError thrown = assertThrows(LinkageError.class, () -> {
+                switch (v) {
+                    case 0 -> DaoUtil.complete(runs);
+                    case 1 -> DaoUtil.uncheckedComplete(runs);
+                    case 2 -> DaoUtil.completeSum(calls);
+                    default -> DaoUtil.uncheckedCompleteSum(calls);
+                }
+            });
+
+            assertSame(first, thrown, "variant " + v);
+            assertEquals(1, thrown.getSuppressed().length, "variant " + v);
+            assertSame(later, thrown.getSuppressed()[0], "variant " + v);
         }
     }
 

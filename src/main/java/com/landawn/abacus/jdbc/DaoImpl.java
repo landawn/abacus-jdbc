@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -846,7 +847,8 @@ final class DaoImpl {
      * {@code long}, {@code boolean} or their wrappers).
      *
      * @param returnType the return type of the DAO method
-     * @return {@code true} if a {@link QueryOperation#DEFAULT} statement with this return type is executed as an update
+     * @return {@code true} if a {@link QueryOperation#DEFAULT} statement with this return type that is neither a
+     *         {@code SELECT} nor an {@code INSERT} (a procedure call included) is executed as an update
      */
     private static boolean isUpdateReturnType(final Class<?> returnType) {
         return returnType.equals(int.class) || returnType.equals(long.class) || returnType.equals(boolean.class) || returnType.equals(void.class)
@@ -878,8 +880,8 @@ final class DaoImpl {
      * <p>The decision rules are:</p>
      * <ul>
      *   <li>Methods annotated with {@link MappedByKey @MappedByKey}: always treated as list queries.</li>
-     *   <li>{@link QueryOperation#list} or {@link QueryOperation#listAll}: treated as a list query, but only if the return type is a proper
-     *       {@link Collection} subtype (not raw {@code Collection.class} itself). A {@code Tuple2} return type (a stored procedure with
+     *   <li>{@link QueryOperation#list} or {@link QueryOperation#listAll}: treated as a list query, but only if the return type is a
+     *       {@link Collection} type ({@code Collection} itself included). A {@code Tuple2} return type (a stored procedure with
      *       out parameters) is treated as non-list; any other non-{@code Collection} return type raises an
      *       {@link UnsupportedOperationException}.</li>
      *   <li>Any explicit {@code QueryOperation} other than {@link QueryOperation#DEFAULT}: not a list query.</li>
@@ -908,7 +910,7 @@ final class DaoImpl {
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return {@code true} if the method should be dispatched as a list query, {@code false} otherwise
      * @throws UnsupportedOperationException if {@code QueryOperation} is {@link QueryOperation#list} or {@link QueryOperation#listAll} but the return
-     *         type is neither a proper {@link Collection} subtype nor one of the supported exemptions
+     *         type is neither a {@link Collection} type nor one of the supported exemptions
      *         ({@code Map} via {@link MappedByKey}, {@code Tuple2} for procedures with out parameters)
      */
     private static boolean isListQuery(final Method method, final Class<?> returnType, final QueryOperation queryOperation, final String fullClassMethodName)
@@ -930,7 +932,9 @@ final class DaoImpl {
                 return false;
             }
 
-            if (Collection.class.equals(returnType) || !(Collection.class.isAssignableFrom(returnType))) {
+            // WHY a raw Collection is accepted: it is served as a List, as with QueryOperation.DEFAULT (and as Iterable is).
+            // Rejecting it failed DAO creation for 'op = list', also for @MergedById methods whose validation accepts it.
+            if (!(Collection.class.isAssignableFrom(returnType))) {
                 throw new UnsupportedOperationException("The result type of list QueryOperation must be sub type of Collection, can't be: " + returnType
                         + " in method: " + fullClassMethodName);
             }
@@ -1926,9 +1930,9 @@ final class DaoImpl {
     /**
      * Maps the declared return type of a custom query method to the type whose instance is returned for it: a
      * {@code List} for {@code Iterable} or another interface that an {@code ArrayList} implements but no collection
-     * factory instantiates (e.g. {@code SequencedCollection}), and an {@code ImmutableList} for the abstract
-     * {@code ImmutableCollection}. Without it such a method fell through to the single-value dispatch, or failed every
-     * call creating the result collection. Any other type is returned unchanged.
+     * factory instantiates (e.g. {@code SequencedCollection}), a {@code LinkedHashSet} for {@code SequencedSet}, and an
+     * {@code ImmutableList} for the abstract {@code ImmutableCollection}. Without it such a method fell through to the
+     * single-value dispatch, or failed every call creating the result collection. Any other type is returned unchanged.
      *
      * @param declaredReturnType the declared return type of the method
      * @return the type of the returned instance
@@ -1936,6 +1940,10 @@ final class DaoImpl {
     private static Class<?> resolveQueryReturnType(final Class<?> declaredReturnType) {
         if (com.landawn.abacus.util.ImmutableCollection.class.equals(declaredReturnType)) {
             return ImmutableList.class;
+        } else if (java.util.SequencedSet.class.equals(declaredReturnType)) {
+            // WHY: no collection factory instantiates the interface (Suppliers.ofCollection rejects it as abstract), so
+            // DAO creation accepted the method and every call failed after the query had run. LinkedHashSet keeps the row order.
+            return java.util.LinkedHashSet.class;
         } else if (declaredReturnType.isInterface() && Iterable.class.isAssignableFrom(declaredReturnType)
                 && declaredReturnType.isAssignableFrom(ArrayList.class)
                 && !(Collection.class.equals(declaredReturnType) || List.class.equals(declaredReturnType))) {
@@ -2071,7 +2079,9 @@ final class DaoImpl {
      * @param method the DAO method
      * @param paramTypes the method's parameter types
      * @param paramLen the number of method parameters
-     * @param fragmentParamLen the number of SQL-fragment parameters
+     * @param fragmentParamLen the number of {@code @SqlFragment}/{@code @SqlFragmentList}/{@code @BindList} parameters (not used
+     *        to build the setter: {@code stmtParamIndexes} already excludes the fragment parameters and includes the
+     *        {@code @BindList} ones)
      * @param stmtParamIndexes indexes of the method parameters that bind to statement parameters
      * @param bindListParamFlags flags, parallel to {@code stmtParamIndexes} (indexed by statement-parameter position,
      *        not by method-parameter index), marking the statement parameters annotated with {@code @BindList}
@@ -2080,9 +2090,11 @@ final class DaoImpl {
      * @throws UnsupportedOperationException if a {@code ParametersSetter}/{@code BiParametersSetter}/
      *         {@code TriParametersSetter} method parameter is used (not enabled at present), if a procedure parameter
      *         cannot be bound (an empty {@code @Bind} name, {@code @Bind} on only some parameters, or a single
-     *         entity/{@code EntityId} parameter), if a single unnamed named-query parameter is not a bean, record,
-     *         {@code Map} or {@code EntityId}, if a named-query parameter lacks {@code @Bind}, or if named-parameter
-     *         bindings are invalid
+     *         bean/record/{@code EntityId} parameter bound neither by name nor as a single parameter), if a single
+     *         named-query parameter has an empty {@code @Bind} name or, without {@code @Bind} and
+     *         {@code collectionAsSingleParameter}, is not a bean, record,
+     *         {@code Map} or {@code EntityId}, if one of several named-query parameters lacks {@code @Bind}, or if
+     *         named-parameter bindings are invalid
      */
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiParametersSetter<AbstractQuery, Object[]> createParametersSetter(final QueryInfo queryInfo, final String fullClassMethodName,
@@ -2450,23 +2462,63 @@ final class DaoImpl {
         }
     }
 
+    /** Keywords that may stand between {@code INSERT} and an {@code INTO}-less target (MySQL's). */
+    private static final Set<String> INSERT_TARGET_MODIFIERS = Set.of("LOW_PRIORITY", "DELAYED", "HIGH_PRIORITY", "IGNORE");
+
     /**
-     * Reads the target of the outer INSERT, ignoring comments, quoted text and INSERTs inside CTEs.
-     * Returns {@code null} for a shape without an identifiable INTO target, leaving key selection to the driver.
+     * Tokens that, right after {@code TOP (...)}, show that {@code TOP} was the target table followed by its column list
+     * (MySQL's {@code INSERT top (a) VALUES ...}, SQL Server's {@code INSERT [top] (a) OUTPUT ...}) rather than SQL Server's
+     * {@code TOP (n)} clause, which a target follows.
+     */
+    private static final Set<String> TOP_TABLE_COLUMN_LIST_FOLLOWERS = Set.of("VALUES", "VALUE", "SELECT", "TABLE", "WITH", "OUTPUT", ";");
+
+    /**
+     * Reads the target of the outer INSERT, ignoring comments, quoted text and INSERTs inside CTEs: the name after its
+     * {@code INTO}, or, without a top-level {@code INTO}, the first name after {@code INSERT} and its modifiers (MySQL and
+     * SQL Server accept {@code INSERT users (...) VALUES ...}; SQL Server's {@code TOP (n) [PERCENT]} is a modifier, a
+     * MySQL table named {@code top} is not). Returns {@code null} for a shape without an identifiable target, leaving key
+     * selection to the driver.
      */
     private static String insertTargetTable(final String sql) {
         final SqlParser.TokenCursor cursor = SqlParser.cursor(sql);
         int depth = 0;
         int statementDepth = -1;
         boolean insert = false;
+        // WHY: an INTO-less INSERT gave no target, so an insert into the DAO's own table was taken for one into another
+        // table and its generated key was no longer written back to the entity (4.9.3 did). The first name is only a
+        // candidate, as it may be a keyword: an INTO before the inserted values (SQLite's INSERT OR REPLACE INTO, Oracle's
+        // INSERT ALL INTO) still decides. The INTO of SQL Server's OUTPUT ... INTO clause names where OUTPUT writes, and an
+        // INTO after a ';' belongs to another statement: the candidate is the target at an OUTPUT or a ';'.
+        String targetWithoutInto = null;
+        // SQL Server's TOP (n): the TOP token (kept in case it was a MySQL table named top), whether its group is open,
+        // and whether that group has just closed (a PERCENT may follow).
+        String topToken = null;
+        boolean topGroupOpen = false;
+        boolean afterTopGroup = false;
+        // Reading a qualified name reads the token after it too, which is then the next one to examine.
+        boolean tokenPending = false;
 
-        while (cursor.next()) {
+        while (tokenPending || cursor.next()) {
+            tokenPending = false;
             final String token = cursor.token();
 
             if ("(".equals(token)) {
+                // WHY: a group right after TOP (...) shows that TOP was a MySQL table named top, followed by its column list and
+                // a parenthesized query (INSERT top (a) (SELECT 1) UNION (SELECT 2)), rather than SQL Server's TOP (n), which a
+                // target follows: the UNION after the query was taken for the target.
+                if (afterTopGroup && depth == statementDepth) {
+                    afterTopGroup = false;
+                    targetWithoutInto = topToken;
+                }
+
                 depth++;
             } else if (")".equals(token)) {
                 depth--;
+
+                if (topGroupOpen && depth == statementDepth) {
+                    topGroupOpen = false;
+                    afterTopGroup = true;
+                }
             } else {
                 if (statementDepth < 0) {
                     statementDepth = depth;
@@ -2476,29 +2528,76 @@ final class DaoImpl {
                     continue;
                 }
 
-                if ("INSERT".equalsIgnoreCase(token)) {
-                    insert = true;
-                } else if (insert && "INTO".equalsIgnoreCase(token) && cursor.next()) {
-                    final StringBuilder table = new StringBuilder(cursor.token());
+                if (afterTopGroup) {
+                    afterTopGroup = false;
 
-                    // Depending on quoting, a qualified name may be one token or several tokens separated by dots.
-                    while (cursor.next()) {
-                        final String next = cursor.token();
-                        if (table.charAt(table.length() - 1) == '.' || next.startsWith(".")) {
-                            table.append(next);
-                        } else {
-                            break;
-                        }
+                    if ("PERCENT".equalsIgnoreCase(token)) {
+                        continue;
                     }
 
+                    if (TOP_TABLE_COLUMN_LIST_FOLLOWERS.contains(token.toUpperCase(Locale.ROOT))) {
+                        targetWithoutInto = topToken;
+                    }
+                }
+
+                if ("INSERT".equalsIgnoreCase(token)) {
+                    // WHY: a top-level INSERT after the candidate begins another statement, which a SQL Server batch need not
+                    // separate by ';' (INSERT users (a) EXEC p INSERT INTO audit ...): its INTO was taken for the target.
+                    if (insert && targetWithoutInto != null) {
+                        return targetWithoutInto;
+                    }
+
+                    insert = true;
+                } else if (insert && "INTO".equalsIgnoreCase(token)) {
+                    if (!cursor.next()) {
+                        break;
+                    }
+
+                    final StringBuilder table = new StringBuilder(cursor.token());
+                    appendQualifiedNameParts(cursor, table);
                     return table.toString();
-                } else if (insert && ("VALUES".equalsIgnoreCase(token) || "SELECT".equalsIgnoreCase(token))) {
-                    return null;
+                } else if (insert && ("VALUES".equalsIgnoreCase(token) || "SELECT".equalsIgnoreCase(token) || ";".equals(token))) {
+                    return targetWithoutInto;
+                } else if (insert && targetWithoutInto != null && "OUTPUT".equalsIgnoreCase(token)) {
+                    return targetWithoutInto;
+                } else if (insert && targetWithoutInto == null && !INSERT_TARGET_MODIFIERS.contains(token.toUpperCase(Locale.ROOT))) {
+                    final StringBuilder table = new StringBuilder(token);
+                    tokenPending = appendQualifiedNameParts(cursor, table);
+
+                    if (topToken == null && "TOP".equalsIgnoreCase(token) && tokenPending && table.length() == token.length() && "(".equals(cursor.token())) {
+                        topToken = token;
+                        topGroupOpen = true;
+                    } else {
+                        targetWithoutInto = table.toString();
+                    }
                 }
             }
         }
 
-        return null;
+        return targetWithoutInto == null && afterTopGroup ? topToken : targetWithoutInto;
+    }
+
+    /**
+     * Appends the remaining parts of a qualified name whose first token is already in {@code name}: depending on quoting,
+     * a qualified name may be one token or several tokens separated by dots. SQL Server's table variable ({@code @tv}) is
+     * read as one name too: the cursor splits it into {@code @} and {@code tv}.
+     *
+     * @param cursor the cursor positioned on the name's first token
+     * @param name the name read so far
+     * @return {@code true} if the cursor is positioned on the token after the name, {@code false} if no token follows it
+     */
+    private static boolean appendQualifiedNameParts(final SqlParser.TokenCursor cursor, final StringBuilder name) {
+        while (cursor.next()) {
+            final String next = cursor.token();
+
+            if (name.charAt(name.length() - 1) == '.' || next.startsWith(".") || (name.length() == 1 && name.charAt(0) == '@')) {
+                name.append(next);
+            } else {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -2889,11 +2988,16 @@ final class DaoImpl {
             }
 
             return preparedQuery;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            // WHY Throwable: an undeclared checked exception (of a parameter setter or a fragment mapper) left the query open.
             if (preparedQuery != null) {
                 try {
                     preparedQuery.close();
-                } catch (final RuntimeException | Error closeFailure) {
+                } catch (final Throwable closeFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    if (closeFailure instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
+
                     if (closeFailure != e) {
                         e.addSuppressed(closeFailure);
                     }
@@ -3373,7 +3477,12 @@ final class DaoImpl {
         void afterFailedWrite(final Throwable failure) {
             try {
                 afterWrite();
-            } catch (final RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                // WHY Throwable: an undeclared checked exception of an ID getter escaped here, replacing the write's own failure.
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+
                 if (e != failure) {
                     failure.addSuppressed(e);
                 }
@@ -3393,7 +3502,8 @@ final class DaoImpl {
 
             try {
                 writes.run();
-            } catch (final RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                // WHY Throwable: an undeclared checked exception of a key setter skipped recording the values it left as written.
                 afterFailedWrite(e);
                 throw e;
             }
@@ -3976,7 +4086,8 @@ final class DaoImpl {
 
     /**
      * Returns the runtime class shared by all non-{@code null} elements of {@code elements}, or {@code null} if there
-     * is no non-{@code null} element or the non-{@code null} elements are of different classes.
+     * is no non-{@code null} element or the non-{@code null} elements are of different classes. An enum constant counts
+     * as an instance of its enum class ({@link Enum#getDeclaringClass()}), also a constant with a body.
      *
      * @param elements the elements to inspect
      * @return the common runtime class of the non-{@code null} elements, or {@code null}
@@ -3989,9 +4100,14 @@ final class DaoImpl {
                 continue;
             }
 
+            // WHY getDeclaringClass: a constant with a body is of an anonymous subclass of its enum, so a container also holding
+            // the enum's other constants was copied untyped (they came back as Strings), and the subclass is resolved by name
+            // (an enum that the library's class loader cannot see failed every call with "No class found by name").
+            final Class<?> cls = element instanceof final Enum<?> constant ? constant.getDeclaringClass() : element.getClass();
+
             if (elementClass == null) {
-                elementClass = element.getClass();
-            } else if (elementClass != element.getClass()) {
+                elementClass = cls;
+            } else if (elementClass != cls) {
                 return null;
             }
         }
@@ -4104,6 +4220,25 @@ final class DaoImpl {
     }
 
     /**
+     * Checks that {@code propNamesToInsert} is not {@code null} or empty and has no {@code null} or blank element, which the
+     * INSERT builder rejects. WHY here: a batch insert/save builds its INSERT only for non-empty entities, so it skipped
+     * this validation for an empty collection, while the single-entity insert/save always failed.
+     *
+     * @param propNamesToInsert the property names to insert
+     * @param argName the name of the parameter, for the message
+     * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty or has a {@code null} or blank element
+     */
+    private static void checkPropNamesToInsert(final Collection<String> propNamesToInsert, final String argName) throws IllegalArgumentException {
+        N.checkArgNotEmpty(propNamesToInsert, argName);
+
+        for (final String propName : propNamesToInsert) {
+            if (Strings.isBlank(propName)) {
+                throw new IllegalArgumentException("'" + argName + "' cannot contain a null or blank element: " + propNamesToInsert);
+            }
+        }
+    }
+
+    /**
      * Returns whether an element of the property names to update is a raw SET assignment such as
      * {@code "score = score + 5"}, which the query builder's {@code set(Collection)} renders as is, without a placeholder:
      * it has an {@code '='} outside quoted text, parentheses and brackets. An {@code '='} inside a delimited name or an
@@ -4188,7 +4323,12 @@ final class DaoImpl {
 
         try {
             generatedIdRestorer.run();
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            // WHY Throwable: an undeclared checked exception of an ID getter or setter replaced the insert's own failure.
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+
             if (e != failure) {
                 failure.addSuppressed(e);
             }
@@ -4207,7 +4347,8 @@ final class DaoImpl {
     private static SqlTransaction beginInsertTransaction(final javax.sql.DataSource ds, final Runnable generatedIdRestorer) {
         try {
             return JdbcUtil.beginTransaction(ds);
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            // WHY Throwable: an undeclared checked exception (of the data source) left the generated IDs on the entities.
             restoreGeneratedIds(generatedIdRestorer, e);
             throw e;
         }
@@ -5438,7 +5579,7 @@ final class DaoImpl {
                             final Collection<String> propNamesToSave = (Collection<String>) args[1];
 
                             N.checkArgNotNull(entity, cs.entity);
-                            N.checkArgNotEmpty(propNamesToSave, cs.propNamesToSave);
+                            checkPropNamesToInsert(propNamesToSave, cs.propNamesToSave);
 
                             final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToSave).build().query();
 
@@ -5555,7 +5696,7 @@ final class DaoImpl {
                             final Collection<?> entities = (Collection<Object>) args[0];
 
                             final Collection<String> propNamesToSave = (Collection<String>) args[1];
-                            N.checkArgNotEmpty(propNamesToSave, cs.propNamesToSave);
+                            checkPropNamesToInsert(propNamesToSave, cs.propNamesToSave);
 
                             final int batchSize = (Integer) args[2];
                             N.checkArgPositive(batchSize, cs.batchSize);
@@ -7100,7 +7241,7 @@ final class DaoImpl {
                             final Object entity = args[0];
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             N.checkArgNotNull(entity, cs.entity);
-                            N.checkArgNotEmpty(propNamesToInsert, cs.propNamesToInsert);
+                            checkPropNamesToInsert(propNamesToInsert, cs.propNamesToInsert);
 
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             // Puts back the ID this call writes onto the entity if a transaction it runs in is rolled back later.
@@ -7444,7 +7585,7 @@ final class DaoImpl {
 
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             final int batchSize = (Integer) args[2];
-                            N.checkArgNotEmpty(propNamesToInsert, cs.propNamesToInsert);
+                            checkPropNamesToInsert(propNamesToInsert, cs.propNamesToInsert);
                             N.checkArgPositive(batchSize, cs.batchSize);
 
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
@@ -9086,7 +9227,7 @@ final class DaoImpl {
 
                             try {
                                 return queryFunc.apply(preparedQuery, args);
-                            } catch (final SQLException | RuntimeException | Error e) {
+                            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                                 // The query function can fail before it reaches the execution method that closes the query, e.g. while
                                 // building its row mapper (a @PrefixFieldMapping target that is not a bean class) or its result
                                 // collection supplier. Close the query so its statement and connection are not leaked; closing a
@@ -9126,7 +9267,7 @@ final class DaoImpl {
                                     ? (ret, entity, isEntity) -> null
                                     : (isOptionalIdReturn
                                             ? (ret, entity, isEntity) -> isEntity ? ret : ret.map(key -> convertGeneratedKey(key, declaredIdReturnType))
-                                            : (ret, entity, isEntity) -> isEntity ? ret.orElse(idGetter.apply(entity)) //NOSONAR
+                                            : (ret, entity, isEntity) -> isEntity ? ret.orElseGet(() -> idGetter.apply(entity)) //NOSONAR
                                                     : ret.map(key -> convertGeneratedKey(key, declaredIdReturnType)).orElse(N.defaultValueOf(returnType)));
 
                             call = (proxy, args) -> {
@@ -9906,15 +10047,33 @@ final class DaoImpl {
                             return kryoParser.deepCopy((Object) new KryoCacheCopy(r));
                         };
                         case JSON -> r -> {
-                            if (serializationNotRequired.test(r)) {
+                            // An enum constant is its own copy, as a JSON round trip reads back the same constant. That round trip
+                            // failed every call of a method returning an enum: the parser writes a root enum quoted but reads a root
+                            // scalar as it is, quotes included ("No enum constant Status.\"ACTIVE\"").
+                            if (r instanceof Enum || serializationNotRequired.test(r)) {
                                 return r;
                             }
+
+                            // An EnumSet holds only constants, so its clone is a deep copy. Rebuilt through JSON, a declared
+                            // EnumSet failed every call: no default container fits it, and its runtime class has no constructor.
+                            if (r instanceof final java.util.EnumSet<?> enumSet) {
+                                return enumSet.clone();
+                            }
+
+                            // WHY: EnumMap has no no-argument constructor, so naming it as the class of the copy failed every call of
+                            // a method returning one (see copyJsonEnumMap).
+                            if (r instanceof final java.util.EnumMap<?, ?> enumMap) {
+                                return copyJsonEnumMap(enumMap, declaredReturnType);
+                            }
+
+                            // The runtime class, unless the parser cannot construct it (e.g. List.of(...)): see jsonRootCopyClass.
+                            final Class<?> rootClass = jsonRootCopyClass(r, returnType);
 
                             if (r instanceof Collection || r instanceof Map || r instanceof Object[] || r instanceof u.Optional || r instanceof u.Nullable
                                     || r instanceof java.util.Optional) {
                                 final Map<Object, Boolean> sortedContainers = new java.util.IdentityHashMap<>();
                                 if (requiresJsonContainerTreeCopy(r, sortedContainers)) {
-                                    return copyJsonContainerTree(r, declaredReturnType, sortedContainers, true);
+                                    return copyJsonContainerTree(r, declaredReturnType, sortedContainers, rootClass);
                                 }
                             }
 
@@ -9956,7 +10115,7 @@ final class DaoImpl {
 
                                 if (elementType != null) {
                                     return jsonParser.deserialize(json, com.landawn.abacus.parser.JsonDeserConfig.create().setElementType(elementType),
-                                            r.getClass());
+                                            rootClass);
                                 }
                             } else if (r instanceof final Map<?, ?> m) {
                                 final boolean isDeclaredMap = declaredReturnType != null && declaredReturnType.isMap()
@@ -9977,13 +10136,13 @@ final class DaoImpl {
                                         config.setMapValueType(valueType);
                                     }
 
-                                    return jsonParser.deserialize(json, config, r.getClass());
+                                    return jsonParser.deserialize(json, config, rootClass);
                                 }
                             } else if (declaredReturnType != null && declaredReturnType.javaType().isAssignableFrom(r.getClass())) {
                                 return jsonParser.deserialize(json, declaredReturnType);
                             }
 
-                            return jsonParser.deserialize(json, r.getClass());
+                            return jsonParser.deserialize(json, rootClass);
                         };
                     };
 
@@ -10685,6 +10844,70 @@ final class DaoImpl {
     }
 
     /**
+     * Whether the JSON parser can construct a non-public container class ({@link #isUsableJsonElementType}), per class.
+     * WHY cached: the check reflects on the class's constructors (copying each of them), and a result of such a class
+     * ({@code List.of(...)}, {@code Stream.toList()}, {@code Collections.unmodifiableMap(...)}) is copied on every cache
+     * read and write. A plain {@link ClassValue} is safe here, unlike for the container copy layouts: its {@code Boolean}
+     * values reference no class of this library, so an entry on a JDK class keeps no class loader of this library reachable.
+     */
+    private static final ClassValue<Boolean> jsonConstructibleContainerClasses = new ClassValue<>() {
+        @Override
+        protected Boolean computeValue(final Class<?> type) {
+            return isUsableJsonElementType(N.typeOf(type));
+        }
+    };
+
+    /**
+     * Returns the class that the JSON cache copy rebuilds a result as: its runtime class, unless that is a container
+     * class the JSON parser cannot construct, such as the class of {@code List.of(...)},
+     * {@code Stream.toList()}, {@code Arrays.asList(...)} or {@code Collections.unmodifiableMap(...)}, or a public JDK class
+     * without a no-argument constructor, such as {@code ConcurrentHashMap.KeySetView} (a public application class is kept:
+     * the parser may construct it through a registered factory; an {@code EnumSet} or
+     * {@code EnumMap} is copied as one instead, before this is consulted). Such a result is rebuilt as the default container
+     * of its kind, if the method's return type accepts it: an {@code ArrayList}, a {@code LinkedHashSet} or a
+     * {@code LinkedHashMap} (iterating like the source), or a {@code TreeSet} or {@code TreeMap} for a sorted one
+     * (keeping its comparator, see
+     * {@link #copyJsonContainerTree(Object, com.landawn.abacus.type.Type, Map, Class)}). WHY: naming the runtime class
+     * failed every call of the method ("No default constructor found"), after the method had returned its result.
+     *
+     * @param result the non-null result (or value held by an optional/nullable result) to copy
+     * @param returnType the return type of the DAO method
+     * @return the class to rebuild the copy as; the runtime class if no default container fits {@code returnType}
+     */
+    private static Class<?> jsonRootCopyClass(final Object result, final Class<?> returnType) {
+        final Class<?> runtimeClass = result.getClass();
+
+        // A public application class keeps its runtime class (the parser may construct it through a factory registered with
+        // Suppliers/IntFunctions; otherwise the parser's diagnostic names it). WHY not a public JDK class: one can lack a
+        // constructor the parser can call (ConcurrentHashMap.KeySetView, ArrayBlockingQueue), and naming it failed every call.
+        // The constructor check is cached per class.
+        if (!(result instanceof Collection || result instanceof Map) || (Modifier.isPublic(runtimeClass.getModifiers()) && !isJdkClass(runtimeClass))
+                || jsonConstructibleContainerClasses.get(runtimeClass)) {
+            return runtimeClass;
+        }
+
+        final Class<?> defaultClass = result instanceof java.util.SortedSet ? java.util.TreeSet.class
+                : result instanceof Set ? java.util.LinkedHashSet.class
+                        : result instanceof Collection ? ArrayList.class
+                                : result instanceof java.util.SortedMap ? java.util.TreeMap.class : java.util.LinkedHashMap.class;
+
+        return returnType.isAssignableFrom(defaultClass) ? defaultClass : runtimeClass;
+    }
+
+    /**
+     * Returns whether {@code cls} belongs to the JDK: a module of the boot layer named {@code java.*} or {@code jdk.*}. No
+     * factory can be registered for such a class with {@code Suppliers}/{@code IntFunctions}.
+     *
+     * @param cls the class to check
+     * @return {@code true} if {@code cls} is a JDK class
+     */
+    private static boolean isJdkClass(final Class<?> cls) {
+        final Module module = cls.getModule();
+
+        return module.isNamed() && module.getLayer() == ModuleLayer.boot() && (module.getName().startsWith("java.") || module.getName().startsWith("jdk."));
+    }
+
+    /**
      * Classifies structural container paths requiring comparator-aware or order-preserving copying. Bean
      * properties remain governed by the JSON parser, including its annotation and property-format rules. Identity
      * memoization avoids rescanning shared/deep container trees; a null entry marks an active path, since JSON
@@ -10774,13 +10997,16 @@ final class DaoImpl {
      *        {@link #requiresJsonContainerTreeCopy(Object, Map)}: a container is flagged {@code true} if it is, or holds
      *        at any depth, a sorted node, a plain immutable set/map wrapper, a map with a {@code null} or
      *        {@code java.util.Date} key, or a {@code Timestamp}, {@code Calendar} or {@code java.time} value
-     * @param inferTypes whether this is the root result, retaining its runtime class and common-runtime-type fallback
+     * @param rootClass for the root result, the class it is rebuilt as (see {@link #jsonRootCopyClass(Object, Class)}),
+     *        which also enables the common-runtime-type fallback; {@code null} for a value inside it
      * @return the JSON copy, retaining source comparators for supported standard/library containers and
      *         constructor-created comparators for custom sorted classes
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private static Object copyJsonContainerTree(final Object value, final com.landawn.abacus.type.Type<?> declaredType,
-            final Map<Object, Boolean> sortedContainers, final boolean inferTypes) {
+            final Map<Object, Boolean> sortedContainers, final Class<?> rootClass) {
+        final boolean inferTypes = rootClass != null;
+
         if (isExactlyCopiedJsonDateTime(value)) {
             return copyJsonDateTime(value);
         }
@@ -10807,15 +11033,14 @@ final class DaoImpl {
             final com.landawn.abacus.type.Type<?> heldType = declaredType != null && N.size(declaredType.parameterTypes()) == 1
                     ? declaredType.parameterTypes().get(0)
                     : null;
-            final Object copy = copyJsonContainerTree(held, resolvedOrRuntimeType(heldType, java.util.Collections.singletonList(held)), sortedContainers,
-                    false);
+            final Object copy = copyJsonContainerTree(held, resolvedOrRuntimeType(heldType, java.util.Collections.singletonList(held)), sortedContainers, null);
             return value instanceof u.Optional ? u.Optional.of(copy) : value instanceof u.Nullable ? u.Nullable.of(copy) : java.util.Optional.of(copy);
         }
         if (value instanceof final Object[] array) {
             if (!inferTypes && (declaredType == null || declaredType.isObject())) {
                 final List<Object> copy = new ArrayList<>(array.length);
                 for (final Object element : array) {
-                    copy.add(copyJsonContainerTree(element, null, sortedContainers, false));
+                    copy.add(copyJsonContainerTree(element, null, sortedContainers, null));
                 }
                 return copy;
             }
@@ -10836,12 +11061,12 @@ final class DaoImpl {
                 }
             }
             for (int i = 0; i < array.length; i++) {
-                copy[i] = copyJsonContainerTree(array[i], elementType, sortedContainers, false);
+                copy[i] = copyJsonContainerTree(array[i], elementType, sortedContainers, null);
             }
             return copy;
         }
 
-        final Class<?> runtimeClass = value.getClass();
+        final Class<?> runtimeClass = inferTypes ? rootClass : value.getClass();
         // A nested declared List/Map can contain a private JDK view. The parser normally constructs the
         // declared interface's default implementation, rather than trying to instantiate that view class.
         final boolean declaredContainer = declaredType != null && (declaredType.isCollection() || declaredType.isMap());
@@ -10901,7 +11126,7 @@ final class DaoImpl {
                 jsonParser.parseInto(jsonParser.serialize(source), config, copy);
             } else {
                 for (final Object element : source) {
-                    copy.add(copyJsonContainerTree(element, elementType, sortedContainers, false));
+                    copy.add(copyJsonContainerTree(element, elementType, sortedContainers, null));
                 }
             }
             if (verifySortedCopy) {
@@ -10979,9 +11204,9 @@ final class DaoImpl {
             }
             for (final Map.Entry<?, ?> entry : source.entrySet()) {
                 final Object key = entry.getKey() == null ? null
-                        : Boolean.TRUE.equals(sortedContainers.get(entry.getKey())) ? copyJsonContainerTree(entry.getKey(), keyType, sortedContainers, false)
+                        : Boolean.TRUE.equals(sortedContainers.get(entry.getKey())) ? copyJsonContainerTree(entry.getKey(), keyType, sortedContainers, null)
                                 : copyJsonMapKey(entry.getKey(), keyConfig);
-                copy.put(key, copyJsonContainerTree(entry.getValue(), valueType, sortedContainers, false));
+                copy.put(key, copyJsonContainerTree(entry.getValue(), valueType, sortedContainers, null));
             }
         }
         if (verifySortedCopy) {
@@ -11134,8 +11359,9 @@ final class DaoImpl {
      * Copies the value held by an {@code Optional}/{@code Nullable} result for the JSON-serialized DAO cache, through
      * {@code declaredValueType} when it is resolved, otherwise through the value's runtime class. A single held value
      * has no untyped fallback: a raw holder declares nothing, and an {@code Object} type would read the value back as
-     * its JSON String. So a runtime container class the parser cannot construct is still used here, and the parser's
-     * own "no default constructor" failure names the class.
+     * its JSON String. So a runtime container class the parser cannot construct (such as that of {@code List.of(...)})
+     * is replaced, as for a root result, by the default container of its kind (see
+     * {@link #jsonRootCopyClass(Object, Class)}), which an unresolved declared type accepts.
      *
      * @param value the held value; may be {@code null} (a present {@code null} of a {@code Nullable})
      * @param declaredValueType the declared value type of the holder, or {@code null} if unknown
@@ -11143,8 +11369,11 @@ final class DaoImpl {
      */
     @SuppressWarnings("unchecked")
     private static Object copyHeldValue(final Object value, final com.landawn.abacus.type.Type<?> declaredValueType) {
-        if (value == null) {
-            return null;
+        // An enum constant is its own copy, as for a root result. WHY: a constant with a body (an anonymous subclass of its
+        // enum, resolved by name) of an enum the library's class loader cannot see, held in an unresolved holder (Optional<T>
+        // of a built-in method), failed every call with "No class found by name".
+        if (value == null || value instanceof Enum) {
+            return value;
         }
 
         // stringOf writes a java.util.Date with whole seconds only (see isSecondPrecisionJsonDate).
@@ -11156,12 +11385,55 @@ final class DaoImpl {
             return copyJsonDateTime(value);
         }
 
+        // An EnumSet holds only constants: its clone is a deep copy, while the parser cannot create the abstract EnumSet.
+        if (value instanceof final java.util.EnumSet<?> enumSet) {
+            return enumSet.clone();
+        }
+
+        if (value instanceof final java.util.EnumMap<?, ?> enumMap) {
+            return copyJsonEnumMap(enumMap, declaredValueType);
+        }
+
         final com.landawn.abacus.type.Type<?> resolvedType = resolvedOrRuntimeType(declaredValueType, java.util.Collections.singletonList(value));
+        // WHY jsonRootCopyClass: a non-public container class the parser cannot construct (List.of(...), Map.of(...), an
+        // unmodifiable view) failed every call with "No default constructor"; an unresolved held type accepts any container.
         final com.landawn.abacus.type.Type<Object> valueType = (com.landawn.abacus.type.Type<Object>) (resolvedType == null || resolvedType.isObject()
-                ? N.typeOf(value.getClass())
+                ? N.typeOf(jsonRootCopyClass(value, Object.class))
                 : resolvedType);
 
         return valueType.valueOf(valueType.stringOf(value));
+    }
+
+    /**
+     * Copies an {@code EnumMap} for the JSON-serialized DAO cache as an {@code EnumMap} of the same key type: its keys are
+     * enum constants, kept as they are, and each value is copied through JSON (as a map value of a JSON-copied map, see
+     * {@link #copyJsonContainerTree(Object, com.landawn.abacus.type.Type, Map, Class)}), typed by the declared value
+     * type when it is resolved, otherwise by the values' common runtime class. The JSON parser cannot construct an
+     * {@code EnumMap}, which has no no-argument constructor.
+     *
+     * @param source the map to copy
+     * @param declaredMapType the declared type of the map, or {@code null} if unknown
+     * @return a deep copy of {@code source}
+     * @throws ParsingException if a value holds a cyclic container structure
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static java.util.EnumMap<?, ?> copyJsonEnumMap(final java.util.EnumMap<?, ?> source, final com.landawn.abacus.type.Type<?> declaredMapType) {
+        // The clone keeps the key type, which an empty map has no other way to tell.
+        final java.util.EnumMap copy = source.clone();
+
+        if (!source.isEmpty()) {
+            final Map<Object, Boolean> sortedContainers = new java.util.IdentityHashMap<>();
+            requiresJsonContainerTreeCopy(source, sortedContainers);
+            final com.landawn.abacus.type.Type<?> valueType = resolvedOrRuntimeType(
+                    declaredMapType != null && declaredMapType.isMap() && N.size(declaredMapType.parameterTypes()) == 2
+                            ? declaredMapType.parameterTypes().get(1)
+                            : null,
+                    source.values());
+
+            copy.replaceAll((key, value) -> copyJsonContainerTree(value, valueType, sortedContainers, null));
+        }
+
+        return copy;
     }
 
     /**

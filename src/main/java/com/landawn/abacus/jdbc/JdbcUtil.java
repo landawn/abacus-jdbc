@@ -684,19 +684,24 @@ public final class JdbcUtil {
      * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the database metadata reports a
      *         {@code null}, empty, or blank product name.
-     * @throws UncheckedSQLException if acquiring a connection or reading its database metadata fails;
-     *         connection acquisition follows {@link #getConnection(javax.sql.DataSource)}.
+     * @throws UncheckedSQLException if acquiring a connection or reading its database metadata fails.
+     *         Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @see #getDBProductInfo(Connection)
      * @see SqlDialect.ProductInfo
      */
     public static ProductInfo getDBProductInfo(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException {
         Connection conn = null;
+        Throwable failure = null;
 
         try {
             conn = getConnection(ds);
             return getDBProductInfo(conn);
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            failure = e;
+            throw e;
         } finally {
-            releaseConnection(conn, ds);
+            releaseConnectionAfter(conn, ds, failure); // a close Error replaced the lookup's failure
         }
     }
 
@@ -1248,7 +1253,11 @@ public final class JdbcUtil {
      * connections are not prematurely closed. If no transaction is active, it closes the connection.
      * It is crucial to call this method in a {@code finally} block to prevent connection leaks.
      *
-     * <p>Close failures are logged, never thrown. Spring binds a transaction's connection to the thread that
+     * <p>Close failures are logged and ignored, except an {@link Error} thrown while the connection is closed directly: when
+     * Spring's transaction support is not used for {@code ds} (Spring is absent, {@code ds} is {@code null}, or the release
+     * runs in one of the scopes named below that ignore Spring transactions), or Spring's classes fail to link, the connection is
+     * closed through {@link #closeQuietly(Connection)}, which rethrows such an {@code Error}. Released through Spring's
+     * {@code DataSourceUtils}, every close failure is logged by Spring. Spring binds a transaction's connection to the thread that
      * started the transaction: release a connection on the thread that obtained it, and not inside a
      * {@link #runIgnoringSpringTransaction(Throwables.Runnable)} scope, or work run outside the transaction on {@code ds}
      * ({@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}, {@link SqlTransaction#callOutsideTransaction},
@@ -1292,9 +1301,33 @@ public final class JdbcUtil {
     }
 
     /**
+     * Releases a connection after an operation on it (see {@link #releaseConnection(Connection, javax.sql.DataSource)}), keeping
+     * the operation's failure primary: closing the connection directly rethrows an {@link Error} from its close (such as a
+     * driver's {@link LinkageError}), which replaced the {@link SQLException} propagating from the operation. Such a failure
+     * is attached to that failure as a suppressed exception, and propagates only if the operation succeeded.
+     *
+     * @param conn The connection to release. Can be {@code null}.
+     * @param ds The data source the connection was obtained from.
+     * @param primaryFailure The failure of the operation, or {@code null} if it succeeded.
+     */
+    private static void releaseConnectionAfter(final Connection conn, final javax.sql.DataSource ds, final Throwable primaryFailure) {
+        try {
+            releaseConnection(conn, ds);
+        } catch (final Throwable e) { //NOSONAR - releaseConnection declares no checked exception: rethrown precisely
+            if (primaryFailure == null) {
+                throw e;
+            }
+
+            addSuppressedIfDistinct(primaryFailure, e);
+        }
+    }
+
+    /**
      * Releases a connection obtained through Spring's {@code DataSourceUtils} for a transaction participating in a
      * Spring-managed transaction, regardless of whether Spring participation is disabled on the current thread at release
-     * time: closing it instead would close the Spring transaction's connection.
+     * time: closing it instead would close the Spring transaction's connection. Spring's {@code DataSourceUtils} logs every
+     * close failure; only if its classes fail to link is the connection closed through {@link #closeQuietly(Connection)},
+     * which rethrows an {@link Error} from the close.
      *
      * @param conn The connection to release; ignored if {@code null}.
      * @param ds The data source the connection was obtained from.
@@ -1462,14 +1495,18 @@ public final class JdbcUtil {
      *
      * @param rs The {@link ResultSet} to close. If {@code null}, the method does nothing.
      * @throws UncheckedSQLException if closing {@code rs} fails with an SQL exception.
+     * @throws IllegalStateException if closing it fails with a checked exception other than an SQL exception, which a driver or
+     *         wrapper can throw without declaring it (it is the cause), as the multi-resource close overloads report it; a runtime
+     *         exception or error is rethrown as is.
      * @see #closeQuietly(ResultSet)
      */
-    public static void close(final ResultSet rs) throws UncheckedSQLException {
+    public static void close(final ResultSet rs) throws UncheckedSQLException, IllegalStateException {
         if (rs != null) {
             try {
                 rs.close();
-            } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
+                // An undeclared checked exception (Kotlin, sneaky throw) escaped raw, while the multi-resource overloads wrap it.
+                throwCloseFailure(e);
             }
         }
     }
@@ -1498,11 +1535,13 @@ public final class JdbcUtil {
      * @param closeStatement If {@code true}, the {@link Statement} that created the {@code ResultSet} will also be closed.
      * @throws UncheckedSQLException if locating the result set's statement (only when {@code closeStatement} is {@code true}),
      *         or closing the result set or that statement, fails with an SQL exception.
+     * @throws IllegalStateException if the first such failure is a checked exception other than an SQL exception, which a driver or
+     *         wrapper can throw without declaring it (it is the cause); a runtime exception or error is rethrown as is.
      * @see #close(ResultSet, Statement)
      * @see #close(ResultSet, boolean, boolean)
      * @see #closeQuietly(ResultSet, boolean)
      */
-    public static void close(final ResultSet rs, final boolean closeStatement) throws UncheckedSQLException {
+    public static void close(final ResultSet rs, final boolean closeStatement) throws UncheckedSQLException, IllegalStateException {
         close(rs, closeStatement, false);
     }
 
@@ -1535,11 +1574,13 @@ public final class JdbcUtil {
      *        This requires {@code closeStatement} to be {@code true}.
      * @throws IllegalArgumentException if {@code closeConnection} is {@code true} but {@code closeStatement} is {@code false}.
      * @throws UncheckedSQLException if locating a requested associated statement or connection, or closing any requested JDBC resource, fails with an SQL exception.
+     * @throws IllegalStateException if the first such failure is a checked exception other than an SQL exception, which a driver or
+     *         wrapper can throw without declaring it (it is the cause); a runtime exception or error is rethrown as is.
      * @see #close(ResultSet, Statement, Connection)
      * @see #closeQuietly(ResultSet, boolean, boolean)
      */
     public static void close(final ResultSet rs, final boolean closeStatement, final boolean closeConnection)
-            throws IllegalArgumentException, UncheckedSQLException {
+            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException {
         if (closeConnection && !closeStatement) {
             throw new IllegalArgumentException("'closeStatement' cannot be false while 'closeConnection' is true");
         }
@@ -1560,30 +1601,18 @@ public final class JdbcUtil {
             if (closeConnection && stmt != null) {
                 conn = stmt.getConnection();
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - as in close(ResultSet, Statement): an undeclared checked exception skipped every close
             lookupFailure = e;
         }
 
-        try {
-            close(rs, stmt, conn);
-        } catch (final RuntimeException | Error closeFailure) {
-            if (lookupFailure == null) {
-                throw closeFailure;
-            }
+        // The raw close failure, not the one close(rs, stmt, conn) throws: that one wrapped an undeclared checked exception in
+        // IllegalStateException, which was attached to a lookup failure as the wrapper, while the explicit multi-resource
+        // close overloads attach the cause itself.
+        final Throwable closeFailure = closeCollectingFailure(rs, stmt, conn);
+        final Throwable failure = closeFailure == null ? lookupFailure : collectCloseFailure(lookupFailure, closeFailure);
 
-            // close(...) wraps a JDBC close failure. Suppress its SQLException directly so callers see
-            // the same failure ordering as the explicit multi-resource close overloads.
-            final Throwable secondaryFailure = closeFailure instanceof UncheckedSQLException && closeFailure.getCause() != null ? closeFailure.getCause()
-                    : closeFailure;
-            addSuppressedIfDistinct(lookupFailure, secondaryFailure);
-        }
-
-        if (lookupFailure instanceof final SQLException sqlException) {
-            throw new UncheckedSQLException(sqlException);
-        } else if (lookupFailure instanceof final RuntimeException runtimeException) {
-            throw runtimeException;
-        } else if (lookupFailure instanceof final Error error) {
-            throw error;
+        if (failure != null) {
+            throwCloseFailure(failure);
         }
     }
 
@@ -1611,14 +1640,18 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link Statement} to close. If {@code null}, the method does nothing.
      * @throws UncheckedSQLException if closing {@code stmt} fails with an SQL exception.
+     * @throws IllegalStateException if closing it fails with a checked exception other than an SQL exception, which a driver or
+     *         wrapper can throw without declaring it (it is the cause), as the multi-resource close overloads report it; a runtime
+     *         exception or error is rethrown as is.
      * @see #closeQuietly(Statement)
      */
-    public static void close(final Statement stmt) throws UncheckedSQLException {
+    public static void close(final Statement stmt) throws UncheckedSQLException, IllegalStateException {
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
+                // An undeclared checked exception (Kotlin, sneaky throw) escaped raw, while the multi-resource overloads wrap it.
+                throwCloseFailure(e);
             }
         }
     }
@@ -1641,6 +1674,9 @@ public final class JdbcUtil {
      *
      * @param conn The {@link Connection} to close. If {@code null}, the method does nothing.
      * @throws UncheckedSQLException if closing {@code conn} fails with an SQL exception.
+     * @throws IllegalStateException if closing it fails with a checked exception other than an SQL exception, which a driver or
+     *         wrapper can throw without declaring it (it is the cause), as the multi-resource close overloads report it; a runtime
+     *         exception or error is rethrown as is.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see #closeQuietly(Connection)
      * @deprecated This method is deprecated because it directly closes the connection, which is often not the desired
@@ -1649,12 +1685,13 @@ public final class JdbcUtil {
      * pooled connections and integration with transaction managers.
      */
     @Deprecated
-    public static void close(final Connection conn) throws UncheckedSQLException {
+    public static void close(final Connection conn) throws UncheckedSQLException, IllegalStateException {
         if (conn != null) {
             try {
                 conn.close();
-            } catch (final SQLException e) {
-                throw new UncheckedSQLException(e);
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
+                // An undeclared checked exception (Kotlin, sneaky throw) escaped raw, while the multi-resource overloads wrap it.
+                throwCloseFailure(e);
             }
         }
     }
@@ -1706,7 +1743,24 @@ public final class JdbcUtil {
             throw error;
         }
 
+        // An undeclared InterruptedException wrapped here lost the thread's interrupt request.
+        restoreInterruptIfInterrupted(failure);
+
         throw new IllegalStateException("Unexpected JDBC resource close failure", failure);
+    }
+
+    /**
+     * Restores the current thread's interrupt flag if {@code failure} is an {@link InterruptedException} that a cleanup or
+     * diagnostic step swallows (logs) or wraps, rather than propagates. A driver, wrapper or callback can throw one without
+     * declaring it (Kotlin, a sneaky throw, e.g. a SQL log handler blocking on {@code BlockingQueue.put}): swallowed or
+     * wrapped, it took the thread's interrupt request with it.
+     *
+     * @param failure The failure being swallowed or wrapped; may be {@code null}.
+     */
+    private static void restoreInterruptIfInterrupted(final Throwable failure) {
+        if (failure instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -1739,15 +1793,19 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param stmt The {@link Statement} to close. Can be {@code null}.
      * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
+     * @throws IllegalStateException if the first failure is a checked exception other than an SQL exception, which a driver or
+     *         wrapper can throw without declaring it (it is the cause); a runtime exception or error is rethrown as is.
      * @see #closeQuietly(ResultSet, Statement)
      */
-    public static void close(final ResultSet rs, final Statement stmt) throws UncheckedSQLException {
+    public static void close(final ResultSet rs, final Statement stmt) throws UncheckedSQLException, IllegalStateException {
+        // Throwable: a driver or wrapper can throw a checked exception it does not declare (Kotlin, Lombok @SneakyThrows).
+        // Escaping at once, it skipped the closes after it, which leaked those resources.
         Throwable failure = null;
 
         if (rs != null) {
             try {
                 rs.close();
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
                 failure = e;
             }
         }
@@ -1755,7 +1813,7 @@ public final class JdbcUtil {
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
                 failure = collectCloseFailure(failure, e);
             }
         }
@@ -1790,16 +1848,19 @@ public final class JdbcUtil {
      * @param stmt The {@link Statement} to close. Can be {@code null}.
      * @param conn The {@link Connection} to close. Can be {@code null}.
      * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
+     * @throws IllegalStateException if the first failure is a checked exception other than an SQL exception, which a driver or
+     *         wrapper can throw without declaring it (it is the cause); a runtime exception or error is rethrown as is.
      * @see #closeQuietly(Statement, Connection)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static void close(final Statement stmt, final Connection conn) throws UncheckedSQLException {
+    public static void close(final Statement stmt, final Connection conn) throws UncheckedSQLException, IllegalStateException {
+        // Throwable: as in close(ResultSet, Statement), an undeclared checked exception must not skip the connection's close.
         Throwable failure = null;
 
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
                 failure = e;
             }
         }
@@ -1807,7 +1868,7 @@ public final class JdbcUtil {
         if (conn != null) {
             try {
                 conn.close();
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
                 failure = collectCloseFailure(failure, e);
             }
         }
@@ -1845,34 +1906,12 @@ public final class JdbcUtil {
      * @param stmt The {@link Statement} to close. Can be {@code null}.
      * @param conn The {@link Connection} to close. Can be {@code null}.
      * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
+     * @throws IllegalStateException if the first failure is a checked exception other than an SQL exception, which a driver or
+     *         wrapper can throw without declaring it (it is the cause); a runtime exception or error is rethrown as is.
      * @see #closeQuietly(ResultSet, Statement, Connection)
      */
-    public static void close(final ResultSet rs, final Statement stmt, final Connection conn) throws UncheckedSQLException {
-        Throwable failure = null;
-
-        if (rs != null) {
-            try {
-                rs.close();
-            } catch (final SQLException | RuntimeException | Error e) {
-                failure = e;
-            }
-        }
-
-        if (stmt != null) {
-            try {
-                stmt.close();
-            } catch (final SQLException | RuntimeException | Error e) {
-                failure = collectCloseFailure(failure, e);
-            }
-        }
-
-        if (conn != null) {
-            try {
-                conn.close();
-            } catch (final SQLException | RuntimeException | Error e) {
-                failure = collectCloseFailure(failure, e);
-            }
-        }
+    public static void close(final ResultSet rs, final Statement stmt, final Connection conn) throws UncheckedSQLException, IllegalStateException {
+        final Throwable failure = closeCollectingFailure(rs, stmt, conn);
 
         if (failure != null) {
             throwCloseFailure(failure);
@@ -1880,9 +1919,51 @@ public final class JdbcUtil {
     }
 
     /**
+     * Closes the given resources in order, each even if an earlier close fails, and returns the first failure as thrown (later
+     * ones attached to it as suppressed exceptions), or {@code null} if none failed.
+     *
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
+     * @param conn The {@link Connection} to close. Can be {@code null}.
+     * @return The first close failure, or {@code null}.
+     */
+    private static Throwable closeCollectingFailure(final ResultSet rs, final Statement stmt, final Connection conn) {
+        // Throwable: as in close(ResultSet, Statement), an undeclared checked exception must not skip the later closes.
+        Throwable failure = null;
+
+        if (rs != null) {
+            try {
+                rs.close();
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
+                failure = e;
+            }
+        }
+
+        if (stmt != null) {
+            try {
+                stmt.close();
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
+                failure = collectCloseFailure(failure, e);
+            }
+        }
+
+        if (conn != null) {
+            try {
+                conn.close();
+            } catch (final Throwable e) { //NOSONAR - see throwCloseFailure
+                failure = collectCloseFailure(failure, e);
+            }
+        }
+
+        return failure;
+    }
+
+    /**
      * Unconditionally closes a {@link ResultSet}; any exception thrown while closing it, checked or unchecked,
-     * is logged and ignored. This method is useful in {@code finally} blocks where you need to ensure a resource is
-     * closed without handling potential exceptions from the close operation itself.
+     * is logged and ignored. An {@link Error} is not ignored: it is rethrown, as by
+     * {@link #closeQuietly(ResultSet, Statement, Connection)}, to which this method delegates. This method is useful in
+     * {@code finally} blocks where you need to ensure a resource is closed without handling potential exceptions from the
+     * close operation itself.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1893,7 +1974,7 @@ public final class JdbcUtil {
      * } catch (SQLException e) {
      *     // handle query exception
      * } finally {
-     *     // Ensures the ResultSet is closed, suppressing any close exceptions.
+     *     // Ensures the ResultSet is closed, logging any close exception (an Error is rethrown).
      *     JdbcUtil.closeQuietly(rs);
      * }
      * }</pre>
@@ -1908,7 +1989,9 @@ public final class JdbcUtil {
     /**
      * Unconditionally closes a {@link ResultSet} and, optionally, its associated {@link Statement}.
      * Any exception thrown while locating the statement or closing either resource, checked or unchecked,
-     * is logged and ignored.
+     * is logged and ignored. An {@link Error} is not ignored: it is rethrown once the result set, and the statement
+     * if it was located, have been closed; an {@code Error} thrown while locating the statement takes precedence, with
+     * any {@code Error} from closing the result set attached as a suppressed exception.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1936,8 +2019,12 @@ public final class JdbcUtil {
 
     /**
      * Unconditionally closes a {@link ResultSet} and, optionally, its associated {@link Statement} and {@link Connection}.
-     * Any exceptions thrown during closing are caught and ignored. This is a low-level utility for ensuring
-     * all resources are closed without needing nested {@code finally} blocks or complex error handling.
+     * Any exception thrown while locating the statement or connection or closing a resource, checked or unchecked, is
+     * logged and ignored. An {@link Error} is not ignored: it is rethrown once the result set, and the statement and
+     * connection that were located, have been closed; an {@code Error} thrown while locating them takes precedence (the
+     * statement is still closed if it was located before it), with any {@code Error} from closing attached as a suppressed
+     * exception. This is a low-level utility for ensuring all resources are closed without needing nested {@code finally}
+     * blocks or complex error handling.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1975,6 +2062,8 @@ public final class JdbcUtil {
         Connection conn = null;
         Statement stmt = null;
 
+        Error lookupError = null;
+
         try {
             if (closeStatement) {
                 stmt = rs.getStatement();
@@ -1983,18 +2072,35 @@ public final class JdbcUtil {
             if (closeConnection && stmt != null) {
                 conn = stmt.getConnection();
             }
-        } catch (final Exception e) {
+        } catch (final Error e) {
+            // Rethrown after the closes below, ahead of their own Error: closing in a finally block let that one replace it.
+            lookupError = e;
+        } catch (final Throwable e) { //NOSONAR - also a sneaky-thrown Throwable that is not an Exception, which skipped every close
             // Quiet contract: like closeQuietly(ResultSet, Statement, Connection), swallow unchecked driver failures too.
+            restoreInterruptIfInterrupted(e);
             logger.warn(e, "Failed to get Statement or Connection from ResultSet(closeStatement={}, closeConnection={})", closeStatement, closeConnection);
-        } finally {
+        }
+
+        try {
             closeQuietly(rs, stmt, conn);
+        } catch (final Error closeError) {
+            if (lookupError == null) {
+                throw closeError;
+            }
+
+            addSuppressedIfDistinct(lookupError, closeError);
+        }
+
+        if (lookupError != null) {
+            throw lookupError;
         }
     }
 
     /**
      * Unconditionally closes a {@link Statement}; any exception thrown while closing it, checked or unchecked,
-     * is logged and ignored. This is useful for ensuring a statement is closed in a {@code finally} block without
-     * needing to handle potential closing exceptions.
+     * is logged and ignored. An {@link Error} is not ignored: it is rethrown, as by
+     * {@link #closeQuietly(ResultSet, Statement, Connection)}, to which this method delegates. This is useful for ensuring
+     * a statement is closed in a {@code finally} block without needing to handle potential closing exceptions.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2017,7 +2123,8 @@ public final class JdbcUtil {
     }
 
     /**
-     * Unconditionally closes a {@link Connection}, suppressing any close failures.
+     * Unconditionally closes a {@link Connection}; any exception thrown while closing it, checked or unchecked, is logged
+     * and ignored. An {@link Error} is not ignored: it is rethrown.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2033,7 +2140,8 @@ public final class JdbcUtil {
      * }</pre>
      *
      * <p>This method is null-safe and always returns immediately when {@code conn} is {@code null}.
-     * All closing exceptions are ignored; it delegates to {@link #closeQuietly(ResultSet, Statement, Connection)} with no ResultSet or Statement.</p>
+     * Closing exceptions are logged and ignored, and an {@link Error} is rethrown: it delegates to
+     * {@link #closeQuietly(ResultSet, Statement, Connection)} with no ResultSet or Statement.</p>
      *
      * @param conn The {@link Connection} to close. Can be {@code null}.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -2048,7 +2156,8 @@ public final class JdbcUtil {
 
     /**
      * Unconditionally closes a {@link ResultSet} and a {@link Statement}. Both closes are attempted; any exception
-     * thrown while closing, checked or unchecked, is logged and ignored. This method is useful for
+     * thrown while closing, checked or unchecked, is logged and ignored (an {@link Error} is rethrown once both closes
+     * have been attempted). This method is useful for
      * cleaning up resources in a {@code finally} block without complex error handling.
      *
      * <p><b>Usage Examples:</b></p>
@@ -2076,7 +2185,8 @@ public final class JdbcUtil {
 
     /**
      * Unconditionally closes a {@link Statement} and a {@link Connection}. Both closes are attempted; any exception
-     * thrown while closing, checked or unchecked, is logged and ignored. This is primarily for cleanup
+     * thrown while closing, checked or unchecked, is logged and ignored (an {@link Error} is rethrown once both closes
+     * have been attempted). This is primarily for cleanup
      * in {@code finally} blocks when not using a {@code DataSource}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -2106,6 +2216,8 @@ public final class JdbcUtil {
     /**
      * Unconditionally closes a {@link ResultSet}, a {@link Statement}, and a {@link Connection}, in that order.
      * Every close is attempted; any exception thrown while closing, checked or unchecked, is logged and ignored.
+     * An {@link Error} is not ignored: the first one is rethrown once every close has been attempted, with any later
+     * one attached as a suppressed exception.
      * This is a convenience method for resource cleanup in a {@code finally} block.
      *
      * <p><b>Usage Examples:</b></p>
@@ -2131,10 +2243,17 @@ public final class JdbcUtil {
      * @see #close(ResultSet, Statement, Connection)
      */
     public static void closeQuietly(final ResultSet rs, final Statement stmt, final Connection conn) {
+        // An Error is not swallowed, but it is rethrown only once every close has been attempted: thrown at once (e.g. a
+        // driver's LinkageError in a stopped web application), it skipped the statement and the connection, which leaked.
+        Throwable error = null;
+
         if (rs != null) {
             try {
                 rs.close();
-            } catch (final Exception e) {
+            } catch (final Error e) {
+                error = e;
+            } catch (final Throwable e) { //NOSONAR - also a sneaky-thrown Throwable that is not an Exception, which skipped the later closes
+                restoreInterruptIfInterrupted(e);
                 logger.warn(e, "Failed to close ResultSet");
             }
         }
@@ -2142,7 +2261,10 @@ public final class JdbcUtil {
         if (stmt != null) {
             try {
                 stmt.close();
-            } catch (final Exception e) {
+            } catch (final Error e) {
+                error = collectCloseFailure(error, e);
+            } catch (final Throwable e) { //NOSONAR
+                restoreInterruptIfInterrupted(e);
                 logger.warn(e, "Failed to close Statement");
             }
         }
@@ -2150,9 +2272,16 @@ public final class JdbcUtil {
         if (conn != null) {
             try {
                 conn.close();
-            } catch (final Exception e) {
+            } catch (final Error e) {
+                error = collectCloseFailure(error, e);
+            } catch (final Throwable e) { //NOSONAR
+                restoreInterruptIfInterrupted(e);
                 logger.warn(e, "Failed to close Connection");
             }
+        }
+
+        if (error != null) {
+            throw (Error) error;
         }
     }
 
@@ -2498,7 +2627,9 @@ public final class JdbcUtil {
 
                 try {
                     columnNameList = getColumnNamesBySelect(conn, safeQualifiedTableName);
-                } catch (final SQLException e) {
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    // Throwable: a RuntimeException, Error or undeclared checked exception of the probe skipped the rollback,
+                    // leaving the caller's PostgreSQL transaction aborted.
                     if (savepoint != null) {
                         rollbackToProbeSavepoint(conn, savepoint, e);
                     }
@@ -2639,6 +2770,7 @@ public final class JdbcUtil {
         final String query = "SELECT * FROM " + qualifiedTableName + " WHERE 1 > 2";
         PreparedStatement stmt = null;
         ResultSet rs = null;
+        Throwable primaryFailure = null;
 
         try {
             stmt = prepareStatement(conn, query);
@@ -2653,8 +2785,11 @@ public final class JdbcUtil {
             }
 
             return columnNameList;
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeQuietly(rs, stmt);
+            closeQuietlyAfter(rs, stmt, primaryFailure);
         }
     }
 
@@ -3165,7 +3300,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} from which to retrieve the value.
      * @param columnLabel The label of the column to retrieve.
      * @return The value of the specified column.
-     * @throws IllegalArgumentException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}, or {@code columnLabel} is {@code null} or empty.
      * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @deprecated Use {@link #getColumnValue(ResultSet, int)} with a cached column index for better performance.
      * @see #getColumnValue(ResultSet, int)
@@ -3174,6 +3309,8 @@ public final class JdbcUtil {
     @Deprecated
     public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rs, cs.rs);
+        // As getAllColumnValues and stream(rs, label): a null label reached the driver, which may throw NullPointerException (pgjdbc).
+        N.checkArgNotEmpty(columnLabel, cs.columnLabel);
 
         return getColumnValue(rs, columnLabel, true);
     }
@@ -3373,11 +3510,13 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to retrieve values from. It will be iterated to the end.
      * @param columnLabel The label of the column to retrieve.
      * @return A {@link List} containing all values from the specified column.
-     * @throws IllegalArgumentException if {@code rs} is {@code null} or no column matches {@code columnLabel}.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}, {@code columnLabel} is {@code null} or empty, or no column
+     *         matches {@code columnLabel}.
      * @throws SQLException if resolving column metadata, advancing the result set, or reading or converting a column value fails.
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rs, cs.rs);
+        N.checkArgNotEmpty(columnLabel, cs.columnLabel);
 
         // Resolve the column getObject(columnLabel) reads: getColumnIndex lets an earlier column's name shadow a later
         // column's label ("SELECT b AS x, a AS b" read column x for "b").
@@ -3456,7 +3595,7 @@ public final class JdbcUtil {
      * @param columnLabel The label of the column to retrieve.
      * @param targetClass The {@link Class} of the desired type {@code T}.
      * @return The column value, converted to the specified {@code targetClass}.
-     * @throws IllegalArgumentException if {@code rs} or {@code targetClass} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} or {@code targetClass} is {@code null}, or {@code columnLabel} is {@code null} or empty.
      * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @deprecated Use {@link #getColumnValue(ResultSet, int, Class)} with a cached column index for better performance.
      * @see #getColumnIndex(ResultSet, String)
@@ -3465,6 +3604,7 @@ public final class JdbcUtil {
     public static <T> T getColumnValue(final ResultSet rs, final String columnLabel, final Class<? extends T> targetClass)
             throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(rs, cs.rs);
+        N.checkArgNotEmpty(columnLabel, cs.columnLabel); // see getColumnValue(ResultSet, String)
         N.checkArgNotNull(targetClass, cs.targetClass);
 
         return Type.<T> of(targetClass).get(rs, columnLabel);
@@ -3628,8 +3768,8 @@ public final class JdbcUtil {
      * @param sql The SQL query to prepare with optional {@code ?} parameter placeholders, must not be {@code null} or empty.
      * @return A new {@link PreparedQuery} instance ready for parameter setting and execution.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see PreparedQuery
      * @see #prepareQuery(Connection, String)
@@ -3651,10 +3791,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareQuery(conn, sql).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -3689,8 +3828,8 @@ public final class JdbcUtil {
      * @param autoGeneratedKeys A boolean flag; if {@code true}, the driver will be instructed to make generated keys available.
      * @return A new {@link PreparedQuery} instance configured to handle auto-generated keys.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Statement#RETURN_GENERATED_KEYS
      */
@@ -3710,10 +3849,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareQuery(conn, sql, autoGeneratedKeys).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -3750,8 +3888,8 @@ public final class JdbcUtil {
      * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or {@code sql} or {@code generatedKeyColumnIndexes} is {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Connection#prepareStatement(String, int[])
      */
@@ -3772,10 +3910,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareQuery(conn, sql, generatedKeyColumnIndexes).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -3811,8 +3948,8 @@ public final class JdbcUtil {
      * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or {@code sql} or {@code generatedKeyColumnNames} is {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Connection#prepareStatement(String, String[])
      */
@@ -3833,10 +3970,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareQuery(conn, sql, generatedKeyColumnNames).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -3868,8 +4004,8 @@ public final class JdbcUtil {
      * @return A new {@link PreparedQuery} instance wrapping the custom-created statement.
      * @throws IllegalArgumentException if {@code ds} or {@code stmtCreator} is {@code null}, if {@code sql} is {@code null} or empty, or if
      *         {@code stmtCreator} returns {@code null}.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
@@ -3890,10 +4026,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareQuery(conn, sql, stmtCreator).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4173,8 +4308,8 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles,
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see NamedQuery
      * @see #prepareNamedQuery(Connection, String)
@@ -4196,10 +4331,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, parsedSql).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4236,8 +4370,8 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance configured to handle auto-generated keys.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles,
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4259,10 +4393,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, parsedSql, autoGeneratedKeys).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4301,8 +4434,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles,
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code generatedKeyColumnIndexes} is
      *         {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4325,10 +4458,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, parsedSql, generatedKeyColumnIndexes).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4366,8 +4498,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles,
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code generatedKeyColumnNames} is
      *         {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4390,10 +4522,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, parsedSql, generatedKeyColumnNames).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4427,8 +4558,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles,
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code stmtCreator} is {@code null} or
      *         returns {@code null}.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4452,10 +4583,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, parsedSql, stmtCreator).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4686,8 +4816,8 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4709,10 +4839,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4744,8 +4873,8 @@ public final class JdbcUtil {
      * @param autoGeneratedKeys A boolean flag; if {@code true}, the driver will be instructed to make generated keys available.
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4767,10 +4896,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, autoGeneratedKeys).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4806,8 +4934,8 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, if {@code namedSql} contains positional parameters without
      *         names, or if {@code generatedKeyColumnIndexes} is {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4830,10 +4958,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, generatedKeyColumnIndexes).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4869,8 +4996,8 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, if {@code namedSql} contains positional parameters without
      *         names, or if {@code generatedKeyColumnNames} is {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4893,10 +5020,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, generatedKeyColumnNames).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -4929,8 +5055,8 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code ds}, {@code namedSql}, or {@code stmtCreator} is {@code null}, if {@code namedSql} contains
      *         positional parameters without names, or if {@code stmtCreator} returns {@code null}.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -4954,10 +5080,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareNamedQuery(conn, namedSql, stmtCreator).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -5308,8 +5433,8 @@ public final class JdbcUtil {
      * @param sql The SQL string for the stored procedure call.
      * @return A new {@link CallableQuery} instance.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
@@ -5330,10 +5455,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareCallableQuery(conn, sql).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -5384,8 +5508,8 @@ public final class JdbcUtil {
      * @return A new {@link CallableQuery} instance wrapping the custom-created statement.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null} or returns
      *         {@code null}.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      * @see #prepareCallableQuery(javax.sql.DataSource, String)
      * @see #getConnection(javax.sql.DataSource)
@@ -5409,10 +5533,9 @@ public final class JdbcUtil {
             try {
                 conn = JdbcUtil.getConnection(ds);
                 result = prepareCallableQuery(conn, sql, stmtCreator).onClose(createCloseHandler(conn, ds));
-            } finally {
-                if (result == null) {
-                    JdbcUtil.releaseConnection(conn, ds);
-                }
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw); see releaseConnectionAfter
+                JdbcUtil.releaseConnectionAfter(conn, ds, e);
+                throw e;
             }
 
             return result;
@@ -5820,7 +5943,9 @@ public final class JdbcUtil {
             // lets SQL containing placeholders reach the driver with unbound parameters,
             // even though setParameters has a deterministic validation error for that case.
             setParameters(parsedSql, stmt, parameters);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR
+            // Throwable: a Type, getter or driver may throw a checked exception it does not declare (Kotlin, Lombok
+            // @SneakyThrows), which left the statement open (the caller never receives it to close).
             closeAfterPreparationFailure(stmt, e);
             throw e;
         }
@@ -5855,7 +5980,7 @@ public final class JdbcUtil {
         if (N.notEmpty(parameters)) {
             try {
                 setParameters(parsedSql, stmt, parameters);
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - as in prepareStmt
                 closeAfterPreparationFailure(stmt, e);
                 throw e;
             }
@@ -5894,7 +6019,7 @@ public final class JdbcUtil {
                 setParameters(parsedSql, stmt, N.asArray(parameters), firstIndexes, true);
                 stmt.addBatch();
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - as in prepareStmt
             closeAfterPreparationFailure(stmt, e);
             throw e;
         }
@@ -5932,7 +6057,7 @@ public final class JdbcUtil {
                 setParameters(parsedSql, stmt, N.asArray(parameters), firstIndexes, true);
                 stmt.addBatch();
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - as in prepareStmt
             closeAfterPreparationFailure(stmt, e);
             throw e;
         }
@@ -5949,7 +6074,8 @@ public final class JdbcUtil {
     private static void closeAfterPreparationFailure(final Statement stmt, final Throwable failure) {
         try {
             stmt.close();
-        } catch (final SQLException | RuntimeException | Error closeFailure) {
+        } catch (final Throwable closeFailure) { //NOSONAR
+            // Throwable: an undeclared checked exception from a driver or wrapper replaced the binding failure.
             addSuppressedIfDistinct(failure, closeFailure);
         }
     }
@@ -6086,8 +6212,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes parameter styles, or
      *         contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named
      *         parameters.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if preparing or binding the query, executing it, or reading its rows or metadata fails.
      * @see PreparedStatement#executeQuery()
      * @see #prepareQuery(javax.sql.DataSource, String)
@@ -6105,11 +6231,15 @@ public final class JdbcUtil {
             return runQuery(tran.connection(), parsedSql, parameters);
         } else {
             final Connection conn = JdbcUtil.getConnection(ds);
+            Throwable failure = null;
 
             try {
                 return runQuery(conn, parsedSql, parameters);
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                failure = e;
+                throw e;
             } finally {
-                JdbcUtil.releaseConnection(conn, ds);
+                JdbcUtil.releaseConnectionAfter(conn, ds, failure); // a close Error replaced the operation's failure
             }
         }
     }
@@ -6164,6 +6294,7 @@ public final class JdbcUtil {
     private static Dataset runQuery(final Connection conn, final ParsedSql parsedSql, final Object[] parameters) throws SQLException {
         PreparedStatement stmt = null;
         ResultSet rs = null;
+        Throwable primaryFailure = null;
 
         try {
             stmt = prepareStmt(conn, parsedSql, parameters);
@@ -6173,8 +6304,11 @@ public final class JdbcUtil {
             rs = executeQuery(stmt);
 
             return extractData(rs);
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeQuietly(rs, stmt);
+            closeQuietlyAfter(rs, stmt, primaryFailure);
         }
     }
 
@@ -6249,8 +6383,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes parameter styles, or
      *         contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named
      *         parameters.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if preparing or binding the statement, or executing the requested SQL, fails.
      * @see PreparedStatement#executeUpdate()
      * @see #prepareQuery(javax.sql.DataSource, String)
@@ -6267,11 +6401,15 @@ public final class JdbcUtil {
             return runUpdate(tran.connection(), parsedSql, parameters);
         } else {
             final Connection conn = JdbcUtil.getConnection(ds);
+            Throwable failure = null;
 
             try {
                 return runUpdate(conn, parsedSql, parameters);
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                failure = e;
+                throw e;
             } finally {
-                JdbcUtil.releaseConnection(conn, ds);
+                JdbcUtil.releaseConnectionAfter(conn, ds, failure); // a close Error replaced the operation's failure
             }
         }
     }
@@ -6323,13 +6461,17 @@ public final class JdbcUtil {
      */
     private static int runUpdate(final Connection conn, final ParsedSql parsedSql, final Object[] parameters) throws SQLException {
         PreparedStatement stmt = null;
+        Throwable primaryFailure = null;
 
         try {
             stmt = prepareStmt(conn, parsedSql, parameters);
 
             return executeUpdate(stmt);
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeQuietly(stmt);
+            closeQuietlyAfter(null, stmt, primaryFailure);
         }
     }
 
@@ -6364,7 +6506,8 @@ public final class JdbcUtil {
      *         satisfy the SQL's required positional or named parameters
      *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
-     *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
+     *         Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws IllegalStateException if more than one parameter set is given and the transaction scope of the batch cannot be
      *         begun (see {@link #beginTransaction(javax.sql.DataSource)}).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
@@ -6432,7 +6575,8 @@ public final class JdbcUtil {
      *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters
      *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
-     *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
+     *         Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws IllegalStateException if more than one parameter set is given and the transaction scope of the batch cannot be
      *         begun (see {@link #beginTransaction(javax.sql.DataSource)}).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
@@ -6465,11 +6609,15 @@ public final class JdbcUtil {
             }
 
             final Connection conn = JdbcUtil.getConnection(ds);
+            Throwable failure = null;
 
             try {
                 return runBatchUpdate(conn, parsedSql, listOfParameters, batchSize);
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                failure = e;
+                throw e;
             } finally {
-                JdbcUtil.releaseConnection(conn, ds);
+                JdbcUtil.releaseConnectionAfter(conn, ds, failure); // a close Error replaced the operation's failure
             }
         } else {
             // A nested scope of the thread's transaction, if there is one, as for DAO batch operations: its failure marks that
@@ -6637,12 +6785,16 @@ public final class JdbcUtil {
             noException = true;
 
             return res;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR
+            // Throwable: with an undeclared checked exception (a sneaky-throwing Type, getter or driver) primaryFailure stayed
+            // null, so a failing rollback threw NullPointerException from addSuppressedIfDistinct, and a failing auto-commit
+            // restore replaced the batch failure.
             primaryFailure = e;
             throw e;
         } finally {
             if (autoCommitDisabled) {
                 Throwable completionFailure = primaryFailure;
+                Throwable restoreFailure = null;
                 boolean transactionCompleted = false;
 
                 try {
@@ -6650,15 +6802,19 @@ public final class JdbcUtil {
                         try {
                             conn.commit();
                             transactionCompleted = true;
-                        } catch (final SQLException | RuntimeException | Error commitFailure) {
+                        } catch (final Throwable commitFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                             completionFailure = commitFailure;
                             // A failed COMMIT leaves the transaction outcome uncertain. Make the same
                             // best-effort rollback used by SqlTransaction and keep COMMIT as the primary
                             // failure if rollback also fails.
+                            // WHY Throwable here and below: a connection (or wrapper) that threw a checked exception it does
+                            // not declare escaped these catches, so a failed COMMIT skipped the rollback and the auto-commit
+                            // restore (the caller's connection was left in manual-commit mode with the work pending), and a
+                            // failed rollback or restore replaced the batch failure.
                             try {
                                 conn.rollback();
                                 transactionCompleted = true;
-                            } catch (final SQLException | RuntimeException | Error rollbackFailure) {
+                            } catch (final Throwable rollbackFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                                 addSuppressedIfDistinct(commitFailure, rollbackFailure);
                             }
 
@@ -6668,7 +6824,7 @@ public final class JdbcUtil {
                         try {
                             conn.rollback();
                             transactionCompleted = true;
-                        } catch (final SQLException | RuntimeException | Error e) {
+                        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                             // Don't mask the batch failure that is already propagating.
                             addSuppressedIfDistinct(primaryFailure, e);
                             logger.warn("Failed to roll back after batch failure", e);
@@ -6680,23 +6836,26 @@ public final class JdbcUtil {
                         if (transactionCompleted) {
                             conn.setAutoCommit(true);
                         }
-                    } catch (final SQLException | RuntimeException | Error e) {
+                    } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                         // A successful batch/commit must not be reported as successful while leaving the
                         // caller-owned connection in manual-commit mode. Preserve an earlier failure when
                         // there is one; otherwise make the restoration failure visible to the caller.
                         if (completionFailure != null) {
                             addSuppressedIfDistinct(completionFailure, e);
                         } else {
+                            restoreFailure = e;
                             throw e;
                         }
 
                         logger.warn("Failed to restore auto-commit mode after batch execution", e);
                     } finally {
-                        JdbcUtil.closeQuietly(stmt);
+                        // closeQuietly rethrows a close Error (e.g. a driver's LinkageError), which replaced the propagating
+                        // batch, commit or auto-commit restore failure: attach it to that failure instead.
+                        closeQuietlyAfter(null, stmt, completionFailure != null ? completionFailure : restoreFailure);
                     }
                 }
             } else {
-                JdbcUtil.closeQuietly(stmt);
+                closeQuietlyAfter(null, stmt, primaryFailure); // see above
             }
         }
     }
@@ -6738,7 +6897,8 @@ public final class JdbcUtil {
      *         satisfy the SQL's required positional or named parameters
      *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
-     *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
+     *         Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws IllegalStateException if more than one parameter set is given and the transaction scope of the batch cannot be
      *         begun (see {@link #beginTransaction(javax.sql.DataSource)}).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or
@@ -6799,7 +6959,8 @@ public final class JdbcUtil {
      *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters
      *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
-     *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
+     *         Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws IllegalStateException if more than one parameter set is given and the transaction scope of the batch cannot be
      *         begun (see {@link #beginTransaction(javax.sql.DataSource)}).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or
@@ -6834,11 +6995,15 @@ public final class JdbcUtil {
             }
 
             final Connection conn = JdbcUtil.getConnection(ds);
+            Throwable failure = null;
 
             try {
                 return runLargeBatchUpdate(conn, parsedSql, listOfParameters, batchSize);
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                failure = e;
+                throw e;
             } finally {
-                JdbcUtil.releaseConnection(conn, ds);
+                JdbcUtil.releaseConnectionAfter(conn, ds, failure); // a close Error replaced the operation's failure
             }
         } else {
             // A nested scope of the thread's transaction, if there is one, as for DAO batch operations: its failure marks that
@@ -7005,12 +7170,13 @@ public final class JdbcUtil {
             noException = true;
 
             return res;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - as in runBatchUpdate
             primaryFailure = e;
             throw e;
         } finally {
             if (autoCommitDisabled) {
                 Throwable completionFailure = primaryFailure;
+                Throwable restoreFailure = null;
                 boolean transactionCompleted = false;
 
                 try {
@@ -7018,12 +7184,13 @@ public final class JdbcUtil {
                         try {
                             conn.commit();
                             transactionCompleted = true;
-                        } catch (final SQLException | RuntimeException | Error commitFailure) {
+                        } catch (final Throwable commitFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                            // Throwable as in runBatchUpdate: an undeclared checked exception skipped the rollback and restore.
                             completionFailure = commitFailure;
                             try {
                                 conn.rollback();
                                 transactionCompleted = true;
-                            } catch (final SQLException | RuntimeException | Error rollbackFailure) {
+                            } catch (final Throwable rollbackFailure) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                                 addSuppressedIfDistinct(commitFailure, rollbackFailure);
                             }
 
@@ -7033,7 +7200,7 @@ public final class JdbcUtil {
                         try {
                             conn.rollback();
                             transactionCompleted = true;
-                        } catch (final SQLException | RuntimeException | Error e) {
+                        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                             // Don't mask the batch failure that is already propagating.
                             addSuppressedIfDistinct(primaryFailure, e);
                             logger.warn("Failed to roll back after batch failure", e);
@@ -7045,23 +7212,26 @@ public final class JdbcUtil {
                         if (transactionCompleted) {
                             conn.setAutoCommit(true);
                         }
-                    } catch (final SQLException | RuntimeException | Error e) {
+                    } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                         // A successful batch/commit must not be reported as successful while leaving the
                         // caller-owned connection in manual-commit mode. Preserve an earlier failure when
                         // there is one; otherwise make the restoration failure visible to the caller.
                         if (completionFailure != null) {
                             addSuppressedIfDistinct(completionFailure, e);
                         } else {
+                            restoreFailure = e;
                             throw e;
                         }
 
                         logger.warn("Failed to restore auto-commit mode after batch execution", e);
                     } finally {
-                        JdbcUtil.closeQuietly(stmt);
+                        // closeQuietly rethrows a close Error (e.g. a driver's LinkageError), which replaced the propagating
+                        // batch, commit or auto-commit restore failure: attach it to that failure instead.
+                        closeQuietlyAfter(null, stmt, completionFailure != null ? completionFailure : restoreFailure);
                     }
                 }
             } else {
-                JdbcUtil.closeQuietly(stmt);
+                closeQuietlyAfter(null, stmt, primaryFailure); // see above
             }
         }
     }
@@ -7145,8 +7315,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes parameter styles, or
      *         contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named
      *         parameters.
-     * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
-     *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
+     * @throws UncheckedSQLException if acquiring a connection fails. Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @throws SQLException if preparing or binding the statement, or executing the requested SQL, fails.
      * @see PreparedStatement#execute()
      * @see #executeQuery(javax.sql.DataSource, String, Object...)
@@ -7164,11 +7334,15 @@ public final class JdbcUtil {
             return runExecute(tran.connection(), parsedSql, parameters);
         } else {
             final Connection conn = JdbcUtil.getConnection(ds);
+            Throwable failure = null;
 
             try {
                 return runExecute(conn, parsedSql, parameters);
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                failure = e;
+                throw e;
             } finally {
-                JdbcUtil.releaseConnection(conn, ds);
+                JdbcUtil.releaseConnectionAfter(conn, ds, failure); // a close Error replaced the operation's failure
             }
         }
     }
@@ -7267,13 +7441,39 @@ public final class JdbcUtil {
      */
     private static boolean runExecute(final Connection conn, final ParsedSql parsedSql, final Object[] parameters) throws SQLException {
         PreparedStatement stmt = null;
+        Throwable primaryFailure = null;
 
         try {
             stmt = prepareStmt(conn, parsedSql, parameters);
 
             return JdbcUtil.execute(stmt);
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            primaryFailure = e;
+            throw e;
         } finally {
-            closeQuietly(stmt);
+            closeQuietlyAfter(null, stmt, primaryFailure);
+        }
+    }
+
+    /**
+     * Closes the result set and statement of an operation quietly (see {@link #closeQuietly(ResultSet, Statement)}), keeping the
+     * operation's failure primary: {@code closeQuietly} rethrows an {@link Error} from a close (such as a driver's
+     * {@link LinkageError}), which replaced the {@link SQLException} propagating from the operation. Such an error is attached
+     * to that failure as a suppressed exception, and propagates only if the operation succeeded.
+     *
+     * @param rs The {@link ResultSet} to close. Can be {@code null}.
+     * @param stmt The {@link Statement} to close. Can be {@code null}.
+     * @param primaryFailure The failure of the operation, or {@code null} if it succeeded.
+     */
+    private static void closeQuietlyAfter(final ResultSet rs, final Statement stmt, final Throwable primaryFailure) {
+        try {
+            closeQuietly(rs, stmt);
+        } catch (final Error e) {
+            if (primaryFailure == null) {
+                throw e;
+            }
+
+            addSuppressedIfDistinct(primaryFailure, e);
         }
     }
 
@@ -7419,8 +7619,8 @@ public final class JdbcUtil {
     /**
      * Executes the given {@link Statement}'s batch, handling SQL performance logging when enabled. The
      * statement's batch clearing is attempted after execution. When execution fails, cleanup failures are
-     * suppressed on that failure. After successful execution, SQL and runtime cleanup exceptions are logged
-     * and ignored; cleanup {@link Error}s still propagate.
+     * suppressed on that failure. After successful execution, any cleanup failure other than an {@link Error} (also a
+     * checked exception thrown without being declared) is logged and ignored; cleanup {@code Error}s still propagate.
      *
      * @param stmt The {@link Statement} whose batch to execute.
      * @return An array of update counts, one per batch entry.
@@ -7457,7 +7657,7 @@ public final class JdbcUtil {
             runAfterExecution(afterExecution);
 
             return updateCounts;
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             executionFailure = e;
             throw e;
         } finally {
@@ -7472,8 +7672,9 @@ public final class JdbcUtil {
     /**
      * Executes the given {@link Statement}'s batch as a large batch, handling SQL performance logging
      * when enabled. The statement's batch clearing is attempted after execution. When execution fails,
-     * cleanup failures are suppressed on that failure. After successful execution, SQL and runtime cleanup
-     * exceptions are logged and ignored; cleanup {@link Error}s still propagate.
+     * cleanup failures are suppressed on that failure. After successful execution, any cleanup failure other than an
+     * {@link Error} (also a checked exception thrown without being declared) is logged and ignored; cleanup {@code Error}s
+     * still propagate.
      *
      * @param stmt The {@link Statement} whose batch to execute.
      * @return An array of update counts as long values, one per batch entry.
@@ -7492,7 +7693,7 @@ public final class JdbcUtil {
 
         try {
             return stmt.executeLargeBatch();
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             executionFailure = e;
             throw e;
         } finally {
@@ -7506,7 +7707,8 @@ public final class JdbcUtil {
 
     /**
      * Keeps a driver's batch failure primary when clearing retained batch parameters also fails.
-     * SQL and runtime cleanup exceptions after successful execution are logged and ignored; {@link Error}s still propagate.
+     * After successful execution, any cleanup failure other than an {@link Error} (also a checked exception that a driver
+     * throws without declaring it) is logged and ignored; {@code Error}s still propagate.
      *
      * @param stmt the statement whose batch is cleared
      * @param executionFailure the primary execution failure, or {@code null} after successful execution
@@ -7514,19 +7716,22 @@ public final class JdbcUtil {
     private static void clearBatchAfterExecution(final Statement stmt, final Throwable executionFailure) {
         try {
             stmt.clearBatch();
-        } catch (final SQLException | RuntimeException e) {
-            if (executionFailure == null) {
-                // As with parameter cleanup, best-effort clearing must not discard completed batch counts.
-                logger.warn(e, "Failed to clear batch parameters after execution");
-            } else {
-                addSuppressedIfDistinct(executionFailure, e);
-            }
         } catch (final Error e) {
             if (executionFailure == null) {
                 throw e;
             }
 
             addSuppressedIfDistinct(executionFailure, e);
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw), or a sneaky-thrown
+            // Throwable that is neither an Exception nor an Error: either escaped and replaced the batch failure.
+            restoreInterruptIfInterrupted(e);
+
+            if (executionFailure == null) {
+                // As with parameter cleanup, best-effort clearing must not discard completed batch counts.
+                logger.warn(e, "Failed to clear batch parameters after execution");
+            } else {
+                addSuppressedIfDistinct(executionFailure, e);
+            }
         }
     }
 
@@ -7634,8 +7839,8 @@ public final class JdbcUtil {
     }
 
     /**
-     * Clears the parameters of the given {@link PreparedStatement}, logging and ignoring SQL and runtime exceptions.
-     * Errors still propagate. Does nothing for {@code null} statements and {@link CallableStatement}s
+     * Clears the parameters of the given {@link PreparedStatement}, logging and ignoring any failure other than an
+     * {@link Error} (also a checked exception that a driver throws without declaring it). Errors still propagate. Does nothing for {@code null} statements and {@link CallableStatement}s
      * (clearing parameters would also remove registered out parameters).
      *
      * @param stmt The {@link PreparedStatement} whose parameters to clear. Can be {@code null}.
@@ -7647,8 +7852,11 @@ public final class JdbcUtil {
         } else {
             try {
                 stmt.clearParameters();
-            } catch (final SQLException | RuntimeException e) {
+            } catch (final Error e) {
+                throw e;
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw), as in clearBatchAfterExecution
                 // Best-effort cleanup must not hide an execution failure or discard a successful query's ResultSet.
+                restoreInterruptIfInterrupted(e);
                 logger.warn(e, "Failed to clear parameters after execution");
             }
         }
@@ -8284,7 +8492,8 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to extract data from, must not be {@code null}.
      * @param rowExtractor The RowExtractor to apply while extracting data. This is a functional interface
      *                     that receives the current ResultSet and an output row array, allowing modification
-     *                     of the row data before it's added to the Dataset. Must not be {@code null}.
+     *                     of the row data before it's added to the Dataset. The same array, one element per column, is passed for every row, so an element the extractor does not set keeps
+     *                     the previous row's value. Must not be {@code null}.
      * @return A {@link Dataset} containing the extracted and transformed data.
      * @throws IllegalArgumentException if {@code rs} or {@code rowExtractor} is {@code null}.
      * @throws SQLException if reading metadata, advancing or reading rows, or invoking the supplied row extractor throws an SQL exception.
@@ -8320,7 +8529,8 @@ public final class JdbcUtil {
      * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
      *               returns {@code true} will be processed by the extractor. Must not be {@code null}.
      * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
-     *                     Must not be {@code null}.
+     *                     The same array, one element per column, is passed for every row, so an element the extractor does not set keeps
+     *                     the previous row's value. Must not be {@code null}.
      * @return A {@link Dataset} containing the filtered and transformed data.
      * @throws IllegalArgumentException if {@code rs}, {@code filter}, or {@code rowExtractor} is {@code null}.
      * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
@@ -8448,7 +8658,8 @@ public final class JdbcUtil {
      * @param offset The starting position (0-based) in the ResultSet, must be non-negative.
      * @param count The maximum number of rows to extract, must be non-negative.
      * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
-     *                     Must not be {@code null}.
+     *                     The same array, one element per column, is passed for every row, so an element the extractor does not set keeps
+     *                     the previous row's value. Must not be {@code null}.
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted and transformed data.
      * @throws IllegalArgumentException if {@code rs} is {@code null}, {@code offset} or {@code count} is negative, or {@code rowExtractor} is {@code null}.
@@ -8493,7 +8704,8 @@ public final class JdbcUtil {
      * @param filter The RowFilter to apply for filtering rows. Only rows for which {@code filter.test(rs)}
      *               returns {@code true} will be processed. Must not be {@code null}.
      * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
-     *                     Must not be {@code null}.
+     *                     The same array, one element per column, is passed for every row, so an element the extractor does not set keeps
+     *                     the previous row's value. Must not be {@code null}.
      * @param closeResultSet whether to close the ResultSet after successful argument validation, including when date-type detection or extraction fails
      * @return A {@link Dataset} containing the filtered and transformed data.
      * @throws IllegalArgumentException if {@code rs} is {@code null}, {@code offset} or {@code count} is negative, or {@code filter} or
@@ -8517,7 +8729,9 @@ public final class JdbcUtil {
             // Skip the DatabaseMetaData lookup in that case (behavior-identical, avoids a potential server round-trip).
             final boolean checkDateType = !(rs instanceof ResultSetProxy) && checkDateType(rs);
             return JdbcUtil.extractResultSetToDataset(rs, offset, count, filter, rowExtractor, checkDateType);
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR
+            // Throwable: a RowFilter/RowExtractor written in Kotlin (or using a sneaky throw) can throw a checked exception it
+            // does not declare; with primaryFailure left null, an Error from closing the result set replaced it.
             primaryFailure = e;
             throw e;
         } finally {
@@ -8544,7 +8758,8 @@ public final class JdbcUtil {
      * @param offset The number of rows to skip before extracting.
      * @param count The maximum number of rows to extract.
      * @param filter The {@link RowFilter} to apply while extracting data.
-     * @param rowExtractor The {@link RowExtractor} to apply while extracting data.
+     * @param rowExtractor The {@link RowExtractor} to apply while extracting data; the same output row array is passed for
+     *        every row, so an element it does not set keeps the previous row's value.
      * @param checkDateType Whether to normalize database-specific date/time types to standard Java types.
      * @return A {@link Dataset} containing the extracted data.
      * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
@@ -8615,8 +8830,9 @@ public final class JdbcUtil {
             }
         }
 
-        // return new RowDataset(null, entityClass, columnNameList, columnList);
-        return new RowDataset(columnNameList, columnList);
+        // The public RowDataset constructors copy every column. These lists are private to this method and never
+        // aliased, so the Dataset adopts them, as abacus-common's own importers do, instead of copying every cell.
+        return RowDataset.fromOwnedColumns(columnNameList, columnList);
     }
 
     /**
@@ -8703,7 +8919,9 @@ public final class JdbcUtil {
 
         try {
             return checkNotResultSet(resultExtractor.apply(rs));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR
+            // Throwable: an extractor written in Kotlin (or using a sneaky throw) can throw a checked exception it does not
+            // declare; recorded as a success, the failure of the MySQL streaming read on close replaced it.
             extractionFailure = e;
             throw e;
         } finally {
@@ -8729,7 +8947,7 @@ public final class JdbcUtil {
 
         try {
             return checkNotResultSet(resultExtractor.apply(rs, getColumnLabels(rs)));
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { // NOSONAR - as in extractAndCloseResultSet(ResultSet, ResultExtractor)
             extractionFailure = e;
             throw e;
         } finally {
@@ -8750,13 +8968,23 @@ public final class JdbcUtil {
      */
     private static void closeExtractedResultSet(final ResultSet rs, final Throwable extractionFailure) throws SQLException {
         if (!(rs instanceof final ResultSetProxy proxy && proxy.readsToEndOnClose())) {
-            closeQuietly(rs);
+            try {
+                closeQuietly(rs);
+            } catch (final Error e) {
+                // closeQuietly rethrows an Error: it must not replace the extraction failure already propagating.
+                if (extractionFailure == null) {
+                    throw e;
+                }
+
+                addSuppressedIfDistinct(extractionFailure, e);
+            }
+
             return;
         }
 
         try {
             rs.close();
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             if (extractionFailure == null) {
                 throw e;
             }
@@ -8818,7 +9046,9 @@ public final class JdbcUtil {
      * }</pre>
      *
      * <p>Database access errors encountered while traversing the returned stream are propagated as
-     * {@link UncheckedSQLException}.</p>
+     * {@link UncheckedSQLException}. Rows are mapped as by {@link Jdbc.BiRowMapper#to(Class)}: traversal throws
+     * {@link IllegalArgumentException} for a column that matches no property of a bean {@code targetClass}, or for a
+     * scalar {@code targetClass} when the result set does not have exactly one column.</p>
      *
      * @param <T> The type of the result extracted from the ResultSet.
      * @param rs The {@link ResultSet} to create a stream from.
@@ -10541,11 +10771,12 @@ public final class JdbcUtil {
      * database-specific date/time types (i.e., whether the underlying database is Oracle).
      *
      * @param stmt The {@link Statement} to check.
-     * @return {@code true} if date/time values should be normalized, or if the check fails.
+     * @return {@code true} if date/time values should be normalized, or if {@link Statement#getConnection()} throws an
+     *         {@link SQLException}.
      * @throws IllegalArgumentException if {@code stmt.getConnection()} is {@code null}, or the database metadata
      *         reports a {@code null}, empty, or blank product name.
-     * @throws UncheckedSQLException if reading the connection's database product metadata fails; failures from
-     *         {@link Statement#getConnection()} are caught and result in {@code true}.
+     * @throws UncheckedSQLException if reading the connection's database product metadata fails; an {@link SQLException}
+     *         thrown by {@link Statement#getConnection()} is caught and results in {@code true} (any other failure of it propagates).
      */
     static boolean checkDateType(final Statement stmt) throws IllegalArgumentException, UncheckedSQLException {
         try {
@@ -10964,7 +11195,8 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if acquiring a connection or reading table metadata fails, or the fallback table query fails
      *         with an SQL error other than "table not found", or, on a database where a failed statement aborts the
      *         transaction, with a "table not found" error that may have left the connection's open transaction aborted
-     *         (no savepoint could be set, or rolling back to it failed).
+     *         (no savepoint could be set, or rolling back to it failed). Spring acquisition failures instead propagate as
+     *         {@code CannotGetJdbcConnectionException} (see {@link #getConnection(javax.sql.DataSource)}).
      * @see #tableExists(Connection, String)
      */
     public static boolean tableExists(final javax.sql.DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -10973,12 +11205,16 @@ public final class JdbcUtil {
         splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         Connection conn = null;
+        Throwable failure = null;
 
         try {
             conn = getConnection(ds);
             return tableExists(conn, tableName);
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+            failure = e;
+            throw e;
         } finally {
-            releaseConnection(conn, ds);
+            releaseConnectionAfter(conn, ds, failure); // a close Error replaced the lookup's failure
         }
     }
 
@@ -11139,6 +11375,14 @@ public final class JdbcUtil {
                     }
 
                     throw e;
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    // As in getColumnNames: a RuntimeException, Error or undeclared checked exception of the probe skipped the
+                    // rollback to the savepoint, leaving the caller's PostgreSQL transaction aborted.
+                    if (savepoint != null) {
+                        rollbackToProbeSavepoint(conn, savepoint, e);
+                    }
+
+                    throw e;
                 }
             }
 
@@ -11214,7 +11458,7 @@ public final class JdbcUtil {
      * @param catalogDelimited Whether the catalog is compared case-sensitively.
      * @param schemaDelimited Whether the schema is compared case-sensitively.
      * @param tableDelimited Whether the table name is delimited (compared case-sensitively, without case variants).
-     * @return The column names, or an empty or {@code null} list if the metadata reports none.
+     * @return The column names, or an empty list if the metadata reports none.
      * @throws SQLException if reading the metadata fails.
      */
     private static List<String> getColumnNamesInSchema(final DatabaseMetaData metadata, final String catalog, final String schema, final String table,
@@ -11544,13 +11788,14 @@ public final class JdbcUtil {
      * @param probeFailure The probe failure that triggered the rollback.
      * @return {@code true} if the rollback succeeded; {@code false} if it failed.
      */
-    private static boolean rollbackToProbeSavepoint(final Connection conn, final java.sql.Savepoint savepoint, final SQLException probeFailure) {
+    private static boolean rollbackToProbeSavepoint(final Connection conn, final java.sql.Savepoint savepoint, final Throwable probeFailure) {
         boolean rolledBack = false;
 
         try {
             conn.rollback(savepoint);
             rolledBack = true;
-        } catch (final SQLException | RuntimeException e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception: it must not replace the probe failure
+            restoreInterruptIfInterrupted(e);
             addSuppressedIfDistinct(probeFailure, e);
         }
 
@@ -12185,8 +12430,11 @@ public final class JdbcUtil {
             }
 
             // Locale-independent lowercase to avoid Turkish-locale `I` ambiguity.
+            // SQLite reports a missing table only in its message ("no such table: t"), with no SQLState and the generic
+            // SQLITE_ERROR code 1 (sqlite-jdbc): unmatched, tableExists threw for a table that does not exist.
             final String msg = N.defaultIfNull(e.getMessage(), "").toLowerCase(Locale.ROOT);
-            return Strings.isNotEmpty(msg) && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found"));
+            return Strings.isNotEmpty(msg)
+                    && (msg.contains("not exist") || msg.contains("doesn't exist") || msg.contains("not found") || msg.contains("no such table"));
         }
 
         return false;
@@ -12720,9 +12968,16 @@ public final class JdbcUtil {
      * @return The {@link PropInfo} for the resolved property, or {@code null} if not found.
      */
     static PropInfo getSubPropInfo(final Class<?> entityClass, final String propName) {
-        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
+        // Answered without the cache: the mappers call this for every column label their entity has no property for, so
+        // caching plain names kept each distinct unmatched label (e.g. with ignoreUnmatchedColumns) in this static map forever.
+        // Checked before the bean-info lookup, which is no validation here: every caller has already resolved the bean info of
+        // entityClass.
+        if (propName.indexOf('.') < 0) {
+            return null;
+        }
+
         final Map<String, Optional<PropInfo>> propInfoQueueMap = entityPropInfoQueueMap.computeIfAbsent(entityClass,
-                cls -> new ConcurrentCacheMap<>((entityInfo.propInfoList.size() + 1) * 2));
+                cls -> new ConcurrentCacheMap<>((ParserUtil.getBeanInfo(cls).propInfoList.size() + 1) * 2));
         Optional<PropInfo> propInfoHolder = propInfoQueueMap.get(propName);
         PropInfo propInfo = null;
 
@@ -12847,10 +13102,16 @@ public final class JdbcUtil {
             }
 
             if (value instanceof final ResultSet rs) {
+                Throwable extractFailure = null;
+
                 try {
                     value = JdbcUtil.extractData(rs);
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    extractFailure = e;
+                    throw e;
                 } finally {
-                    JdbcUtil.closeQuietly(rs);
+                    // closeQuietly rethrows a close Error, which replaced the failure of reading the result set.
+                    closeQuietlyAfter(rs, null, extractFailure);
                 }
             } else if (value instanceof final Blob blob) {
                 value = materializeBlob(blob);
@@ -13556,8 +13817,9 @@ public final class JdbcUtil {
      * registered via {@link #setSqlLogHandler(TriConsumer)}, if any.
      *
      * <p>Invoked from a {@code finally} block right after the statement finishes:
-     * a {@code RuntimeException} from the handler is logged and swallowed rather than allowed to mask the
-     * statement's own outcome.</p>
+     * any failure of the handler other than an {@link Error} (also a checked exception it throws without declaring it) is
+     * logged and swallowed rather than allowed to mask the statement's own outcome, restoring the thread's interrupt flag
+     * for an {@link InterruptedException}; an {@code Error} propagates.</p>
      *
      * <p>The start time is deliberately captured on two clocks because neither can be derived from the other:
      * {@code startTimeNanos} ({@link System#nanoTime()}) is monotonic and yields a duration that stays correct
@@ -13598,9 +13860,14 @@ public final class JdbcUtil {
 
             try {
                 sqlLogHandler.accept(sql, startTimeMillis, endTimeMillis);
-            } catch (final RuntimeException e) {
+            } catch (final Error e) {
+                throw e;
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw), as in extractSqlForLog
                 // Observability hooks must not turn a successful database operation into a failure or
-                // replace the SQLException thrown by the JDBC driver.
+                // replace the SQLException thrown by the JDBC driver. Escaping from the callers' finally blocks, a checked
+                // one also skipped the parameter/batch cleanup and dropped a query's result set unclosed. An undeclared
+                // InterruptedException (a handler blocking on a queue) was swallowed with the thread's interrupt request.
+                restoreInterruptIfInterrupted(e);
                 logger.warn(e, "Failed to invoke SQL log handler");
             }
         }
@@ -13608,8 +13875,8 @@ public final class JdbcUtil {
 
     /**
      * Extracts the SQL text of a statement for logging. Returns an empty string if the extractor
-     * throws an {@link Exception} or yields {@code null}, preserving the JDBC operation's outcome
-     * in those cases. Errors are not caught.
+     * throws anything other than an {@link Error} (also a checked exception it does not declare) or yields {@code null},
+     * preserving the JDBC operation's outcome in those cases. Errors are not caught.
      *
      * @param stmt The statement whose SQL to extract.
      * @param sqlExtractor The extractor function to apply.
@@ -13619,9 +13886,13 @@ public final class JdbcUtil {
         try {
             // A custom extractor registered via setSqlExtractor may return null.
             return N.defaultIfNull(sqlExtractor.apply(stmt), "");
-        } catch (final Exception e) {
+        } catch (final Error e) {
+            throw e;
+        } catch (final Throwable e) { //NOSONAR - also a sneaky-thrown Throwable that is not an Exception
             // SQL extraction is diagnostic only. In particular, do not let it mask a JDBC failure
-            // while this method is executing from a finally block.
+            // while this method is executing from a finally block. Swallowed, an undeclared InterruptedException lost the
+            // thread's interrupt request.
+            restoreInterruptIfInterrupted(e);
             logger.warn(e, "Failed to extract SQL for logging");
 
             return "";
@@ -13713,8 +13984,9 @@ public final class JdbcUtil {
      * thread after each statement execution performed by this library's query objects (a batch counts as one
      * execution), whether the execution succeeded or failed, independently of the per-thread SQL log and
      * performance-log settings and of the global disable switches. The SQL text comes from the
-     * {@linkplain #setSqlExtractor(Throwables.Function) SQL extractor}. A {@code RuntimeException} thrown by
-     * the handler is logged and ignored. The handler must be thread-safe and fast, because it runs
+     * {@linkplain #setSqlExtractor(Throwables.Function) SQL extractor}. An exception thrown by the handler,
+     * also a checked one it throws without declaring it, is logged and ignored (an {@link InterruptedException} restores the
+     * thread's interrupt flag); an {@link Error} propagates. The handler must be thread-safe and fast, because it runs
      * synchronously for each statement.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -14116,6 +14388,8 @@ public final class JdbcUtil {
      *         cannot be determined, or if that transaction exposes the connection through a handle of its own but no JPA
      *         transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException} (see
+     *         {@link #getConnection(javax.sql.DataSource)}).
      * @see SqlTransaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel)
      * @see SqlTransaction#commit()
@@ -14160,6 +14434,8 @@ public final class JdbcUtil {
      *         cannot be determined, or if that transaction exposes the connection through a handle of its own but no JPA
      *         transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException} (see
+     *         {@link #getConnection(javax.sql.DataSource)}).
      * @see SqlTransaction
      */
     @SuppressWarnings("deprecation")
@@ -14262,8 +14538,8 @@ public final class JdbcUtil {
      * Spring is on the class path and its participation is enabled on this thread.
      *
      * @param ds the data source
-     * @return {@code true} if the holder bound to the data source belongs to a transaction and its connection has
-     *         auto-commit off
+     * @return {@code true} if the holder bound to the data source belongs to a transaction, its connection has
+     *         auto-commit off, and the completion of that transaction has not started
      * @throws IllegalStateException if the ownership of the bound connection holder cannot be determined
      * @throws UncheckedSQLException if the auto-commit mode of the bound connection cannot be read
      */
@@ -15405,6 +15681,8 @@ public final class JdbcUtil {
      * @param actionSupplier supplies the action (or {@code null} for none); called at most once, before this method returns
      * @return the action registered, or {@code null} if none was (outside any transaction, or without Spring's transaction
      *         synchronization)
+     * @throws IllegalStateException if the ownership of a Spring connection holder bound to {@code ds} cannot be determined
+     * @throws UncheckedSQLException if the auto-commit mode of the connection Spring bound to {@code ds} cannot be read
      */
     static <A extends Runnable> A registerEnclosingTransactionRollbackAction(final javax.sql.DataSource ds, final Supplier<? extends A> actionSupplier) {
         final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
@@ -15916,7 +16194,7 @@ public final class JdbcUtil {
      *       therefore runs on a <em>separate</em> connection that is <em>not</em> part of the
      *       surrounding transaction. When {@code cmd} finishes (normally or exceptionally) the
      *       original transaction is restored. If another transaction is opened and not closed
-     *       inside {@code cmd}, an {@link IllegalStateException} is thrown.</li>
+     *       inside {@code cmd}, it is rolled back and an {@link IllegalStateException} is thrown.</li>
      * </ul>
      *
      * <p>This is useful for operations that must be committed immediately and independently of
@@ -15962,8 +16240,9 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
      * @throws E if {@code cmd} throws an exception.
      * @throws IllegalStateException if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another
-     *         transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to
-     *         its exception as a suppressed exception instead.
+     *         transaction for {@code ds} opened inside {@code cmd} is still open (it is rolled back, as by
+     *         {@link SqlTransaction#rollbackIfNotCommitted()} of its outermost scope, also when {@code cmd} throws); if {@code cmd}
+     *         throws, that condition is attached to its exception as a suppressed exception instead.
      * @see SqlTransaction
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      * @see SqlTransaction#callOutsideTransaction(Throwables.Callable)
@@ -16051,8 +16330,9 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
      * @throws E if {@code cmd} throws an exception.
      * @throws IllegalStateException if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another
-     *         transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to
-     *         its exception as a suppressed exception instead.
+     *         transaction for {@code ds} opened inside {@code cmd} is still open (it is rolled back, as by
+     *         {@link SqlTransaction#rollbackIfNotCommitted()} of its outermost scope, also when {@code cmd} throws); if {@code cmd}
+     *         throws, that condition is attached to its exception as a suppressed exception instead.
      * @see SqlTransaction
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)
@@ -16132,8 +16412,9 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
      * @throws E if {@code cmd} throws an exception.
      * @throws IllegalStateException if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another
-     *         transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to
-     *         its exception as a suppressed exception instead.
+     *         transaction for {@code ds} opened inside {@code cmd} is still open (it is rolled back, as by
+     *         {@link SqlTransaction#rollbackIfNotCommitted()} of its outermost scope, also when {@code cmd} throws); if {@code cmd}
+     *         throws, that condition is attached to its exception as a suppressed exception instead.
      * @see SqlTransaction
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      * @see SqlTransaction#runOutsideTransaction(Throwables.Runnable)
@@ -16206,8 +16487,9 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
      * @throws E if {@code cmd} throws an exception.
      * @throws IllegalStateException if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another
-     *         transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to
-     *         its exception as a suppressed exception instead.
+     *         transaction for {@code ds} opened inside {@code cmd} is still open (it is rolled back, as by
+     *         {@link SqlTransaction#rollbackIfNotCommitted()} of its outermost scope, also when {@code cmd} throws); if {@code cmd}
+     *         throws, that condition is attached to its exception as a suppressed exception instead.
      * @see SqlTransaction
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)
@@ -16318,16 +16600,17 @@ public final class JdbcUtil {
      * // Inside a Spring @Transactional method, read committed data that is not yet
      * // visible in the current transaction (using a separate connection)
      * @Transactional
-     * public OrderSummary createAndSummarize(Order order) {
+     * public OrderSummary createAndSummarize(Order order) throws SQLException {
      *     orderRepository.save(order);
      *
-     *     // Read the pre-existing aggregate using a fresh, non-transactional connection
+     *     // Read the pre-existing aggregate using a fresh, non-transactional connection.
+     *     // SUM returns one row, with NULL when no order matches: orElseIfNull, not orElse
      *     BigDecimal runningTotal = JdbcUtil.callIgnoringSpringTransaction(() ->
      *         JdbcUtil.prepareQuery(dataSource,
      *             "SELECT SUM(total) FROM orders WHERE customer_id = ?")
      *             .setLong(1, order.getCustomerId())
      *             .queryForBigDecimal()
-     *             .orElse(BigDecimal.ZERO));
+     *             .orElseIfNull(BigDecimal.ZERO));
      *
      *     return new OrderSummary(order, runningTotal);
      * }
@@ -17494,7 +17777,7 @@ public final class JdbcUtil {
         }
 
         /**
-         * Returns the cache bound to the current thread by this scope.
+         * Returns the cache this scope binds to the current thread (also while a nested scope binds another one).
          *
          * @return The scope's cache.
          */

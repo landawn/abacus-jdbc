@@ -56,8 +56,11 @@ import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.ImportTree;
+import com.sun.source.tree.LambdaExpressionTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModifiersTree;
+import com.sun.source.tree.NewClassTree;
+import com.sun.source.tree.ParameterizedTypeTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
@@ -134,6 +137,7 @@ public final class ApiDocGenerator {
 
     private static final class FieldInfo {
         String name;
+        boolean enumConstant;
         List<String> modifiers = new ArrayList<>();
         String type;
         String value;
@@ -151,10 +155,18 @@ public final class ApiDocGenerator {
         String threadSafety = "unspecified";
         String nullability = "unspecified";
         List<TypeParamInfo> typeParams = new ArrayList<>();
+        List<String> extendsTypes = new ArrayList<>();
+        List<String> implementsTypes = new ArrayList<>();
+        List<String> permitsTypes = new ArrayList<>();
+        // Public types through which a non-public supertype's members are inherited; empty for public types.
+        List<String> exposedThrough = new ArrayList<>();
         List<ConstructorInfo> constructors = new ArrayList<>();
         List<MethodInfo> methods = new ArrayList<>();
         List<FieldInfo> fields = new ArrayList<>();
         int order;
+    }
+
+    private record TypeDecl(String fqn, UnitData unit, ClassTree tree, String enclosingFqn, boolean visible) {
     }
 
     private static final class PackageInfoData {
@@ -186,7 +198,13 @@ public final class ApiDocGenerator {
         boolean inheritsDocumentation;
     }
 
+    private static final int MAX_FIELD_VALUE_LENGTH = 160;
+
     private static int methodOrder;
+
+    // Non-public types (fqn -> public subtypes) whose members are public API inherited by public types,
+    // such as the package-private DAO capability interfaces behind CrudDao.
+    private static Map<String, List<String>> exposedNonPublicTypes = Map.of();
 
     public static void main(final String[] args) throws Exception {
         final Path sourceRoot = args.length > 0 ? Path.of(args[0]) : Path.of("src/main/java");
@@ -195,6 +213,7 @@ public final class ApiDocGenerator {
         final Path pomPath = args.length > 3 ? Path.of(args[3]) : Path.of("pom.xml");
 
         final LibraryInfo library = readLibraryInfo(pomPath);
+        library.gitSha = readGitSha(pomPath, sourceRoot);
         final List<Path> javaFiles = listJavaFiles(sourceRoot);
         if (javaFiles.isEmpty()) {
             throw new IllegalStateException("No Java source files under " + sourceRoot);
@@ -279,6 +298,8 @@ public final class ApiDocGenerator {
             units.add(ud);
         }
 
+        exposedNonPublicTypes = findExposedNonPublicTypes(units, typesByPackage, allTypes);
+
         int typeOrder = 0;
         methodOrder = 0;
         for (final UnitData ud : units) {
@@ -309,17 +330,13 @@ public final class ApiDocGenerator {
             final DocTrees docTrees, final SourcePositions sourcePositions, final Elements elements, final Types types, final int startOrder) {
         int nextOrder = startOrder;
         final ClassTree classTree = (ClassTree) typePath.getLeaf();
-        if (!isPublicType(classTree, parentType)) {
+        final String simpleName = classTree.getSimpleName().toString();
+        final String fqn = typeFqn(unitData, enclosingFqn, simpleName);
+
+        if (!isPublicType(classTree, parentType == null ? null : parentType.kind) && !exposedNonPublicTypes.containsKey(fqn)) {
             return nextOrder;
         }
 
-        final String simpleName = classTree.getSimpleName().toString();
-        final String fqn;
-        if (enclosingFqn == null) {
-            fqn = unitData.packageName.isEmpty() ? simpleName : unitData.packageName + "." + simpleName;
-        } else {
-            fqn = enclosingFqn + "." + simpleName;
-        }
         allTypes.putIfAbsent(fqn, fqn);
 
         final TypeInfo type = new TypeInfo();
@@ -329,6 +346,19 @@ public final class ApiDocGenerator {
         type.kind = mapTypeKind(classTree.getKind());
         type.modifiers = sortedModifiers(classTree.getModifiers(), parentType);
         type.typeParams = readTypeParams(classTree.getTypeParameters());
+        type.exposedThrough = exposedNonPublicTypes.getOrDefault(fqn, List.of());
+
+        // javac records the supertypes of an interface in its implements clause.
+        final List<String> superInterfaces = classTree.getImplementsClause().stream().map(tree -> normalize(tree.toString())).toList();
+        if (classTree.getExtendsClause() != null) {
+            type.extendsTypes.add(normalize(classTree.getExtendsClause().toString()));
+        }
+        if (classTree.getKind() == Tree.Kind.INTERFACE || classTree.getKind() == Tree.Kind.ANNOTATION_TYPE) {
+            type.extendsTypes.addAll(superInterfaces);
+        } else {
+            type.implementsTypes.addAll(superInterfaces);
+        }
+        classTree.getPermitsClause().forEach(tree -> type.permitsTypes.add(normalize(tree.toString())));
         type.nullability = inferNullability(classTree.getModifiers().getAnnotations(), "");
 
         final DocInfo typeDoc = readDoc(docTrees, typePath);
@@ -352,10 +382,15 @@ public final class ApiDocGenerator {
                 }
                 final FieldInfo field = new FieldInfo();
                 field.name = varTree.getName().toString();
+                field.enumConstant = isEnumConstant(varTree, classTree);
                 field.type = normalize(varTree.getType() == null ? "" : varTree.getType().toString());
                 field.modifiers = sortedModifiers(varTree.getModifiers(), null);
-                if (varTree.getInitializer() != null) {
-                    field.value = normalize(varTree.getInitializer().toString());
+                if ("interface".equals(type.kind) || "annotation".equals(type.kind)) {
+                    // Interface fields are implicitly public static final.
+                    field.modifiers = List.of("public", "static", "final");
+                }
+                if (!field.enumConstant) {
+                    field.value = readFieldValue(varTree.getInitializer());
                 }
                 final DocInfo fieldDoc = readDoc(docTrees, new TreePath(typePath, varTree));
                 if (fieldDoc != null) {
@@ -465,18 +500,148 @@ public final class ApiDocGenerator {
         return nextOrder;
     }
 
-    private static boolean isPublicType(final ClassTree classTree, final TypeInfo parentType) {
+    private static boolean isPublicType(final ClassTree classTree, final String parentKind) {
         final Set<Modifier> flags = classTree.getModifiers().getFlags();
         if (flags.contains(Modifier.PUBLIC)) {
             return true;
         }
-        if (parentType == null) {
+        if (parentKind == null) {
             return false;
         }
-        if ("interface".equals(parentType.kind) || "annotation".equals(parentType.kind)) {
+        if ("interface".equals(parentKind) || "annotation".equals(parentKind)) {
             return !flags.contains(Modifier.PRIVATE);
         }
         return false;
+    }
+
+    private static String typeFqn(final UnitData unitData, final String enclosingFqn, final String simpleName) {
+        if (enclosingFqn != null) {
+            return enclosingFqn + "." + simpleName;
+        }
+        return unitData.packageName.isEmpty() ? simpleName : unitData.packageName + "." + simpleName;
+    }
+
+    /**
+     * Finds the non-public source types whose members are inherited by a visible type, such as a
+     * package-private interface extended by a public one. Their public members are callable through
+     * the public type, so they belong in the index even though the type itself cannot be named.
+     */
+    private static Map<String, List<String>> findExposedNonPublicTypes(final List<UnitData> units, final Map<String, Map<String, String>> typesByPackage,
+            final Map<String, String> allTypes) {
+        final Map<String, TypeDecl> decls = new LinkedHashMap<>();
+        for (final UnitData ud : units) {
+            for (final Tree t : ud.unit.getTypeDecls()) {
+                if (t instanceof ClassTree ct) {
+                    collectTypeDecls(ct, ud, null, null, true, decls);
+                }
+            }
+        }
+        decls.keySet().forEach(fqn -> allTypes.putIfAbsent(fqn, fqn));
+
+        final Map<String, Set<String>> exposed = new LinkedHashMap<>();
+        for (final TypeDecl decl : decls.values()) {
+            if (!decl.visible()) {
+                continue;
+            }
+            final Deque<TypeDecl> toVisit = new ArrayDeque<>(directSourceSupertypes(decl, decls, typesByPackage, allTypes));
+            final Set<String> visited = new LinkedHashSet<>();
+            while (!toVisit.isEmpty()) {
+                final TypeDecl supertype = toVisit.removeFirst();
+                if (supertype.visible() || !visited.add(supertype.fqn())) {
+                    continue;
+                }
+                exposed.computeIfAbsent(supertype.fqn(), k -> new LinkedHashSet<>()).add(decl.fqn());
+                toVisit.addAll(directSourceSupertypes(supertype, decls, typesByPackage, allTypes));
+            }
+        }
+
+        final Map<String, List<String>> out = new LinkedHashMap<>();
+        exposed.forEach((fqn, subtypes) -> out.put(fqn, subtypes.stream().sorted().toList()));
+        return out;
+    }
+
+    private static void collectTypeDecls(final ClassTree classTree, final UnitData unitData, final String enclosingFqn, final String parentKind,
+            final boolean parentVisible, final Map<String, TypeDecl> out) {
+        final String simpleName = classTree.getSimpleName().toString();
+        if (simpleName.isEmpty()) {
+            return;
+        }
+        final String fqn = typeFqn(unitData, enclosingFqn, simpleName);
+        final boolean visible = parentVisible && isPublicType(classTree, parentKind);
+        out.put(fqn, new TypeDecl(fqn, unitData, classTree, enclosingFqn, visible));
+
+        for (final Tree member : classTree.getMembers()) {
+            if (member instanceof ClassTree nested) {
+                collectTypeDecls(nested, unitData, fqn, mapTypeKind(classTree.getKind()), visible, out);
+            }
+        }
+    }
+
+    private static List<TypeDecl> directSourceSupertypes(final TypeDecl decl, final Map<String, TypeDecl> decls,
+            final Map<String, Map<String, String>> typesByPackage, final Map<String, String> allTypes) {
+        final List<Tree> supertypeTrees = new ArrayList<>(decl.tree().getImplementsClause());
+        if (decl.tree().getExtendsClause() != null) {
+            supertypeTrees.add(decl.tree().getExtendsClause());
+        }
+
+        final List<TypeDecl> out = new ArrayList<>();
+        for (final Tree supertypeTree : supertypeTrees) {
+            final Tree rawType = supertypeTree instanceof ParameterizedTypeTree parameterized ? parameterized.getType() : supertypeTree;
+            final String resolved = resolveSourceType(normalize(rawType.toString()), decl, typesByPackage, allTypes);
+            if (resolved != null && decls.containsKey(resolved)) {
+                out.add(decls.get(resolved));
+            }
+        }
+        return out;
+    }
+
+    private static String resolveSourceType(final String name, final TypeDecl context, final Map<String, Map<String, String>> typesByPackage,
+            final Map<String, String> allTypes) {
+        if (isBlank(name)) {
+            return null;
+        }
+        if (allTypes.containsKey(name)) {
+            return name;
+        }
+
+        final int dot = name.indexOf('.');
+        final String first = dot < 0 ? name : name.substring(0, dot);
+        final String rest = dot < 0 ? "" : name.substring(dot);
+        final UnitData ud = context.unit();
+        final List<String> candidates = new ArrayList<>();
+
+        for (String enclosing = context.enclosingFqn(); enclosing != null; enclosing = enclosing.lastIndexOf('.') < 0 ? null
+                : enclosing.substring(0, enclosing.lastIndexOf('.'))) {
+            candidates.add(enclosing + "." + name);
+        }
+        if (ud.explicitImports.containsKey(first)) {
+            candidates.add(ud.explicitImports.get(first) + rest);
+        }
+        final Map<String, String> inPackage = typesByPackage.get(ud.packageName);
+        if (inPackage != null && inPackage.containsKey(first)) {
+            candidates.add(inPackage.get(first) + rest);
+        }
+        for (final String wildcardImport : ud.wildcardImports) {
+            candidates.add(wildcardImport + "." + name);
+        }
+
+        return candidates.stream().filter(allTypes::containsKey).findFirst().orElse(null);
+    }
+
+    private static boolean isEnumConstant(final VariableTree varTree, final ClassTree owner) {
+        // An enum cannot be instantiated explicitly, so a field initialized by `new <Enum>(...)` is one of its constants.
+        return owner.getKind() == Tree.Kind.ENUM && varTree.getInitializer() instanceof NewClassTree newClass
+                && simpleName(normalize(newClass.getIdentifier().toString())).equals(owner.getSimpleName().toString());
+    }
+
+    private static String readFieldValue(final ExpressionTree initializer) {
+        // Lambdas, anonymous classes and long expressions are implementation, not API.
+        if (initializer == null || initializer instanceof LambdaExpressionTree
+                || (initializer instanceof NewClassTree newClass && newClass.getClassBody() != null)) {
+            return null;
+        }
+        final String value = normalize(initializer.toString());
+        return value == null || value.length() > MAX_FIELD_VALUE_LENGTH ? null : value;
     }
 
     private static boolean isConstructor(final MethodTree methodTree, final ClassTree owner) {
@@ -696,7 +861,7 @@ public final class ApiDocGenerator {
     private static List<String> sortedModifiers(final ModifiersTree modifiers, final TypeInfo ownerType) {
         final LinkedHashSet<String> out = new LinkedHashSet<>();
         final List<Modifier> order = List.of(Modifier.PUBLIC, Modifier.PROTECTED, Modifier.PRIVATE, Modifier.ABSTRACT, Modifier.STATIC, Modifier.FINAL,
-                Modifier.TRANSIENT, Modifier.VOLATILE, Modifier.SYNCHRONIZED, Modifier.NATIVE, Modifier.STRICTFP, Modifier.DEFAULT);
+                Modifier.SEALED, Modifier.NON_SEALED, Modifier.TRANSIENT, Modifier.VOLATILE, Modifier.SYNCHRONIZED, Modifier.NATIVE, Modifier.STRICTFP, Modifier.DEFAULT);
         for (final Modifier m : order) {
             if (modifiers.getFlags().contains(m)) {
                 out.add(m.toString().toLowerCase(Locale.ROOT));
@@ -1238,6 +1403,38 @@ public final class ApiDocGenerator {
         return out;
     }
 
+    /**
+     * Returns the abbreviated HEAD commit of the repository holding the POM, suffixed with
+     * {@code -dirty} when the sources under {@code sourceRoot} have uncommitted changes, or
+     * {@code unknown} when git is unavailable.
+     */
+    private static String readGitSha(final Path pomPath, final Path sourceRoot) {
+        final Path workDir = pomPath.toAbsolutePath().getParent();
+        final String sha = runGit(workDir, "rev-parse", "--short=8", "HEAD");
+        if (isBlank(sha)) {
+            return "unknown";
+        }
+        final String status = runGit(workDir, "status", "--porcelain", "--untracked-files=no", "--", sourceRoot.toAbsolutePath().toString());
+        return status == null || status.isEmpty() ? sha : sha + "-dirty";
+    }
+
+    private static String runGit(final Path workDir, final String... args) {
+        final List<String> command = new ArrayList<>();
+        command.add("git");
+        command.addAll(List.of(args));
+        try {
+            final Process process = new ProcessBuilder(command).directory(workDir.toFile()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            process.getOutputStream().close();
+            final String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
+            return process.waitFor() == 0 ? output : null;
+        } catch (final IOException e) {
+            return null;
+        } catch (final InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        }
+    }
+
     private static String readProjectElement(final Document doc, final String key) {
         final NodeList children = doc.getDocumentElement().getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
@@ -1297,11 +1494,62 @@ public final class ApiDocGenerator {
             for (final TypeInfo t : p.types) {
                 sb.append("### ").append(capitalize(md(t.kind))).append(' ').append(md(t.name)).append(" (").append(md(t.fqn)).append(")\n");
                 sb.append(isBlank(t.javadocSummary) ? "unspecified" : md(t.javadocSummary)).append("\n\n");
+                if (!t.modifiers.isEmpty()) {
+                    sb.append("**Modifiers:** `").append(String.join(" ", t.modifiers)).append("`\n");
+                }
+                if (!t.exposedThrough.isEmpty()) {
+                    sb.append("**Visibility:** not public; its members are public API inherited through ").append(codeList(t.exposedThrough)).append('\n');
+                }
+                if (!t.extendsTypes.isEmpty()) {
+                    sb.append("**Extends:** ").append(codeList(t.extendsTypes)).append('\n');
+                }
+                if (!t.implementsTypes.isEmpty()) {
+                    sb.append("**Implements:** ").append(codeList(t.implementsTypes)).append('\n');
+                }
+                if (!t.permitsTypes.isEmpty()) {
+                    sb.append("**Permits:** ").append(codeList(t.permitsTypes)).append('\n');
+                }
+                if (t.deprecated != null) {
+                    sb.append("**Deprecated:** ").append(isBlank(t.deprecated.message) ? "yes" : md(t.deprecated.message)).append('\n');
+                }
                 if (!isBlank(t.since)) {
                     sb.append("**Since:** ").append(md(t.since)).append('\n');
                 }
                 sb.append("**Thread-safety:** ").append(md(t.threadSafety)).append('\n');
                 sb.append("**Nullability:** ").append(md(t.nullability)).append("\n\n");
+
+                final List<FieldInfo> enumConstants = t.fields.stream().filter(f -> f.enumConstant).toList();
+                final List<FieldInfo> fields = t.fields.stream().filter(f -> !f.enumConstant).toList();
+                if (!enumConstants.isEmpty()) {
+                    sb.append("#### Enum Constants\n");
+                    for (final FieldInfo f : enumConstants) {
+                        sb.append("- `").append(f.name).append('`');
+                        if (!isBlank(f.javadocSummary)) {
+                            sb.append(" — ").append(md(f.javadocSummary));
+                        }
+                        sb.append('\n');
+                    }
+                    sb.append('\n');
+                }
+                if (!fields.isEmpty()) {
+                    sb.append("#### Public Fields\n");
+                    for (final FieldInfo f : fields) {
+                        sb.append("- `");
+                        if (!f.modifiers.isEmpty()) {
+                            sb.append(String.join(" ", f.modifiers)).append(' ');
+                        }
+                        sb.append(f.type).append(' ').append(f.name);
+                        if (!isBlank(f.value)) {
+                            sb.append(" = ").append(f.value);
+                        }
+                        sb.append('`');
+                        if (!isBlank(f.javadocSummary)) {
+                            sb.append(" — ").append(md(f.javadocSummary));
+                        }
+                        sb.append('\n');
+                    }
+                    sb.append('\n');
+                }
 
                 sb.append("#### Public Constructors\n");
                 if (t.constructors.isEmpty()) {
@@ -1388,6 +1636,10 @@ public final class ApiDocGenerator {
         }
     }
 
+    private static String codeList(final List<String> values) {
+        return values.stream().map(value -> "`" + value + "`").collect(Collectors.joining(", "));
+    }
+
     private static String toJson(final LibraryInfo library, final List<PackageInfoData> packages) {
         final Map<String, Object> root = new LinkedHashMap<>();
         final Map<String, Object> lib = new LinkedHashMap<>();
@@ -1414,6 +1666,14 @@ public final class ApiDocGenerator {
                 type.put("name", t.name);
                 type.put("kind", t.kind);
                 type.put("modifiers", t.modifiers);
+                type.put("extends", t.extendsTypes);
+                type.put("implements", t.implementsTypes);
+                if (!t.permitsTypes.isEmpty()) {
+                    type.put("permits", t.permitsTypes);
+                }
+                if (!t.exposedThrough.isEmpty()) {
+                    type.put("exposed_through", t.exposedThrough);
+                }
                 if (!isBlank(t.since)) {
                     type.put("since", t.since);
                 }
@@ -1516,6 +1776,7 @@ public final class ApiDocGenerator {
     private static Map<String, Object> fieldJson(final FieldInfo value) {
         final Map<String, Object> out = new LinkedHashMap<>();
         out.put("name", value.name);
+        out.put("kind", value.enumConstant ? "enum_constant" : "field");
         out.put("modifiers", value.modifiers);
         out.put("type", value.type);
         if (!isBlank(value.value)) {

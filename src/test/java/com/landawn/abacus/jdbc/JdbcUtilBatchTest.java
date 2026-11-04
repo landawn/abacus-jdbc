@@ -254,6 +254,127 @@ class JdbcUtilBatchTest extends JdbcUtilTestSupport {
         verify(mockConnection, never()).setAutoCommit(true);
     }
 
+    @ParameterizedTest(name = "largeBatch={0}, failing cleanup={1}")
+    @CsvSource({ "false,rollback", "false,restore", "true,rollback", "true,restore" })
+    @DisplayName("execute(Large)BatchUpdate(conn, ...): an undeclared checked batch failure stays primary when cleanup fails")
+    void testBatchUpdateKeepsUndeclaredCheckedFailurePrimaryWhenCleanupFails(final boolean largeBatch, final String failingCleanup) throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        // A checked exception that addBatch does not declare, as a sneaky-throwing Type, getter or driver throws it.
+        final Exception batchFailure = new Exception("undeclared checked batch failure");
+        final SQLException cleanupFailure = new SQLException(failingCleanup + " failed");
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw batchFailure;
+        }).when(mockPreparedStatement).addBatch();
+
+        if ("rollback".equals(failingCleanup)) {
+            doThrow(cleanupFailure).when(mockConnection).rollback();
+        } else {
+            doThrow(cleanupFailure).when(mockConnection).setAutoCommit(true);
+        }
+
+        final Throwable thrown = assertThrows(Throwable.class, () -> {
+            if (largeBatch) {
+                JdbcUtil.executeLargeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2);
+            } else {
+                JdbcUtil.executeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2);
+            }
+        });
+
+        assertSame(batchFailure, thrown);
+        assertArrayEquals(new Throwable[] { cleanupFailure }, thrown.getSuppressed());
+        verify(mockConnection).rollback();
+        verify(mockPreparedStatement).close();
+    }
+
+    // BUG FIX: the commit, rollback, auto-commit restore and batch-clearing cleanup caught only SQL/runtime exceptions and
+    // errors. An undeclared checked exception from the connection or statement (a Kotlin or sneaky-throwing driver or
+    // wrapper) escaped them: a failed COMMIT skipped the rollback and the auto-commit restore, leaving the caller's
+    // connection in manual-commit mode with the work pending, and a cleanup failure replaced the batch failure.
+    @ParameterizedTest(name = "largeBatch={0}, failing step={1}")
+    @CsvSource({ "false,commit", "false,rollback", "false,restore", "false,clearBatch", "true,commit", "true,rollback", "true,restore", "true,clearBatch" })
+    @DisplayName("execute(Large)BatchUpdate(conn, ...): undeclared checked commit/cleanup failures neither skip cleanup nor replace the batch failure")
+    void testBatchUpdateHandlesUndeclaredCheckedCommitAndCleanupFailures(final boolean largeBatch, final String failingStep) throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final Exception batchFailure = new Exception("undeclared checked batch failure");
+        final Exception stepFailure = new Exception("undeclared checked " + failingStep + " failure");
+        final AssertionError clearFailure = new AssertionError("clearBatch failed");
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+
+        if (largeBatch) {
+            when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
+        } else {
+            when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
+        }
+
+        final Throwable expected;
+
+        switch (failingStep) {
+            case "commit" -> {
+                org.mockito.Mockito.doAnswer(invocation -> {
+                    throw stepFailure;
+                }).when(mockConnection).commit();
+                expected = stepFailure;
+            }
+            case "clearBatch" -> {
+                // The execution itself fails undeclared, and clearing the batch afterwards throws an Error.
+                final org.mockito.stubbing.Answer<Object> failExecution = invocation -> {
+                    throw batchFailure;
+                };
+
+                if (largeBatch) {
+                    org.mockito.Mockito.doAnswer(failExecution).when(mockPreparedStatement).executeLargeBatch();
+                } else {
+                    org.mockito.Mockito.doAnswer(failExecution).when(mockPreparedStatement).executeBatch();
+                }
+
+                doThrow(clearFailure).when(mockPreparedStatement).clearBatch();
+                expected = batchFailure;
+            }
+            default -> {
+                org.mockito.Mockito.doAnswer(invocation -> {
+                    throw batchFailure;
+                }).when(mockPreparedStatement).addBatch();
+
+                if ("rollback".equals(failingStep)) {
+                    org.mockito.Mockito.doAnswer(invocation -> {
+                        throw stepFailure;
+                    }).when(mockConnection).rollback();
+                } else {
+                    org.mockito.Mockito.doAnswer(invocation -> {
+                        throw stepFailure;
+                    }).when(mockConnection).setAutoCommit(true);
+                }
+
+                expected = batchFailure;
+            }
+        }
+
+        final Throwable thrown = assertThrows(Throwable.class, () -> {
+            if (largeBatch) {
+                JdbcUtil.executeLargeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2);
+            } else {
+                JdbcUtil.executeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2);
+            }
+        });
+
+        assertSame(expected, thrown);
+        verify(mockConnection).rollback();
+        verify(mockPreparedStatement).close();
+
+        switch (failingStep) {
+            case "commit" -> {
+                // The rollback ran, and the connection got its auto-commit mode back.
+                verify(mockConnection).setAutoCommit(true);
+                assertEquals(0, thrown.getSuppressed().length);
+            }
+            case "clearBatch" -> assertTrue(Arrays.asList(thrown.getSuppressed()).contains(clearFailure));
+            default -> assertArrayEquals(new Throwable[] { stepFailure }, thrown.getSuppressed());
+        }
+    }
+
     @Test
     public void testExecuteLargeBatchUpdate_ThrowsOnLongCountOverflow() throws SQLException {
         String sql = "INSERT INTO users (name) VALUES (?)";

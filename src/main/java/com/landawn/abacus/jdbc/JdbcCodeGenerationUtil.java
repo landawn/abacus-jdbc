@@ -406,8 +406,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param entityName the entity name, normally the table name: the class name is derived from it (its last qualified part in capitalized
-     *        camel case, for example {@code user_profile} becomes {@code UserProfile}), it is emitted as the {@code @Table} name, and primary
-     *        keys are looked up under it, following the database's case folding for unquoted names, if it names an existing table
+     *        camel case, for example {@code user_profile} becomes {@code UserProfile}), it is emitted without surrounding whitespace or control
+     *        characters as the {@code @Table} name, and primary keys are looked up under it, following the database's case folding for unquoted
+     *        names, if it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
      *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata, requesting at most
      *         one row when the driver supports {@code setMaxRows}. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
@@ -436,10 +437,11 @@ public final class JdbcCodeGenerationUtil {
      * }</pre>
      *
      * @param ds the data source to connect to the database
-     * @param entityName the entity name, normally the table name: emitted as the {@code @Table} name and passed to the field name/type
-     *        converters; the class name is derived from it unless {@code config.className} is set (its last qualified part in capitalized camel
-     *        case, for example {@code user_profile} becomes {@code UserProfile}); primary keys are looked up under it, following the database's
-     *        case folding for unquoted names, when no configured id field matches a generated field and it names an existing table
+     * @param entityName the entity name, normally the table name: with surrounding whitespace and control characters removed, it is emitted as the
+     *        {@code @Table} name and passed to the field name/type converters; the class name is derived from it unless {@code config.className} is
+     *        set (its last qualified part in capitalized camel case, for example {@code user_profile} becomes {@code UserProfile}); primary keys are
+     *        looked up under it, following the database's case folding for unquoted names, when no configured id field matches a generated field and
+     *        it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
      *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata, requesting at most
      *         one row when the driver supports {@code setMaxRows}. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
@@ -478,8 +480,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param entityName the entity name, normally the table name: the class name is derived from it (its last qualified part in capitalized
-     *        camel case, for example {@code user_profile} becomes {@code UserProfile}), it is emitted as the {@code @Table} name, and primary
-     *        keys are looked up under it, following the database's case folding for unquoted names, if it names an existing table
+     *        camel case, for example {@code user_profile} becomes {@code UserProfile}), it is emitted without surrounding whitespace or control
+     *        characters as the {@code @Table} name, and primary keys are looked up under it, following the database's case folding for unquoted
+     *        names, if it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
      *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata, requesting at most
      *         one row when the driver supports {@code setMaxRows}. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
@@ -509,10 +512,11 @@ public final class JdbcCodeGenerationUtil {
      * }</pre>
      *
      * @param conn the database connection to use
-     * @param entityName the entity name, normally the table name: emitted as the {@code @Table} name and passed to the field name/type
-     *        converters; the class name is derived from it unless {@code config.className} is set (its last qualified part in capitalized camel
-     *        case, for example {@code user_profile} becomes {@code UserProfile}); primary keys are looked up under it, following the database's
-     *        case folding for unquoted names, when no configured id field matches a generated field and it names an existing table
+     * @param entityName the entity name, normally the table name: with surrounding whitespace and control characters removed, it is emitted as the
+     *        {@code @Table} name and passed to the field name/type converters; the class name is derived from it unless {@code config.className} is
+     *        set (its last qualified part in capitalized camel case, for example {@code user_profile} becomes {@code UserProfile}); primary keys are
+     *        looked up under it, following the database's case folding for unquoted names, when no configured id field matches a generated field and
+     *        it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
      *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata, requesting at most
      *         one row when the driver supports {@code setMaxRows}. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
@@ -729,8 +733,9 @@ public final class JdbcCodeGenerationUtil {
      * A two-part name is looked up as {@code schema.table}, or as {@code catalog.table} on databases that support catalogs but not
      * schemas in table definitions (for example MySQL).
      *
-     * @param entityName the entity or table name: emitted as the {@code @Table} name, the source of the class name unless
-     *        {@code config.className} is set, and the name primary keys are looked up under when no configured id field matches a generated field
+     * @param entityName the entity or table name: with surrounding whitespace and control characters removed, it is emitted as the {@code @Table}
+     *        name and passed to the field name/type converters; it is also the source of the class name unless {@code config.className} is set, and
+     *        the name primary keys are looked up under when no configured id field matches a generated field
      * @param rs the result set whose column metadata defines the generated fields
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
@@ -750,8 +755,9 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class from column metadata obtained either from an executed result set or from a prepared
      * statement that was described without being executed.
      *
-     * @param entityName the entity or table name: emitted as the {@code @Table} name, the source of the class name unless
-     *        {@code config.className} is set, and the name primary keys are looked up under when no configured id field matches a generated field
+     * @param entityName the entity or table name: with surrounding whitespace and control characters removed, it is emitted as the {@code @Table}
+     *        name and passed to the field name/type converters; it is also the source of the class name unless {@code config.className} is set, and
+     *        the name primary keys are looked up under when no configured id field matches a generated field
      * @param rs the executed result set, or {@code null} when {@code preparedMetadata} is supplied
      * @param preparedMetadata the column metadata of a described prepared statement, or {@code null} to read it from {@code rs}
      * @param sourceConnection the connection used for the primary-key lookup, or {@code null} to use the connection of
@@ -816,6 +822,11 @@ public final class JdbcCodeGenerationUtil {
 
         // Already validated by checkEntityCodeConfig, like the annotation classes, package name and read-only/non-updatable conflicts.
         final String finalClassName = Strings.isEmpty(className) ? deriveClassName(entityName) : className;
+        // The table-name overloads accept surrounding whitespace; @Table and the converters use the name without it (the
+        // converters received the padded name). WHY trim() first: the class name and the primary-key lookup parse the name
+        // with splitQualifiedSqlIdentifier, which also drops outer control characters (as String.trim() does); stripping
+        // whitespace alone kept a leading U+0001 in the @Table name of a class named and looked up as "users".
+        final String strippedEntityName = entityName == null ? null : Strings.strip(entityName.trim());
 
         final String additionalClassBodySource = configToUse.getAdditionalClassBodySource();
 
@@ -851,7 +862,7 @@ public final class JdbcCodeGenerationUtil {
                         : customFieldMappingMap.get(Strings.toCamelCase(columnName).toLowerCase(Locale.ROOT));
 
                 final String fieldName = customFieldMapping == null || Strings.isEmpty(customFieldMapping.fieldName())
-                        ? fieldNameConverter.apply(entityName, columnName)
+                        ? fieldNameConverter.apply(strippedEntityName, columnName)
                         : customFieldMapping.fieldName();
 
                 if (N.notEmpty(excludedFields) && (excludedFields.contains(fieldName) || excludedFields.contains(columnName))) {
@@ -867,7 +878,7 @@ public final class JdbcCodeGenerationUtil {
 
                 final String columnClassName = customFieldMapping == null || customFieldMapping.fieldType() == null
                         ? mapColumnClassName((fieldTypeConverter == null ? getColumnClassName(rsmd, i)
-                                : fieldTypeConverter.apply(entityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
+                                : fieldTypeConverter.apply(strippedEntityName, fieldName, columnName, getColumnClassName(rsmd, i))), false, configToUse)
                         : mapColumnClassName(ClassUtil.getCanonicalClassName(customFieldMapping.fieldType()), true, configToUse);
 
                 if (!Strings.isValidJavaIdentifier(fieldName)) {
@@ -1151,10 +1162,13 @@ public final class JdbcCodeGenerationUtil {
                 sb.append("@JsonXmlConfig").append(Strings.join(tmp, ", ", "(", ")")).append(LINE_SEPARATOR);
             }
 
+            // Surrounding whitespace is dropped: the table-name overloads accept and trim it like the SQL generators do, but
+            // abacus-common's BeanInfo rejects a @Table name that starts or ends with whitespace, so every use of the
+            // generated entity (DAO creation, row mapping) failed with IllegalArgumentException.
             sb.append('@')
                     .append(tableAnnotationName)
                     .append("(name = \"")
-                    .append(EscapeUtil.escapeJava(entityName))
+                    .append(EscapeUtil.escapeJava(strippedEntityName))
                     .append("\")")
                     .append(LINE_SEPARATOR)
                     .append("public class ")
@@ -1452,10 +1466,12 @@ public final class JdbcCodeGenerationUtil {
      */
     private static List<Tuple3<String, String, Boolean>> parseAdditionalFields(final Stream<String> lines) {
         return lines
-                // Strip trailing line comments so a declaration written as "private Set<X> s; // note"
-                // still parses (and gets its import + copy() assignment). stripLineComment ignores any
-                // "//" inside a string/char literal, so initializers like "https://..." are preserved.
-                .map(JdbcCodeGenerationUtil::stripLineComment)
+                // Strip comments so a declaration written as "private Set<X> s; // note" still parses (and gets its
+                // import + copy() assignment). Block comments are removed too: inside a declaration they were parsed as
+                // code, so "private int a /* c */;" was rejected as malformed, "private /* c */ final int a = 1;" got a
+                // copy() assignment to a final field, and a ',' inside a comment split off a declarator copy() assigned.
+                // Comment markers inside a string/char literal are kept, so initializers like "https://..." are preserved.
+                .map(JdbcCodeGenerationUtil::stripJavaComments)
                 .map(Strings::strip)
                 // .peek(Fn.println())
                 .filter(Fn.notEmpty())
@@ -1507,10 +1523,67 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Returns the lines of a class body source that begin in code. A line that begins inside a block comment or a
-     * text block is left out, so its content is not mistaken for a field declaration; with {@code topLevelOnly}, so
-     * is a line that begins inside a brace-delimited body (a nested type, method, initializer block, or anonymous
-     * class), whose members are not fields of the enclosing class.
+     * Removes the comments from a single source line that begins in code: each block comment closed on the line is
+     * replaced by a space, so the tokens it separated stay apart, and a line comment or a block comment left open at
+     * the end of the line is removed to the end of the line. Comment markers inside a string or character literal are
+     * kept.
+     *
+     * @param line the source line to process
+     * @return the line without its comments
+     */
+    private static String stripJavaComments(final String line) {
+        StringBuilder sb = null;
+        int copiedTo = 0;
+        char quote = 0;
+
+        for (int i = 0, len = line.length(); i < len; i++) {
+            final char ch = line.charAt(i);
+
+            if (quote != 0) {
+                if (ch == '\\') {
+                    i++; // skip the escaped character
+                } else if (ch == quote) {
+                    quote = 0;
+                }
+            } else if (ch == '"' || ch == '\'') {
+                quote = ch;
+            } else if (ch == '/' && i + 1 < len && (line.charAt(i + 1) == '/' || line.charAt(i + 1) == '*')) {
+                if (sb == null) {
+                    sb = new StringBuilder(len);
+                }
+
+                sb.append(line, copiedTo, i);
+
+                final int commentEnd = line.charAt(i + 1) == '*' ? line.indexOf("*/", i + 2) : -1;
+
+                if (commentEnd < 0) {
+                    return sb.toString();
+                }
+
+                sb.append(' ');
+                copiedTo = commentEnd + 2;
+                i = copiedTo - 1;
+            }
+        }
+
+        return sb == null ? line : sb.append(line, copiedTo, line.length()).toString();
+    }
+
+    /**
+     * Returns the code lines of a class body source, split at the Java line terminators ({@code \r\n}, {@code \r} or
+     * {@code \n}). Text block content is not mistaken for a field declaration: of a line that begins inside a text block,
+     * only the code after the end of the statement that text block belongs to (its first {@code ;} after the closing
+     * delimiter at the brace depth the line begins at or a lower one) is returned, preceded by a space (nothing if that
+     * statement does not end on the line); the code after each later {@code ;} at a lower depth than the previous one is
+     * returned as well, preceded by a space, so that a member following the body that statement lies in (an anonymous
+     * class or lambda body, or an array initializer, closed on the line) is returned on its own. Of a line that begins
+     * inside a block comment, only the code after the end of that comment is returned, preceded by a space in place of the
+     * comment (nothing if the comment does not end on the line). With {@code topLevelOnly}, a line that begins inside a
+     * brace-delimited body (a nested type, method, initializer block, array initializer, or anonymous class), whose
+     * members are not fields of the enclosing class, is left out too, and of a line that begins inside a text block, only
+     * the code after the first top-level {@code ;} (after the closing delimiter) is returned, whatever depth the line
+     * begins at. Comments that begin in code on a returned line are kept;
+     * see {@link #stripJavaComments(String)}.
      *
      * @param source the class body source
      * @param topLevelOnly whether to also leave out the lines that begin inside a brace-delimited body
@@ -1522,11 +1595,27 @@ public final class JdbcCodeGenerationUtil {
         boolean inBlockComment = false;
         boolean inTextBlock = false;
 
-        for (final String line : source.split("\n", -1)) {
-            if ((braceDepth == 0 || !topLevelOnly) && !inBlockComment && !inTextBlock) {
+        for (final String line : source.split("\r\n|\r|\n", -1)) {
+            final boolean selected = braceDepth == 0 || !topLevelOnly;
+
+            if (selected && !inBlockComment && !inTextBlock) {
                 result.add(line);
             }
 
+            // WHY: code may follow the end of a block comment begun on an earlier line ("*/ private List<String> tags;");
+            // dropping the whole line lost that declaration (no java.util import, no copy() assignment). Comment content
+            // does not change the brace depth, so the selection made at the start of the line applies to that code too.
+            boolean addCodeAfterComment = selected && inBlockComment;
+            // WHY: likewise after a text block ("""; private List<String> tags;"). The code right after its closing delimiter
+            // continues the statement begun on an earlier line, so the code after that statement's ';' is returned.
+            boolean addCodeAfterTextBlock = inTextBlock;
+            // WHY: the statement may end at a lower brace depth than the line begins at ("""}; private List<String> tags;"
+            // closing an array initializer), and may lie in a body the line closes ("""; } }; private List<String> tags;" in
+            // an anonymous class or lambda block): only a ';' at the line's starting depth was taken, so that code was dropped
+            // (no java.util import; the generated source did not compile). The code after each ';' that ends a statement
+            // further out than the last one is returned too; with topLevelOnly, only the code after a top-level ';'.
+            int statementEndDepth = topLevelOnly ? 0 : braceDepth;
+            boolean textBlockStatementOpen = false;
             char quote = 0; // String and character literals end on their line; only text blocks span lines.
 
             for (int i = 0, len = line.length(); i < len; i++) {
@@ -1536,12 +1625,19 @@ public final class JdbcCodeGenerationUtil {
                     if (ch == '*' && i + 1 < len && line.charAt(i + 1) == '/') {
                         inBlockComment = false;
                         i++;
+
+                        if (addCodeAfterComment) {
+                            // A space replaces the comment, as stripJavaComments does, so tokens around it stay apart.
+                            result.add(" " + line.substring(i + 1));
+                            addCodeAfterComment = false;
+                        }
                     }
                 } else if (inTextBlock) {
                     if (ch == '\\') {
                         i++;
                     } else if (line.startsWith("\"\"\"", i)) {
                         inTextBlock = false;
+                        textBlockStatementOpen = addCodeAfterTextBlock;
                         i += 2;
                     }
                 } else if (quote != 0) {
@@ -1560,6 +1656,10 @@ public final class JdbcCodeGenerationUtil {
                     i += 2;
                 } else if (ch == '"' || ch == '\'') {
                     quote = ch;
+                } else if (ch == ';' && textBlockStatementOpen && braceDepth <= statementEndDepth) {
+                    result.add(" " + line.substring(i + 1));
+                    statementEndDepth = braceDepth - 1;
+                    addCodeAfterTextBlock = false; // a text block opened later on the line is part of the code returned
                 } else if (ch == '{') {
                     braceDepth++;
                 } else if (ch == '}' && braceDepth > 0) {
@@ -2605,7 +2705,7 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column name is {@code null}, blank,
      *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names or
      *         blank column labels.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
@@ -2661,7 +2761,7 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column name is {@code null}, blank,
      *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names or
      *         blank column labels.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
@@ -2949,7 +3049,7 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column name is {@code null}, blank,
      *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
      *         malformed qualified table names or blank column labels.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
@@ -3005,7 +3105,7 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column name is {@code null}, blank,
      *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
      *         malformed qualified table names or blank column labels.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
@@ -3750,45 +3850,6 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Strips a trailing line comment ({@code //...}) from a single source line, ignoring any {@code //}
-     * that appears inside a string or character literal (e.g. an initializer like {@code "https://..."}).
-     * Returns the line unchanged when it contains no line comment outside a literal.
-     *
-     * @param line the source line to process
-     * @return the line with any trailing line comment removed
-     */
-    private static String stripLineComment(final String line) {
-        boolean inString = false;
-        boolean inChar = false;
-
-        for (int i = 0, len = line.length(); i < len; i++) {
-            final char ch = line.charAt(i);
-
-            if (inString) {
-                if (ch == '\\') {
-                    i++; // skip the escaped character
-                } else if (ch == '"') {
-                    inString = false;
-                }
-            } else if (inChar) {
-                if (ch == '\\') {
-                    i++; // skip the escaped character
-                } else if (ch == '\'') {
-                    inChar = false;
-                }
-            } else if (ch == '"') {
-                inString = true;
-            } else if (ch == '\'') {
-                inChar = true;
-            } else if (ch == '/' && i + 1 < len && line.charAt(i + 1) == '/') {
-                return line.substring(0, i);
-            }
-        }
-
-        return line;
-    }
-
-    /**
      * Splits one physical source line into top-level field declarations, excluding their terminal
      * semicolons. Semicolons inside literals, comments, or nested initializer expressions are ignored.
      */
@@ -3848,9 +3909,11 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Conservatively determines whether the additional body contributes no arguments to Lombok's
-     * all-arguments constructor. Only complete, single-line field declarations with an explicit access
-     * modifier are recognized. Each field must be static or final with an initializer. Annotations,
-     * block comments, braces, or unrecognized source retain the existing constructor annotation.
+     * all-arguments constructor. Comments are ignored (line and block comments, including javadoc comments, also
+     * when they span lines), as when fields are recognized. Only complete, single-line field declarations with an
+     * explicit access modifier are recognized; a text block counts as an empty string literal, so a declaration whose
+     * text block initializer spans lines counts as one line. Each field must be static or final with an initializer. Annotations,
+     * braces, or unrecognized source retain the existing constructor annotation.
      *
      * @param source the additional class body, or {@code null} when no body is supplied
      * @return {@code true} if the body is blank or consists entirely of recognized constructor-excluded fields
@@ -3860,8 +3923,14 @@ public final class JdbcCodeGenerationUtil {
             return true;
         }
 
-        for (final String physicalLine : source.split("\\R")) {
-            final String line = stripLineComment(physicalLine).trim();
+        // WHY: comments are stripped as for field recognition. Rejecting every line that contained "/*" or "*/" kept
+        // @AllArgsConstructor for a body such as "private static final long version = 1L; /* note */" (or a field
+        // with a javadoc comment) when every column is excluded: next to @NoArgsConstructor, Lombok then generated
+        // two no-argument constructors and the generated class did not compile. Text blocks are collapsed to "" first, so
+        // a declaration initialized by one is checked as one line through its ';' ("private static final String SQL = "";").
+        // Its opening line, which does not end with ';', rejected such a constant, with the same uncompilable result.
+        for (final String codeLine : getSourceCodeLines(collapseTextBlocks(source), false)) {
+            final String line = stripJavaComments(codeLine).trim();
 
             if (line.isEmpty()) {
                 continue;
@@ -3869,8 +3938,7 @@ public final class JdbcCodeGenerationUtil {
 
             // This is intentionally narrower than Java syntax: uncertain source must not cause a
             // constructor required by @Builder (for example an annotated field) to be removed.
-            if (!line.endsWith(";") || line.indexOf('@') >= 0 || line.indexOf('{') >= 0 || line.indexOf('}') >= 0 || line.contains("/*")
-                    || line.contains("*/")) {
+            if (!line.endsWith(";") || line.indexOf('@') >= 0 || line.indexOf('{') >= 0 || line.indexOf('}') >= 0) {
                 return false;
             }
 
@@ -3920,6 +3988,65 @@ public final class JdbcCodeGenerationUtil {
         }
 
         return true;
+    }
+
+    /**
+     * Replaces each text block of a class body source, from its opening through its closing delimiter, by an empty string
+     * literal ({@code ""}), joining the lines it spans. Text block delimiters inside comments and string or character
+     * literals are not text blocks. A text block that is not closed is removed to the end of the source.
+     *
+     * @param source the class body source
+     * @return the source with its text blocks collapsed, or {@code source} itself if it has none
+     */
+    private static String collapseTextBlocks(final String source) {
+        StringBuilder sb = null;
+        int copiedTo = 0;
+        boolean inBlockComment = false;
+        boolean inLineComment = false;
+        char quote = 0;
+
+        for (int i = 0, len = source.length(); i < len; i++) {
+            final char ch = source.charAt(i);
+
+            if (inBlockComment) {
+                if (ch == '*' && i + 1 < len && source.charAt(i + 1) == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+            } else if (inLineComment) {
+                inLineComment = ch != '\n' && ch != '\r';
+            } else if (quote != 0) {
+                if (ch == '\\') {
+                    i++;
+                } else if (ch == quote || ch == '\n' || ch == '\r') { // a string or character literal ends on its line
+                    quote = 0;
+                }
+            } else if (ch == '/' && i + 1 < len && source.charAt(i + 1) == '/') {
+                inLineComment = true;
+                i++;
+            } else if (ch == '/' && i + 1 < len && source.charAt(i + 1) == '*') {
+                inBlockComment = true;
+                i++;
+            } else if (source.startsWith("\"\"\"", i)) {
+                int end = i + 3;
+
+                while (end < len && !source.startsWith("\"\"\"", end)) {
+                    end += source.charAt(end) == '\\' ? 2 : 1; // an escaped character, such as \""", doesn't close it
+                }
+
+                if (sb == null) {
+                    sb = new StringBuilder(len);
+                }
+
+                sb.append(source, copiedTo, i).append("\"\"");
+                copiedTo = Math.min(end + 3, len);
+                i = copiedTo - 1;
+            } else if (ch == '"' || ch == '\'') {
+                quote = ch;
+            }
+        }
+
+        return sb == null ? source : sb.append(source, copiedTo, source.length()).toString();
     }
 
     /**
@@ -4603,22 +4730,26 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Validates that an annotation class configured for code generation can actually be emitted: it must have
-     * a canonical name, be publicly accessible, declare a no-arg {@code String} member named
-     * {@code suppliedStringMember} when one is supplied, have no other members without defaults, and be
+     * Validates that an annotation class configured for code generation can actually be emitted: it must be an
+     * annotation interface with a canonical name, be publicly accessible, declare a no-arg {@code String} element named
+     * {@code suppliedStringMember} when one is supplied, have no other elements without defaults, and be
      * applicable to {@code requiredTarget}.
      *
      * @param annotationClass the annotation class to validate
      * @param suppliedStringMember the name of the {@code String} member the generator supplies, or {@code null} if none
      * @param requiredTarget the element type the annotation must be applicable to
      * @param configName the configuration option name, used only in error messages
-     * @throws IllegalArgumentException if the annotation has no canonical name, is not publicly accessible, requires unsupported members, lacks the
-     *         required String member, or does not support the required declaration target
+     * @throws IllegalArgumentException if the class has no canonical name, is not an annotation interface, is not publicly accessible, requires
+     *         unsupported members, lacks the required String member, or does not support the required declaration target
      */
     private static void checkGeneratedAnnotationClass(final Class<? extends Annotation> annotationClass, final String suppliedStringMember,
             final ElementType requiredTarget, final String configName) throws IllegalArgumentException {
         if (annotationClass.getCanonicalName() == null) {
             throw new IllegalArgumentException(configName + " annotation must have a canonical name: " + annotationClass);
+        }
+
+        if (!annotationClass.isAnnotation()) {
+            throw new IllegalArgumentException(configName + " must be an annotation interface: " + annotationClass.getCanonicalName());
         }
 
         for (Class<?> enclosingType = annotationClass; enclosingType != null; enclosingType = enclosingType.getEnclosingClass()) {
@@ -4631,6 +4762,13 @@ public final class JdbcCodeGenerationUtil {
         boolean suppliedMemberFound = suppliedStringMember == null;
 
         for (final Method member : annotationClass.getDeclaredMethods()) {
+            // Only public abstract, non-synthetic methods are elements, as the JDK's annotation parser reads them: a lambda in
+            // a constant's initializer compiles to a private static synthetic method of the annotation interface (so may a
+            // coverage agent's instrumentation), which has no default value but is not a member the annotation requires.
+            if (!Modifier.isPublic(member.getModifiers()) || !Modifier.isAbstract(member.getModifiers()) || member.isSynthetic()) {
+                continue;
+            }
+
             if (member.getName().equals(suppliedStringMember)) {
                 if (member.getParameterCount() != 0 || member.getReturnType() != String.class) {
                     throw new IllegalArgumentException(
@@ -4813,7 +4951,7 @@ public final class JdbcCodeGenerationUtil {
 
         /**
          * Function to convert database column names to Java field names.
-         * First parameter is entity/table name, second is column name.
+         * First parameter is entity/table name (without surrounding whitespace or control characters), second is column name.
          * Default implementation converts column names to camelCase.
          * Example: (tableName, columnName) -> Strings.toCamelCase(columnName)
          */
@@ -4821,7 +4959,8 @@ public final class JdbcCodeGenerationUtil {
 
         /**
          * Function to convert database column types to Java field types.
-         * Parameters: entity/table name, field name, column name, and the resolved column class name.
+         * Parameters: entity/table name (without surrounding whitespace or control characters), field name, column name, and the resolved
+         * column class name.
          * The class name is already normalized before the converter runs: the {@code java.lang.} prefix is
          * stripped and boxed primitive types are reduced to primitives (for example {@code java.lang.Integer}
          * arrives as {@code int} and {@code oracle.sql.TIMESTAMP} as {@code java.sql.Timestamp}).
@@ -4906,17 +5045,24 @@ public final class JdbcCodeGenerationUtil {
          * Each field declaration should follow standard Java syntax (e.g., {@code "private List<String> tags;"}).
          * The supplied source is appended unchanged. Field recognition for imports and {@code copy()} is
          * best effort: it handles complete declarations on one physical line beginning with
-         * {@code private}, {@code protected}, or {@code public}. Line comments ({@code //...}) are ignored
-         * during recognition. Within recognized multi-variable declarations (e.g., {@code "private int width, height;"}),
-         * each variable receives its own {@code copy()} assignment when that method is generated;
-         * {@code static}/{@code final} fields are skipped. Package-private, multiline, and annotated source
-         * is not guaranteed to receive inferred imports or copy assignments. Source in block comments and text
-         * blocks is ignored, and the members of a nested type, method, initializer, or anonymous class body
-         * receive imports but no {@code copy()} assignment.
+         * {@code private}, {@code protected}, or {@code public}. Comments are ignored during recognition: line
+         * comments ({@code //...}), and block and javadoc comments (<code>/* ... *&#47;</code>), also inside a declaration
+         * (<code>"private int /* note *&#47; count;"</code>) and when they span lines; a declaration that follows the end of a
+         * multiline comment on the same line is recognized. Within recognized multi-variable declarations (e.g.,
+         * {@code "private int width, height;"}), each variable receives its own {@code copy()} assignment when that method
+         * is generated; {@code static}/{@code final} fields are skipped. Package-private, multiline, and annotated source
+         * is not guaranteed to receive inferred imports or copy assignments. Source in text blocks is ignored; a declaration
+         * that follows, on the text block's closing line, the {@code ;} ending the text block's statement is recognized
+         * (<code>"""; private List&lt;String&gt; tags;</code>), also when that statement lies in an anonymous class or lambda
+         * body or an array initializer closed before the declaration (<code>"""}; private List&lt;String&gt; tags;</code>).
+         * The members of a nested type, method, initializer, or anonymous class body receive imports but no {@code copy()}
+         * assignment.
          *
          * <p>When no database fields are generated, {@code @AllArgsConstructor} is omitted only if the
          * additional body is blank or consists entirely of recognized static or initialized final fields
-         * without annotations or other unrecognized content. Arbitrary additional source retains the annotation.</p>
+         * without annotations or other unrecognized content (comments don't count as such content; an initializer may be a
+         * text block, whose content is ignored). Arbitrary
+         * additional source retains the annotation.</p>
          *
          * <p>Imports are auto-added only for generic {@code java.util} types used by these fields
          * (e.g. {@code List}, {@code Map}); any other type (such as {@code java.time.LocalDate} or a
@@ -5058,7 +5204,7 @@ public final class JdbcCodeGenerationUtil {
 
             /**
              * The enum serialization strategy.
-             * Controls whether enums are serialized by name or ordinal.
+             * Controls whether enums are serialized by name, ordinal or code (see {@link EnumType}).
              */
             private EnumType enumerated;
 

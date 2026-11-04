@@ -1359,7 +1359,10 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
     /**
      * Returns a list of values for a single property from records matching the condition.
      * This is a convenience method for selecting a single column; the property type is
-     * automatically detected and used for mapping.
+     * automatically detected and used for mapping: when {@code singleSelectPropName} names a property of the entity
+     * class (or its column), each value is read with that property's type, so a SQL {@code NULL} of a primitive property
+     * is read as its default (e.g. {@code 0}); any other name, such as an expression, is read with
+     * {@link com.landawn.abacus.jdbc.JdbcUtil#getColumnValue(java.sql.ResultSet, int)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1641,7 +1644,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
 
     /**
      * Processes each record with selected properties using a consumer that receives a {@link DisposableObjArray}.
-     * The array is reused for each row to minimize object allocation.
+     * The array is reused for each row to minimize object allocation. A column whose label names a property of the
+     * entity class (or its column) is read with that property's type, any other column with
+     * {@link com.landawn.abacus.jdbc.JdbcUtil#getColumnValue(java.sql.ResultSet, int)}.
      *
      * <p><b>WARNING:</b> Do not store or cache the array parameter passed to the consumer, as it is
      * reused for every row. Process the values immediately within the consumer.</p>
@@ -1678,7 +1683,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
 
     /**
      * Processes each record matching the condition using a consumer that receives a {@link DisposableObjArray}.
-     * Convenience overload that selects all properties. The array is reused for each row to minimize
+     * Convenience overload that selects all properties; the values are read as by
+     * {@link #foreach(Collection, Condition, Consumer)}. The array is reused for each row to minimize
      * object allocation.
      *
      * <p><b>WARNING:</b> Do not store or cache the array parameter passed to the consumer, as it is

@@ -4,13 +4,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.parser.ParserUtil;
+import com.landawn.abacus.parser.ParserUtil.BeanInfo;
+import com.landawn.abacus.parser.ParserUtil.PropInfo;
 
 class RollbackActionLogIdRestoreTest extends TestBase {
 
@@ -70,6 +77,86 @@ class RollbackActionLogIdRestoreTest extends TestBase {
         assertEquals(1, failure.getSuppressed().length);
         assertSame(second.setterFailure, rootCause(failure.getSuppressed()[0]));
         assertNull(third.storedId);
+    }
+
+    // An accessor can pass a checked exception through that the ID getter or setter throws without declaring it (Kotlin,
+    // through @AccessFieldByMethod; a sneaky throw): the reflectasm-backed property accessor does not wrap it, as the
+    // reflective one does. It escaped the RuntimeException | Error catch at once, leaving the IDs of the later entities
+    // assigned.
+    @Test
+    void run_undeclaredCheckedSetterFailure_stillRestoresLaterEntitiesAndIsRethrownAsIs() {
+        final Holder first = new Holder();
+        final Holder second = new Holder();
+        final RollbackActionLog.IdSnapshot snapshot = passThroughSnapshot(first, second);
+        first.id = 1L;
+        second.id = 2L;
+        snapshot.recordWrittenValues();
+        first.setterFailure = new IOException("setter failed");
+
+        assertSame(first.setterFailure, assertThrows(IOException.class, snapshot::run));
+
+        assertEquals(1L, first.id);
+        assertNull(second.id);
+    }
+
+    // A getter's undeclared checked exception escaped recordWrittenValues at once, leaving nothing recorded: the rollback then
+    // put back the captured IDs of every entity, overwriting an ID the application had set since.
+    @Test
+    void recordWrittenValues_undeclaredCheckedGetterFailure_stillRecordsTheOtherEntities() {
+        final Holder first = new Holder();
+        final Holder second = new Holder();
+        final RollbackActionLog.IdSnapshot snapshot = passThroughSnapshot(first, second);
+        first.id = 1L;
+        second.id = 2L;
+        first.getterFailure = new IOException("getter failed");
+
+        assertSame(first.getterFailure, assertThrows(IOException.class, snapshot::recordWrittenValues));
+
+        first.getterFailure = null;
+        second.id = 99L; // set by the application after the insert
+
+        snapshot.run();
+
+        assertEquals(1L, first.id); // its written values are unknown: left alone
+        assertEquals(99L, second.id);
+    }
+
+    /**
+     * A snapshot of the {@code id} of {@code holders} through a property accessor that passes every failure of the holder
+     * through unwrapped.
+     */
+    private static RollbackActionLog.IdSnapshot passThroughSnapshot(final Holder... holders) {
+        final PropInfo idInfo = mock(PropInfo.class);
+        when(idInfo.getPropValue(any())).thenAnswer(invocation -> {
+            final Holder holder = invocation.getArgument(0);
+
+            if (holder.getterFailure != null) {
+                throw holder.getterFailure;
+            }
+
+            return holder.id;
+        });
+        doAnswer(invocation -> {
+            final Holder holder = invocation.getArgument(0);
+
+            if (holder.setterFailure != null) {
+                throw holder.setterFailure;
+            }
+
+            holder.id = invocation.getArgument(1);
+            return null;
+        }).when(idInfo).setPropValue(any(), any());
+
+        final BeanInfo beanInfo = mock(BeanInfo.class);
+        when(beanInfo.getPropInfo("id")).thenReturn(idInfo);
+
+        return RollbackActionLog.captureIdValues(List.of(holders), List.of("id"), beanInfo);
+    }
+
+    private static final class Holder {
+        private Object id;
+        private Exception getterFailure;
+        private Exception setterFailure;
     }
 
     private static RollbackActionLog.IdSnapshot snapshot(final Entity... entities) {

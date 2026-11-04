@@ -298,6 +298,28 @@ class NamedQueryScalarBindingTest extends NamedQueryBindingTestSupport {
         assertSame(closeFailure, thrown.getSuppressed()[0]);
     }
 
+    // A driver (or a proxy written in Kotlin, a sneaky throw) can throw a checked exception setLong does not declare. It
+    // escaped the SQLException | RuntimeException | Error cleanup of setLong(String, BigInteger), leaving the statement (and a
+    // data-source query's connection, released by a close handler) open. It must close the query and stay primary.
+    @Test
+    void testSetLongBigIntegerDriverThrowsUndeclaredCheckedExceptionClosesQueryAndPropagatesIt() throws SQLException {
+        final Exception checkedFailure = new Exception("undeclared checked failure");
+        final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        org.mockito.Mockito.doAnswer(invocation -> {
+            throw checkedFailure;
+        }).when(mockPreparedStatement).setLong(anyInt(), anyLong());
+        namedQuery.onClose(() -> {
+            throw closeFailure;
+        });
+
+        final Throwable thrown = assertThrows(Throwable.class, () -> namedQuery.setLong("param1", BigInteger.valueOf(42L)));
+
+        assertSame(checkedFailure, thrown);
+        verify(mockPreparedStatement).close();
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(closeFailure, thrown.getSuppressed()[0]);
+    }
+
     @Test
     void testSetLongBigIntegerUnknownParamClosesOnce() throws SQLException {
         assertThrows(IllegalArgumentException.class, () -> namedQuery.setLong("nonExistent", BigInteger.ONE));

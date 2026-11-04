@@ -647,7 +647,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
      *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
@@ -679,7 +680,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
      *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
@@ -709,7 +711,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
      *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
@@ -749,7 +752,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null},
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw),
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
      *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
@@ -884,7 +888,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
-     *                                  or if every element of {@code ids} is {@code null}
+     *                                  or, for a composite-id entity only, if every element of {@code ids} is {@code null}
+     *                                  (for a single-id entity, {@code null} elements are matched with {@code IS NULL} and never throw)
      * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
      *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails

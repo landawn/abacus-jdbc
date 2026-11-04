@@ -1002,6 +1002,55 @@ class CallableQueryParameterBindingTest extends CallableQueryTestSupport {
         assertTrue(ex.getMessage().contains("Unsupported parameter type"));
     }
 
+    // Regression: setParameters(entity, names) resolved the bean metadata before its cleanup block, so an entity class with
+    // invalid property metadata threw without closing the query (setParameters(Object) delegates to it for a bean).
+    @Test
+    public void testSetParameters_EntityInvalidBeanMetadata_ClosesQuery() throws SQLException {
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> callableQuery.setParameters(new AbstractQueryStreamTest.BlankPaddedColumnBean(), List.of("name")));
+
+        assertTrue(ex.getMessage().contains("whitespace"));
+        assertTrue(callableQuery.isClosed);
+        verify(callableStatement).close();
+        verify(callableStatement, never()).setString(Mockito.anyString(), Mockito.any());
+
+        final CallableStatement byObjectStatement = Mockito.mock(CallableStatement.class);
+        final CallableQuery byObjectQuery = new CallableQuery(byObjectStatement);
+
+        assertThrows(IllegalArgumentException.class, () -> byObjectQuery.setParameters(new AbstractQueryStreamTest.BlankPaddedColumnBean()));
+        assertTrue(byObjectQuery.isClosed);
+        verify(byObjectStatement).close();
+    }
+
+    // A custom Collection of names runs user code when it is copied (toArray). The copy ran before the cleanup block, so a
+    // failing collection left the statement (and a data-source query's connection) open.
+    @Test
+    public void testSetParameters_EntityWithFailingNameCollection_ClosesQuery() throws SQLException {
+        final RuntimeException copyFailure = new RuntimeException("toArray failed");
+        final java.util.Collection<String> names = new java.util.AbstractCollection<>() {
+            @Override
+            public java.util.Iterator<String> iterator() {
+                throw copyFailure;
+            }
+
+            @Override
+            public int size() {
+                return 1;
+            }
+
+            @Override
+            public Object[] toArray() {
+                throw copyFailure;
+            }
+        };
+
+        final RuntimeException thrown = assertThrows(RuntimeException.class, () -> callableQuery.setParameters(new SimpleTestBean(), names));
+
+        assertSame(copyFailure, thrown);
+        assertTrue(callableQuery.isClosed);
+        verify(callableStatement).close();
+    }
+
     // --- setParameters(Map) throws → close() called (L1522-1524) ---
 
     @Test

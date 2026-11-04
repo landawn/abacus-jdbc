@@ -58,6 +58,47 @@ class RollbackActionLogTest extends TestBase {
         assertEquals(List.of(failure), failures);
     }
 
+    // Only RuntimeException | Error was caught: a checked exception an action threw without declaring it (a Kotlin ID setter,
+    // a sneaky throw) escaped, skipping the remaining actions (and, from a rollback's finally block, the connection cleanup).
+    @Test
+    void undeclaredCheckedFailureOfAnActionDoesNotStopTheOthers() {
+        final RollbackActionLog log = new RollbackActionLog();
+        final List<String> ran = new ArrayList<>();
+        final List<Throwable> failures = new ArrayList<>();
+        final java.io.IOException failure = new java.io.IOException("restore failed");
+
+        log.add(() -> ran.add("first"));
+        log.add(() -> sneakyThrow(failure));
+        log.add(() -> ran.add("last"));
+        log.runNewestFirst(failures::add);
+
+        assertEquals(List.of("last", "first"), ran);
+        assertEquals(List.of(failure), failures);
+    }
+
+    @Test
+    void interruptedExceptionOfAnActionResetsTheInterruptFlag() {
+        final RollbackActionLog log = new RollbackActionLog();
+        final List<Throwable> failures = new ArrayList<>();
+        final InterruptedException failure = new InterruptedException("interrupted");
+
+        log.add(() -> sneakyThrow(failure));
+
+        try {
+            log.runNewestFirst(failures::add);
+
+            assertTrue(Thread.currentThread().isInterrupted(), "the interrupt reported by the action must not be lost");
+            assertEquals(List.of(failure), failures);
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void sneakyThrow(final Throwable e) throws E {
+        throw (E) e;
+    }
+
     // Every changed part of a composite ID is put back, and an unchanged ID is not written (so immutable entities don't fail).
     @Test
     void idSnapshotRestoresOnlyChangedIdParts() {

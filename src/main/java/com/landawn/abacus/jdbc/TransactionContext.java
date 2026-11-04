@@ -262,7 +262,7 @@ final class TransactionContext {
                 isolationAttempted = true;
                 conn.setTransactionIsolation(isolationLevel.intValue());
             }
-        } catch (final SQLException | RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             if (autoCommitAttempted) {
                 try {
                     conn.setAutoCommit(_originalAutoCommit);
@@ -452,7 +452,7 @@ final class TransactionContext {
                 final UncheckedSQLException failure = new UncheckedSQLException(e);
                 restoreIsolationLevel(_isolationLevel, failure, e);
                 throw failure;
-            } catch (final RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                 restoreIsolationLevel(_isolationLevel, e, e);
                 throw e;
             }
@@ -490,8 +490,8 @@ final class TransactionContext {
      * @param scope the innermost open scope
      * @param forceExit if {@code true}, the scope is exited even when the enclosing scope's isolation level cannot be
      *        restored, and the transaction is marked {@link Status#MARKED_ROLLBACK}: an {@link SQLException} is logged, while
-     *        a {@link RuntimeException} or an {@link Error} is propagated once the exit has been recorded; if {@code false},
-     *        such a failure leaves the scope open (for a retry) and propagates
+     *        any other failure (also a checked exception the driver does not declare) is propagated once the exit has been
+     *        recorded; if {@code false}, such a failure leaves the scope open (for a retry) and propagates
      * @throws IllegalStateException if {@code scope} is not the innermost open scope
      * @throws UncheckedSQLException if {@code forceExit} is {@code false} and the connection rejects restoring the enclosing
      *         scope's isolation level
@@ -528,7 +528,7 @@ final class TransactionContext {
         if (toConnectionIsolationLevel(_isolationLevel) != toConnectionIsolationLevel(preIsolationLevel)) {
             try {
                 _conn.setTransactionIsolation(toConnectionIsolationLevel(_isolationLevel));
-            } catch (final SQLException | RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                 if (forceExit) {
                     // The cleanup path: exit anyway (a retry would keep failing, e.g. on PostgreSQL). The enclosing scope can no
                     // longer run at its own isolation level, so the transaction must not commit.
@@ -571,7 +571,7 @@ final class TransactionContext {
      * Exits, innermost first, the scopes opened inside {@code scope} that are still open: they were never completed, so their
      * work cannot be committed. The transaction is marked rollback-only and its rollback actions run (see
      * {@link #runRollbackActionsUnlessParticipating(Throwable)}). Every leaked scope is exited even if restoring an isolation
-     * level fails; the first unchecked failure propagates afterwards, or else an {@link Error} thrown by a rollback action.
+     * level fails; the first failure other than an {@link SQLException} propagates afterwards, or else an {@link Error} thrown by a rollback action.
      *
      * @param scope an open scope
      * @return {@code true} if there were such scopes
@@ -603,7 +603,7 @@ final class TransactionContext {
 
             try {
                 exitScope(leaked, true);
-            } catch (final RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                 if (failure == null) {
                     failure = e;
                 } else if (failure != e) {
@@ -695,7 +695,7 @@ final class TransactionContext {
 
     /**
      * Exits the scopes opened inside {@code scope} that are still open (see {@link #exitLeakedScopesAbove(SqlTransaction)}),
-     * returning the unchecked failure of a forced exit (or the {@link Error} of a rollback action) instead of throwing it, so
+     * returning the failure of a forced exit (or the {@link Error} of a rollback action) instead of throwing it, so
      * that the caller can still complete {@code scope}: every leaked scope has been exited either way.
      *
      * @param scope an open scope
@@ -706,7 +706,7 @@ final class TransactionContext {
         try {
             leaked[0] = exitLeakedScopesAbove(scope);
             return null;
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             leaked[0] = true;
             return e;
         }
@@ -719,7 +719,7 @@ final class TransactionContext {
     private void exitScopeAfterLeaks(final SqlTransaction scope, final Throwable leakExitFailure) {
         try {
             exitScope(scope, false);
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             if (leakExitFailure != null && leakExitFailure != e) {
                 e.addSuppressed(leakExitFailure);
             }
@@ -765,7 +765,7 @@ final class TransactionContext {
         // Throws, leaving the scope open for its cleanup call to retry, if a nested exit cannot restore the isolation level.
         try {
             exitScopeAfterLeaks(scope, leakExitFailure);
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             if (leaked[0]) { // say why the transaction is now rollback-only, too
                 e.addSuppressed(leakedScopeException());
             }
@@ -776,13 +776,14 @@ final class TransactionContext {
         scope.markCompleted();
 
         if (leaked[0]) {
-            // An unchecked driver failure while exiting a leaked scope takes precedence.
+            // A driver failure other than an SQLException (also an undeclared checked one) while exiting a leaked scope, or
+            // an Error of a rollback action run then, takes precedence.
             Throwable failure = leakExitFailure;
 
             if (scope.isOutermost()) {
                 try {
                     executeRollback();
-                } catch (final RuntimeException | Error e) {
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                     // A failed rollback (or Spring mark) propagates its own failure, as for a transaction marked rollback-only
                     // below. It used to be attached, an Error too, to a RollbackOnlyException, which reports the transaction as
                     // rolled back although its status is FAILED_ROLLBACK (Spring may still commit a participating one's work).
@@ -817,7 +818,7 @@ final class TransactionContext {
 
             try {
                 executeRollback();
-            } catch (final RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                 // A failed rollback (or Spring mark) propagates its own failure, and so does a cleanup that fails after the rollback.
                 // Why the commit failed is attached, worded after the recorded outcome, as for a leaked scope above: it used to be
                 // missing, and a cleanup failure did not say that the transaction had been rolled back.
@@ -876,7 +877,7 @@ final class TransactionContext {
             final UncheckedSQLException failure = new UncheckedSQLException("Failed to commit transaction(id=" + _timedId + ")", e);
             commitFailure = failure;
             throw failure;
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             commitFailure = e;
             throw e;
         } finally {
@@ -909,7 +910,7 @@ final class TransactionContext {
 
                 try {
                     executeRollback();
-                } catch (final RuntimeException | Error rollbackEx) {
+                } catch (final Throwable rollbackEx) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                     if (commitFailure != null && commitFailure != rollbackEx) {
                         commitFailure.addSuppressed(rollbackEx);
                     }
@@ -971,8 +972,8 @@ final class TransactionContext {
     /**
      * Ends the open {@code scope} without a commit. The scope is always exited: if the enclosing scope's isolation level cannot
      * be restored on the connection, the transaction is marked rollback-only all the same; an {@link SQLException} from the
-     * connection is logged, while a {@link RuntimeException} or an {@link Error} is propagated after the scope has been exited
-     * (and, for the outermost scope, rolled back). Scopes opened inside it that are still open are exited first. A nested
+     * connection is logged, while any other failure (also a checked exception the driver does not declare) is propagated
+     * after the scope has been exited (and, for the outermost scope, rolled back). Scopes opened inside it that are still open are exited first. A nested
      * scope marks the transaction rollback-only; the outermost scope rolls it back.
      *
      * @param scope the open scope to end
@@ -983,7 +984,7 @@ final class TransactionContext {
 
         try {
             exitScope(scope, true);
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             if (failure == null) {
                 failure = e;
             } else if (failure != e) {
@@ -1018,7 +1019,7 @@ final class TransactionContext {
 
         try {
             executeRollback();
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             if (e != failure) {
                 failure.addSuppressed(e);
             }
@@ -1069,7 +1070,7 @@ final class TransactionContext {
                     // on the data source (REQUIRES_NEW), this marked that one instead, and the one participated in could commit.
                     JdbcUtil.markUnboundSpringTransactionRollbackOnly(_springResource);
                 }
-            } catch (final RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                 markFailure = e;
                 throw e;
             } finally {
@@ -1118,7 +1119,7 @@ final class TransactionContext {
             final UncheckedSQLException sqlFailure = new UncheckedSQLException("Failed to roll back transaction(id=" + _timedId + ")", e);
             rollbackFailure = sqlFailure;
             throw sqlFailure;
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             rollbackFailure = e;
             throw e;
         } finally {
@@ -1194,8 +1195,8 @@ final class TransactionContext {
 
     /**
      * Runs (and discards) the registered commit actions, in registration order; see {@link #addCommitAction(Object, Runnable)}.
-     * A failing action does not stop the others: a {@code RuntimeException} is logged, while an {@link Error} is returned, not
-     * logged, for the caller to throw.
+     * A failing action does not stop the others: an exception (also a checked one an action throws without declaring it) is
+     * logged, while an {@link Error} is returned, not logged, for the caller to throw.
      *
      * @return the first {@link Error} thrown by an action (later ones attached to it), or {@code null}
      */
@@ -1219,7 +1220,12 @@ final class TransactionContext {
                 } else if (firstError != e) {
                     firstError.addSuppressed(e);
                 }
-            } catch (final RuntimeException e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception, which skipped the remaining actions
+                // Logged, not thrown: the interrupt it reported would otherwise be lost.
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+
                 logger.warn(e, "Failed to run an action after the commit of transaction(id={})", _timedId);
             }
         }
@@ -1231,7 +1237,10 @@ final class TransactionContext {
      * Runs (and discards) the registered rollback actions, newest first. A failing action is logged, attached to
      * {@code primaryFailure} if there is one, and does not stop the remaining actions. Without a primary failure, the first
      * {@link Error} thrown by an action (later ones attached to it) is returned for the caller to throw once it has completed
-     * the scope; an exception is only logged, as the rollback itself succeeded.
+     * the scope; an exception (also a checked one an action, such as an ID setter, throws without declaring it) is only
+     * logged, as the rollback itself succeeded. WHY every {@code Throwable} is caught (see {@link RollbackActionLog}): an
+     * undeclared checked exception escaped from the rollback's {@code finally} block, skipping the remaining actions and the
+     * connection cleanup, and replacing the rollback's own failure.
      *
      * @param primaryFailure the failure already propagating, or {@code null}
      * @return the first {@code Error} thrown by an action if {@code primaryFailure} is {@code null}; otherwise {@code null}
@@ -1289,7 +1298,7 @@ final class TransactionContext {
     private void complete(final Throwable primaryFailure) {
         try {
             resetAndCloseConnection();
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
             if (primaryFailure == null) {
                 throw e;
             }
@@ -1314,25 +1323,12 @@ final class TransactionContext {
     }
 
     /**
-     * Returns {@code first}, with {@code next} attached to it, or {@code next} if {@code first} is {@code null}.
-     */
-    private static Error withSuppressed(final Error first, final Error next) {
-        if (first == null) {
-            return next;
-        }
-
-        if (next != null && next != first) {
-            first.addSuppressed(next);
-        }
-
-        return first;
-    }
-
-    /**
      * Restores the connection's original auto-commit mode and isolation level and releases it if this transaction owns it, the
      * way it was acquired. After a failed rollback, state restoration is skipped to avoid implicitly committing pending work,
      * and an owned connection is aborted before it is released (released also if the abort fails), and taken from Spring if
-     * Spring bound it to the thread for synchronization (see {@link JdbcUtil#detachAbortedSpringConnection}). A participating
+     * Spring bound it to the thread for synchronization (see {@link JdbcUtil#detachAbortedSpringConnection}). Every step of
+     * the cleanup is attempted; the first failure (other than an {@link SQLException} of restoring a setting, which is
+     * logged) propagates once all have been, with the later ones attached to it as suppressed exceptions. A participating
      * transaction's connection is left to Spring while Spring binds another resource to the data source, or none (see
      * {@link JdbcUtil#releaseUnboundParticipatingConnection}). Called after commit or rollback, and by
      * {@link JdbcUtil#beginTransaction} when opening the first scope fails.
@@ -1356,18 +1352,36 @@ final class TransactionContext {
                 // The connection may still hold the transaction's work. Released as it is, it went back to the pool with that
                 // work pending, and a pool that restores auto-commit on its connections committed it (setAutoCommit(true) commits
                 // the current transaction). Aborted, it is discarded instead.
+                // WHY every step is attempted, the first failure propagating with the later ones attached, as below: in a
+                // try/finally chain, a failing release skipped the detach from Spring, and replaced an Error of the abort.
+                Throwable cleanupFailure = null;
+
                 try {
                     abortConnection();
-                } finally {
-                    // Also if the abort throws an Error: the connection was never closed, and kept the work and its locks.
-                    releaseConnection();
+                } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
+                    cleanupFailure = e;
+                }
 
-                    if (_acquiredThroughSpring) {
-                        // Spring keeps a connection it bound to the thread for synchronization (a SUPPORTS scope, or a Spring
-                        // transaction on another data source) for the rest of its scope: later work there got the aborted
-                        // connection and failed on it. Taken from Spring (and closed), it is replaced by a new one for that work.
+                // Also if the abort throws an Error: the connection was never closed, and kept the work and its locks.
+                try {
+                    releaseConnection();
+                } catch (final Throwable e) { //NOSONAR - see above
+                    cleanupFailure = withSuppressed(cleanupFailure, e);
+                }
+
+                if (_acquiredThroughSpring) {
+                    // Spring keeps a connection it bound to the thread for synchronization (a SUPPORTS scope, or a Spring
+                    // transaction on another data source) for the rest of its scope: later work there got the aborted
+                    // connection and failed on it. Taken from Spring (and closed), it is replaced by a new one for that work.
+                    try {
                         JdbcUtil.detachAbortedSpringConnection(_conn, _ds);
+                    } catch (final Throwable e) { //NOSONAR - see above
+                        cleanupFailure = withSuppressed(cleanupFailure, e);
                     }
+                }
+
+                if (cleanupFailure != null) {
+                    throwUnchecked(cleanupFailure);
                 }
             }
 
@@ -1377,11 +1391,13 @@ final class TransactionContext {
         Throwable cleanupFailure = null;
 
         // Restore both original settings even if the constructor left them unchanged: callers can modify the exposed connection.
+        // Throwable: a driver or wrapper can throw a checked exception it does not declare (Kotlin, a sneaky throw); escaping at
+        // once, it skipped the isolation reset and the release, which leaked the connection.
         try {
             _conn.setAutoCommit(_originalAutoCommit);
         } catch (final SQLException e) {
             logger.warn(e, "Failed to reset autoCommit for transaction(id={}) to {}", _timedId, _originalAutoCommit);
-        } catch (final RuntimeException | Error e) {
+        } catch (final Throwable e) { //NOSONAR - see above
             cleanupFailure = e;
         }
 
@@ -1389,12 +1405,8 @@ final class TransactionContext {
             _conn.setTransactionIsolation(_originalIsolationLevel);
         } catch (final SQLException e) {
             logger.warn(e, "Failed to reset transaction isolation for transaction(id={}) to {}", _timedId, _originalIsolationLevel);
-        } catch (final RuntimeException | Error e) {
-            if (cleanupFailure == null) {
-                cleanupFailure = e;
-            } else if (cleanupFailure != e) {
-                cleanupFailure.addSuppressed(e);
-            }
+        } catch (final Throwable e) { //NOSONAR - see above
+            cleanupFailure = withSuppressed(cleanupFailure, e);
         }
 
         if (_closeConnection) {
@@ -1402,12 +1414,8 @@ final class TransactionContext {
 
             try {
                 releaseConnection();
-            } catch (final RuntimeException | Error e) {
-                if (cleanupFailure == null) {
-                    cleanupFailure = e;
-                } else if (cleanupFailure != e) {
-                    cleanupFailure.addSuppressed(e);
-                }
+            } catch (final Throwable e) { //NOSONAR - see above
+                cleanupFailure = withSuppressed(cleanupFailure, e);
             }
         }
 
@@ -1513,7 +1521,12 @@ final class TransactionContext {
     private void abortConnection() {
         try {
             _conn.abort(Runnable::run);
-        } catch (final SQLException | RuntimeException | LinkageError e) {
+        } catch (final Exception | LinkageError e) { // also an undeclared checked exception, which skipped the release
+            // Logged, not thrown: the interrupt it reported would otherwise be lost.
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+
             logger.warn(e, "Failed to abort the connection of transaction(id={}) after its rollback failed", _timedId);
         }
     }
@@ -1650,7 +1663,7 @@ final class TransactionContext {
                 if (outermost != null) {
                     leaked.rollbackIfNotCommitted(outermost);
                 }
-            } catch (final RuntimeException | Error e) {
+            } catch (final Throwable e) { //NOSONAR - also an undeclared checked exception (Kotlin, sneaky throw)
                 failures.add(e);
             } finally {
                 // Removed whatever its rollback did, so that the loop ends: a transaction it hid, registered again, is next.
@@ -1669,12 +1682,40 @@ final class TransactionContext {
         return outcome;
     }
 
+    /**
+     * Throws {@code failure} as it is: a runtime exception or an error, or a checked exception that a driver, a wrapper or an
+     * action threw without declaring it (Kotlin, a sneaky throw), which is rethrown undeclared rather than cast to
+     * {@link Error}: the cast failed with a {@link ClassCastException} that replaced it.
+     *
+     * @param failure the failure to throw, never {@code null}
+     */
     private static void throwUnchecked(final Throwable failure) {
-        if (failure instanceof RuntimeException runtimeException) {
-            throw runtimeException;
+        TransactionContext.<RuntimeException> throwUndeclared(failure);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwUndeclared(final Throwable failure) throws E {
+        throw (E) failure;
+    }
+
+    /**
+     * Returns {@code first}, with {@code next} attached to it, or {@code next} if {@code first} is {@code null}.
+     *
+     * @param <T> the failure type, {@link Error} for the failures of rollback actions
+     * @param first the failure that propagates, or {@code null}
+     * @param next a later failure, or {@code null}
+     * @return the failure to propagate, or {@code null} if both are {@code null}
+     */
+    private static <T extends Throwable> T withSuppressed(final T first, final T next) {
+        if (first == null) {
+            return next;
         }
 
-        throw (Error) failure;
+        if (next != null && next != first) {
+            first.addSuppressed(next);
+        }
+
+        return first;
     }
 
     /**

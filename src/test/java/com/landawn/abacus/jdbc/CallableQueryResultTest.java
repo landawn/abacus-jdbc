@@ -577,6 +577,24 @@ class CallableQueryResultTest extends CallableQueryTestSupport {
         verify(callableStatement).close();
     }
 
+    // Regression: listAllResultSetsAndGetOutParameters(Class) resolved the bean metadata only once a result set was processed, so a
+    // bean class with invalid property metadata failed after the stored procedure had run (and auto-committed), and never when it
+    // returned no result set. It must fail before execution, closing the query, as listAndGetOutParameters(Class) does.
+    @Test
+    public void testListAllResultSetsAndGetOutParameters_ByInvalidBeanClass_FailsBeforeExecutionAndClosesQuery() throws SQLException {
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        when(callableStatement.execute()).thenReturn(false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> callableQuery.listAllResultSetsAndGetOutParameters(AbstractQueryStreamTest.BlankPaddedColumnBean.class));
+
+        assertTrue(failure.getMessage().contains("whitespace"));
+        assertTrue(callableQuery.isClosed);
+        verify(callableStatement, never()).execute();
+        verify(callableStatement).close();
+    }
+
     // --- listAndGetOutParameters(RowMapper) - empty result set path (L2974 false branch) ---
 
     @Test

@@ -164,12 +164,14 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities to update
-     * @return the total number of rows updated; 0, without executing any statement, if {@code entities} is {@code null}
+     * @return the total number of rows updated (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO}
+     *         contribute 0); 0, without executing any statement, if {@code entities} is {@code null}
      *         or empty or the entity class has no updatable non-ID property
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails. With more than one element, the transaction is begun first and a Spring
      *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
@@ -198,15 +200,17 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      *                     With more than one element, all of them run in one transaction, even if they fit in one batch.
-     * @return the total number of rows updated; 0, without executing any statement, if {@code entities} is {@code null}
+     * @return the total number of rows updated (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO}
+     *         contribute 0); 0, without executing any statement, if {@code entities} is {@code null}
      *         or empty or the entity class has no updatable non-ID property
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails. With more than one element, the transaction is begun first and a Spring
      *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
@@ -233,15 +237,17 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for each entity (must not be {@code null} or empty)
-     * @return the total number of rows updated; 0, without executing any statement, if {@code entities} is {@code null} or empty
+     * @return the total number of rows updated (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO}
+     *         contribute 0); 0, without executing any statement, if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, if an element of it is {@code null}
      *         or names no property of the entity class (and is not a raw SET expression),
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails. With more than one element, the transaction is begun first and a Spring
      *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
@@ -271,15 +277,17 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      *                     With more than one element, all of them run in one transaction, even if they fit in one batch.
-     * @return the total number of rows updated; 0, without executing any statement, if {@code entities} is {@code null} or empty
+     * @return the total number of rows updated (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO}
+     *         contribute 0); 0, without executing any statement, if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, if an element of it is {@code null}
      *         or names no property of the entity class (and is not a raw SET expression), if {@code batchSize} is not positive,
      *         if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
-     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
-     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
-     *         own while no JPA transaction owning it can be identified (see
-     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: no
+     *         {@link com.landawn.abacus.jdbc.SpringTransactionTracker} was registered with its transaction manager before that transaction began
+     *         (required when more than one element opens a transaction scope), the ownership of the Spring connection holder bound to the data source
+     *         cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be
+     *         identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails. With more than one element, the transaction is begun first and a Spring
      *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
